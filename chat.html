@@ -1466,35 +1466,35 @@
 		let lastPullToRefreshTime = 0;
 		// Users data
 		const users = [{
-				id: 1,
-				name: 'You',
-				avatar: 'https://i.pravatar.cc/150?img=1',
-				status: 'online'
-			},
-			{
-				id: 2,
-				name: 'John Doe',
-				avatar: 'https://i.pravatar.cc/150?img=2',
-				status: 'online'
-			},
-			{
-				id: 3,
-				name: 'Jane Smith',
-				avatar: 'https://i.pravatar.cc/150?img=3',
-				status: 'away'
-			},
-			{
-				id: 4,
-				name: 'Mike Johnson',
-				avatar: 'https://i.pravatar.cc/150?img=4',
-				status: 'busy'
-			},
-			{
-				id: 5,
-				name: 'Emma Davis',
-				avatar: 'https://i.pravatar.cc/150?img=5',
-				status: 'offline'
-			},
+			id: 1,
+			name: 'You',
+			avatar: 'https://i.pravatar.cc/150?img=1',
+			status: 'online'
+		},
+		{
+			id: 2,
+			name: 'John Doe',
+			avatar: 'https://i.pravatar.cc/150?img=2',
+			status: 'online'
+		},
+		{
+			id: 3,
+			name: 'Jane Smith',
+			avatar: 'https://i.pravatar.cc/150?img=3',
+			status: 'away'
+		},
+		{
+			id: 4,
+			name: 'Mike Johnson',
+			avatar: 'https://i.pravatar.cc/150?img=4',
+			status: 'busy'
+		},
+		{
+			id: 5,
+			name: 'Emma Davis',
+			avatar: 'https://i.pravatar.cc/150?img=5',
+			status: 'offline'
+		},
 		];
 		// Sample message texts for more variety
 		const messageTexts = [
@@ -1531,53 +1531,53 @@
 		];
 		// File types for attachment examples
 		const fileTypes = [{
-				ext: 'pdf',
-				icon: 'fa-file-pdf',
-				name: 'Presentation',
-				size: '2.4 MB'
-			},
-			{
-				ext: 'doc',
-				icon: 'fa-file-word',
-				name: 'Report Document',
-				size: '1.8 MB'
-			},
-			{
-				ext: 'xls',
-				icon: 'fa-file-excel',
-				name: 'Financial Data',
-				size: '3.2 MB'
-			},
-			{
-				ext: 'zip',
-				icon: 'fa-file-archive',
-				name: 'Project Files',
-				size: '5.7 MB'
-			},
-			{
-				ext: 'jpg',
-				icon: 'fa-file-image',
-				name: 'Product Photo',
-				size: '1.2 MB'
-			},
-			{
-				ext: 'mp3',
-				icon: 'fa-file-audio',
-				name: 'Meeting Recording',
-				size: '4.3 MB'
-			},
-			{
-				ext: 'mp4',
-				icon: 'fa-file-video',
-				name: 'Tutorial Video',
-				size: '8.5 MB'
-			},
-			{
-				ext: 'txt',
-				icon: 'fa-file-alt',
-				name: 'Meeting Notes',
-				size: '45 KB'
-			}
+			ext: 'pdf',
+			icon: 'fa-file-pdf',
+			name: 'Presentation',
+			size: '2.4 MB'
+		},
+		{
+			ext: 'doc',
+			icon: 'fa-file-word',
+			name: 'Report Document',
+			size: '1.8 MB'
+		},
+		{
+			ext: 'xls',
+			icon: 'fa-file-excel',
+			name: 'Financial Data',
+			size: '3.2 MB'
+		},
+		{
+			ext: 'zip',
+			icon: 'fa-file-archive',
+			name: 'Project Files',
+			size: '5.7 MB'
+		},
+		{
+			ext: 'jpg',
+			icon: 'fa-file-image',
+			name: 'Product Photo',
+			size: '1.2 MB'
+		},
+		{
+			ext: 'mp3',
+			icon: 'fa-file-audio',
+			name: 'Meeting Recording',
+			size: '4.3 MB'
+		},
+		{
+			ext: 'mp4',
+			icon: 'fa-file-video',
+			name: 'Tutorial Video',
+			size: '8.5 MB'
+		},
+		{
+			ext: 'txt',
+			icon: 'fa-file-alt',
+			name: 'Meeting Notes',
+			size: '45 KB'
+		}
 		];
 		// Setup history lock failsafe to prevent lock from getting stuck
 		function setupHistoryLockFailsafe() {
@@ -1627,11 +1627,11 @@
 			confirmBtn.parentNode.replaceChild(confirmClone, confirmBtn);
 			cancelBtn.parentNode.replaceChild(cancelClone, cancelBtn);
 			// Add new event listeners
-			confirmClone.addEventListener('click', function() {
+			confirmClone.addEventListener('click', function () {
 				confirmDialog.style.display = 'none';
 				confirmCallback();
 			});
-			cancelClone.addEventListener('click', function() {
+			cancelClone.addEventListener('click', function () {
 				confirmDialog.style.display = 'none';
 			});
 		}
@@ -1765,11 +1765,11 @@
 				console.log(
 					`%cRisultato #${i + 1} ${i === currentSearchIndex ? '👉' : ''}`,
 					i === currentSearchIndex ? "font-weight: bold; color: green;" : "", {
-						messageId: result.messageId,
-						testo: result.match.substring(0, 30) + "...",
-						posizioneDom: positionInDom,
-						altezzaY: result.domElement ? result.domElement.getBoundingClientRect().top : 'N/A'
-					}
+					messageId: result.messageId,
+					testo: result.match.substring(0, 30) + "...",
+					posizioneDom: positionInDom,
+					altezzaY: result.domElement ? result.domElement.getBoundingClientRect().top : 'N/A'
+				}
 				);
 			});
 			console.log("%c========================", "font-weight: bold; color: blue;");
@@ -1821,12 +1821,12 @@
 						'<span class="search-result-match">$1</span>'
 					);
 					resultItem.innerHTML = `
-		<div class="search-result-header">
-		  <div class="search-result-name">${result.message.user.name}</div>
-		  <div class="search-result-date">${formatTime(result.message.timestamp)}</div>
-		</div>
-		<div class="search-result-text">${highlightedText}</div>
-	  `;
+        <div class="search-result-header">
+          <div class="search-result-name">${result.message.user.name}</div>
+          <div class="search-result-date">${formatTime(result.message.timestamp)}</div>
+        </div>
+        <div class="search-result-text">${highlightedText}</div>
+      `;
 					// Click handler to navigate to the message
 					resultItem.addEventListener('click', () => {
 						currentSearchIndex = index;
@@ -1867,12 +1867,12 @@
 						'<span class="search-result-match">$1</span>'
 					);
 					resultItem.innerHTML = `
-		<div class="search-result-header">
-		  <div class="search-result-name">${result.message.user.name}</div>
-		  <div class="search-result-date">${formatTime(result.message.timestamp)}</div>
-		</div>
-		<div class="search-result-text">${highlightedText}</div>
-	  `;
+        <div class="search-result-header">
+          <div class="search-result-name">${result.message.user.name}</div>
+          <div class="search-result-date">${formatTime(result.message.timestamp)}</div>
+        </div>
+        <div class="search-result-text">${highlightedText}</div>
+      `;
 					// Click handler to navigate to the message
 					resultItem.addEventListener('click', () => {
 						currentSearchIndex = index;
@@ -1942,13 +1942,13 @@
 			if (!text) return '';
 			// First, handle our custom highlighted links
 			text = text.replace(/<span class="link-example">(https?:\/\/[^\s<]+)<\/span>/g,
-				function(match, url) {
+				function (match, url) {
 					return `<a href="${url}" target="_blank" rel="noopener" class="link-example">${url}</a>`;
 				}
 			);
 			// Then handle any regular URLs
 			const urlRegex = /(?<!<a[^>]*>)(https?:\/\/[^\s<]+)(?![^<]*<\/a>)/g;
-			return text.replace(urlRegex, function(url) {
+			return text.replace(urlRegex, function (url) {
 				return `<a href="${url}" target="_blank" rel="noopener">${url}</a>`;
 			});
 		}
@@ -2164,93 +2164,114 @@
 			}, 800);
 		}
 
+		// Funzione createMessageElement aggiornata per funzionare con i messaggi del server
 		function createMessageElement(message) {
 			// Creiamo prima la riga che conterrà il messaggio e il timestamp
 			const messageRow = document.createElement('div');
 			messageRow.className = 'message-row';
+
 			// Creiamo il contenitore del messaggio
 			const messageEl = document.createElement('div');
 			messageEl.className = 'message-container';
 			messageEl.dataset.messageId = message.id;
+
 			if (message.isOwn) {
 				messageEl.classList.add('own-message');
 			}
+
+			// Assicuriamoci che la timestamp sia un oggetto Date
+			if (typeof message.timestamp === 'string') {
+				message.timestamp = new Date(message.timestamp);
+			}
+
 			// Handle quote/reply
 			let quotedHtml = '';
 			if (message.replyTo) {
 				// Different quoted display based on message type
 				let quoteIcon = '';
-				if (message.replyTo.type === 'file') {
+				const replyToMessage = message.replyTo;
+
+				if (replyToMessage.type === 'file') {
 					quoteIcon = `<i class="fas fa-file"></i>`;
-				} else if (message.replyTo.type === 'forwarded') {
+				} else if (replyToMessage.type === 'forwarded') {
 					quoteIcon = `<i class="fas fa-share"></i>`;
 				}
+
 				quotedHtml = `
-	  <div class="quoted-message">
-		<div class="quoted-user">${quoteIcon} ${message.replyTo.user.name}</div>
-		<div class="quoted-text">${message.replyTo.text}</div>
-	  </div>
-	`;
+      <div class="quoted-message">
+        <div class="quoted-user">${quoteIcon} ${replyToMessage.user.name}</div>
+        <div class="quoted-text">${replyToMessage.text}</div>
+      </div>
+    `;
 			}
+
 			// Handle forwarded message display
 			let forwardedHtml = '';
 			if (message.type === 'forwarded' && message.forwardedFrom) {
 				forwardedHtml = `
-	  <div class="forwarded-header">
-		<i class="fas fa-share"></i> Forwarded from ${message.forwardedFrom.name}
-	  </div>
-	`;
+      <div class="forwarded-header">
+        <i class="fas fa-share"></i> Forwarded from ${message.forwardedFrom.name}
+      </div>
+    `;
 			}
+
 			// Handle file attachment display
 			let fileHtml = '';
 			if (message.type === 'file' && message.fileData) {
 				const file = message.fileData;
 				fileHtml = `
-	  <div class="file-attachment">
-		<div class="file-icon">
-		  <i class="fas ${file.icon}"></i>
-		</div>
-		<div class="file-info">
-		  <div class="file-name">${file.name}.${file.ext}</div>
-		  <div class="file-size">${file.size}</div>
-		</div>
-		<div class="file-download">
-		  <i class="fas fa-download"></i>
-		</div>
-	  </div>
-	`;
+      <div class="file-attachment">
+        <div class="file-icon">
+          <i class="fas ${file.icon}"></i>
+        </div>
+        <div class="file-info">
+          <div class="file-name">${file.name}.${file.ext}</div>
+          <div class="file-size">${file.size}</div>
+        </div>
+        <div class="file-download">
+          <i class="fas fa-download"></i>
+        </div>
+      </div>
+    `;
 			}
+
 			// Add check marks for own messages
 			const statusIndicator = message.isOwn ? '<i class="fas fa-check"></i>' : '';
+
 			// Process text to convert URLs to links
 			const processedText = linkifyText(message.text);
+
+			// Costruisci l'HTML del messaggio
 			messageEl.innerHTML = `
-	<div class="avatar">
-	  <img src="${message.user.avatar}" alt="${message.user.name}">
-	</div>
-	<div class="message-content">
-	  <div class="message-header">
-		<div class="user-name">${message.user.name}</div>
-	  </div>
-	  <div class="message-bubble ${message.type === 'forwarded' ? 'forwarded-message' : ''}">
-		${forwardedHtml}
-		${quotedHtml}
-		<div class="message-text">${processedText}</div>
-		${fileHtml}
-	  </div>
-	  <div class="message-actions">
-		<button class="reply-button" data-message-id="${message.id}">↩️ Reply</button>
-		<button class="menu-button" data-message-id="${message.id}">⋮</button>
-	  </div>
-	</div>
+    <div class="avatar">
+      <img src="${message.user.avatar}" alt="${message.user.name}">
+    </div>
+    <div class="message-content">
+      <div class="message-header">
+        <div class="user-name">${message.user.name}</div>
+      </div>
+      <div class="message-bubble ${message.type === 'forwarded' ? 'forwarded-message' : ''}">
+        ${forwardedHtml}
+        ${quotedHtml}
+        <div class="message-text">${processedText}</div>
+        ${fileHtml}
+      </div>
+      <div class="message-actions">
+        <button class="reply-button" data-message-id="${message.id}">↩️ Reply</button>
+        <button class="menu-button" data-message-id="${message.id}">⋮</button>
+      </div>
+    </div>
   `;
+
 			// Creiamo il timestamp separato
 			const timestamp = document.createElement('div');
 			timestamp.className = 'timestamp';
 			timestamp.innerHTML = `${formatTime(message.timestamp)} ${statusIndicator}`;
+
 			// Assembliamo la riga completa
 			messageRow.appendChild(messageEl);
 			messageRow.appendChild(timestamp);
+
 			return messageRow;
 		}
 		// Show context menu at specified position with proper permissions handling
@@ -2528,11 +2549,11 @@
 			const sidebarClear = document.getElementById('sidebarSearchClear');
 			if (sidebarSearch && sidebarClear) {
 				// Show/hide clear button based on input content
-				sidebarSearch.addEventListener('input', function() {
+				sidebarSearch.addEventListener('input', function () {
 					sidebarClear.classList.toggle('visible', this.value.length > 0);
 				});
 				// Clear the input when button is clicked
-				sidebarClear.addEventListener('click', function() {
+				sidebarClear.addEventListener('click', function () {
 					sidebarSearch.value = '';
 					sidebarClear.classList.remove('visible');
 					// Trigger input event to update filtered items
@@ -2545,11 +2566,11 @@
 			const searchPanelClear = document.getElementById('searchPanelClear');
 			if (searchPanelInput && searchPanelClear) {
 				// Show/hide clear button based on input content
-				searchPanelInput.addEventListener('input', function() {
+				searchPanelInput.addEventListener('input', function () {
 					searchPanelClear.classList.toggle('visible', this.value.length > 0);
 				});
 				// Clear the input when button is clicked
-				searchPanelClear.addEventListener('click', function() {
+				searchPanelClear.addEventListener('click', function () {
 					searchPanelInput.value = '';
 					searchPanelClear.classList.remove('visible');
 					// Trigger input event to update search results
@@ -2586,11 +2607,11 @@
 			const editArea = document.createElement('div');
 			editArea.className = 'edit-area';
 			editArea.innerHTML = `
-	<textarea class="edit-input" style="width: 100%; min-height: 40px; padding: 4px; border: 1px solid var(--primary); border-radius: 4px; resize: vertical; background: var(--bg-main); color: var(--text-color);">${originalText}</textarea>
-	<div class="edit-actions" style="display: flex; margin-top: 6px; gap: 8px;">
-	  <button class="save-edit" style="background: var(--primary); color: white; border: none; padding: 2px 8px; border-radius: 4px; cursor: pointer;">Save</button>
-	  <button class="cancel-edit" style="background: none; border: 1px solid var(--border-color); padding: 2px 8px; border-radius: 4px; cursor: pointer; color: var(--text-color);">Cancel</button>
-	</div>
+    <textarea class="edit-input" style="width: 100%; min-height: 40px; padding: 4px; border: 1px solid var(--primary); border-radius: 4px; resize: vertical; background: var(--bg-main); color: var(--text-color);">${originalText}</textarea>
+    <div class="edit-actions" style="display: flex; margin-top: 6px; gap: 8px;">
+      <button class="save-edit" style="background: var(--primary); color: white; border: none; padding: 2px 8px; border-radius: 4px; cursor: pointer;">Save</button>
+      <button class="cancel-edit" style="background: none; border: 1px solid var(--border-color); padding: 2px 8px; border-radius: 4px; cursor: pointer; color: var(--text-color);">Cancel</button>
+    </div>
   `;
 			// Clear the text element and add our edit area
 			textEl.innerHTML = '';
@@ -2616,7 +2637,7 @@
 				pendingEditOperation = null;
 				historyScrollLock = false;
 			};
-			saveBtn.addEventListener('click', function() {
+			saveBtn.addEventListener('click', function () {
 				const textarea = editArea.querySelector('.edit-input');
 				const newText = textarea.value.trim();
 				if (newText) {
@@ -2648,7 +2669,7 @@
 					finishEditing();
 				}
 			});
-			cancelBtn.addEventListener('click', function() {
+			cancelBtn.addEventListener('click', function () {
 				// Save current scroll position
 				const currentScrollTop = chatContainer.scrollTop;
 				textEl.innerHTML = linkifyText(originalText);
@@ -2667,7 +2688,7 @@
 			const message = displayedMessages[messageIndex];
 			if (!message.isOwn) return;
 			// Ask for confirmation using our custom dialog
-			showConfirmDialog("Are you sure you want to delete this message?", function() {
+			showConfirmDialog("Are you sure you want to delete this message?", function () {
 				// Save current scroll position
 				const chatContainer = document.getElementById('chatMessages');
 				const scrollTop = chatContainer.scrollTop;
@@ -2714,14 +2735,18 @@
 				}, 300);
 			});
 		}
-		// Handle reply functionality with proper UI interaction
+
+		// Funzione handleReply aggiornata
 		function handleReply(messageId) {
 			const message = displayedMessages.find(m => m.id == messageId);
 			if (!message) return;
+
 			replyingTo = message;
+
 			// Remove existing reply preview if any
 			const existingPreview = document.querySelector('.reply-preview');
 			if (existingPreview) existingPreview.remove();
+
 			// Create icon based on message type
 			let typeIcon = '';
 			if (message.type === 'file') {
@@ -2729,23 +2754,28 @@
 			} else if (message.type === 'forwarded') {
 				typeIcon = '<i class="fas fa-share"></i>';
 			}
+
 			// Create and insert reply preview
 			const replyPreview = document.createElement('div');
 			replyPreview.className = 'reply-preview';
 			replyPreview.innerHTML = `
-	<div class="reply-text">${typeIcon} Replying to ${message.user.name}: "${message.text.substring(0, 30)}${message.text.length > 30 ? '...' : ''}"</div>
-	<button class="cancel-reply">✕</button>
+    <div class="reply-text">${typeIcon} Replying to ${message.user.name}: "${message.text.substring(0, 30)}${message.text.length > 30 ? '...' : ''}"</div>
+    <button class="cancel-reply">✕</button>
   `;
+
 			const inputArea = document.querySelector('.input-area');
 			inputArea.insertBefore(replyPreview, document.querySelector('.message-input-container'));
+
 			// Attach cancel event to the new button
 			const cancelBtn = replyPreview.querySelector('.cancel-reply');
 			if (cancelBtn) {
 				cancelBtn.addEventListener('click', cancelReply);
 			}
+
 			// Focus the input field
 			document.getElementById('messageInput').focus();
 		}
+
 		// Cancel reply
 		function cancelReply() {
 			replyingTo = null;
@@ -2791,7 +2821,7 @@
 			}, 1500);
 		}
 		// Initialize the chat
-		document.addEventListener('DOMContentLoaded', function() {
+		document.addEventListener('DOMContentLoaded', function () {
 			// Set up the history lock failsafe to prevent permanent lock
 			setupHistoryLockFailsafe();
 			// Generate mock messages with special types
@@ -2806,7 +2836,7 @@
 			const chatContainer = document.getElementById('chatMessages');
 			// Use a more responsive throttled scroll handler with less aggressive throttling
 			let lastScrollHandleTime = 0;
-			chatContainer.addEventListener('scroll', function() {
+			chatContainer.addEventListener('scroll', function () {
 				const now = Date.now();
 				if (now - lastScrollHandleTime > 30) { // Less throttling (30ms vs 60ms)
 					lastScrollHandleTime = now;
@@ -2824,7 +2854,7 @@
 			// Log initialization complete
 			debug("Chat initialization complete");
 			// Scroll to bottom button
-			document.getElementById('scrollBottomBtn').addEventListener('click', function() {
+			document.getElementById('scrollBottomBtn').addEventListener('click', function () {
 				scrollToBottom();
 			});
 			// Search button
@@ -2832,52 +2862,52 @@
 			// Close search panel
 			document.getElementById('closeSearchPanel').addEventListener('click', toggleSearchPanel);
 			// Search input handler
-			document.getElementById('searchPanelInput').addEventListener('input', function(e) {
+			document.getElementById('searchPanelInput').addEventListener('input', function (e) {
 				searchMessages(e.target.value);
 			});
 			// Channel click events
-			document.getElementById('channel-general').addEventListener('click', function() {
+			document.getElementById('channel-general').addEventListener('click', function () {
 				setActiveChannel(this, 'general');
 			});
-			document.getElementById('channel-random').addEventListener('click', function() {
+			document.getElementById('channel-random').addEventListener('click', function () {
 				setActiveChannel(this, 'random');
 			});
-			document.getElementById('channel-announcements').addEventListener('click', function() {
+			document.getElementById('channel-announcements').addEventListener('click', function () {
 				setActiveChannel(this, 'announcements');
 			});
-			document.getElementById('channel-development').addEventListener('click', function() {
+			document.getElementById('channel-development').addEventListener('click', function () {
 				setActiveChannel(this, 'development');
 			});
 			// User click events
-			document.getElementById('user-john').addEventListener('click', function() {
+			document.getElementById('user-john').addEventListener('click', function () {
 				setActiveUser(this, 'John Doe');
 			});
-			document.getElementById('user-jane').addEventListener('click', function() {
+			document.getElementById('user-jane').addEventListener('click', function () {
 				setActiveUser(this, 'Jane Smith');
 			});
-			document.getElementById('user-mike').addEventListener('click', function() {
+			document.getElementById('user-mike').addEventListener('click', function () {
 				setActiveUser(this, 'Mike Johnson');
 			});
-			document.getElementById('user-emma').addEventListener('click', function() {
+			document.getElementById('user-emma').addEventListener('click', function () {
 				setActiveUser(this, 'Emma Davis');
 			});
 			// Send message
 			document.getElementById('sendButton').addEventListener('click', sendMessage);
 			// Enter key to send message
-			document.getElementById('messageInput').addEventListener('keydown', function(event) {
+			document.getElementById('messageInput').addEventListener('keydown', function (event) {
 				if (event.key === 'Enter' && !event.shiftKey) {
 					event.preventDefault();
 					sendMessage();
 				}
 			});
 			// Hide context menu when clicking elsewhere
-			document.addEventListener('click', function(e) {
+			document.addEventListener('click', function (e) {
 				if (!e.target.closest('#contextMenu') && !e.target.classList.contains('menu-button')) {
 					document.getElementById('contextMenu').style.display = 'none';
 				}
 			});
 			// Context menu actions
-			document.getElementById('contextMenu').addEventListener('click', function(e) {
+			document.getElementById('contextMenu').addEventListener('click', function (e) {
 				const action = e.target.dataset.action;
 				const messageId = this.dataset.messageId;
 				switch (action) {
@@ -2900,7 +2930,7 @@
 				this.style.display = 'none';
 			});
 			// Use event delegation for message actions
-			chatContainer.addEventListener('click', function(e) {
+			chatContainer.addEventListener('click', function (e) {
 				// Reply button
 				if (e.target.classList.contains('reply-button')) {
 					const messageId = e.target.dataset.messageId;
@@ -2928,11 +2958,11 @@
 				}
 			});
 			// Sidebar search
-			document.getElementById('sidebarSearch').addEventListener('input', function(e) {
+			document.getElementById('sidebarSearch').addEventListener('input', function (e) {
 				filterSidebarItems(e.target.value);
 			});
 			// Keyboard shortcuts
-			document.addEventListener('keydown', function(e) {
+			document.addEventListener('keydown', function (e) {
 				// Escape to close search
 				if (e.key === 'Escape' && searchOpen) {
 					toggleSearchPanel();
@@ -2968,7 +2998,7 @@
 				}
 			});
 			// Window resize handler to maintain scroll position
-			window.addEventListener('resize', function() {
+			window.addEventListener('resize', function () {
 				if (!historyScrollLock) {
 					const chatContainer = document.getElementById('chatMessages');
 					const isAtBottom = chatContainer.scrollHeight - chatContainer.clientHeight <= lastScrollPosition + 20;
@@ -2979,161 +3009,414 @@
 			});
 		});
 	</script>
-	<!-- Add this before the closing </body> tag -->
-<script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
-<script>
-  // Socket.io connection
-  const socket = io();
-  
-  // Socket event listeners
-  socket.on('connect', () => {
-	console.log('Connected to server');
-	
-	// Join the default channel
-	socket.emit('joinChannel', 'general');
-  });
-  
-  socket.on('initialData', (data) => {
-	console.log('Received initial data:', data);
-	// You can use this data to populate users and channels
-  });
-  
-  socket.on('messageHistory', (messages) => {
-	console.log('Received message history:', messages);
-	// You can use this to populate the chat history
-  });
-  
-  socket.on('newMessage', (message) => {
-	console.log('New message received:', message);
-	// Add the new message to the chat
-  });
-  
-  socket.on('userTyping', (data) => {
-	console.log('User typing:', data);
-	// Show typing indicator
-  });
-  
-  socket.on('userStatusUpdate', (data) => {
-	console.log('User status update:', data);
-	// Update user status in the UI
-  });
-  
-  // Modify the sendMessage function to use socket.io
-  function sendMessage() {
-	const input = document.getElementById('messageInput');
-	const text = input.value.trim();
-	if (text) {
-	  // Create message object
-	  const newMessage = {
-		user: users[0], // 'You'
-		text: text,
-		isOwn: true,
-		replyTo: replyingTo,
-		type: 'normal'
-	  };
-	  
-	  // Emit to server based on current chat type
-	  if (isDirectMessage && currentUser) {
-		socket.emit('directMessage', {
-		  userId: currentUser.id,
-		  message: newMessage
+
+	<script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+	<script>
+		// Socket.io connection and event handlers
+		const socket = io({
+			debug: false,
+			autoConnect: true,
+			reconnection: true,
+			forceNew: true
 		});
-	  } else {
-		socket.emit('channelMessage', {
-		  channelName: currentChannel,
-		  message: newMessage
+		let currentlyConnected = false;
+
+		// Socket connection events
+		socket.on('connect', () => {
+			console.log('Connesso al server Socket.IO');
+			currentlyConnected = true;
+
+			// Join the default channel on initial load
+			socket.emit('joinChannel', 'general');
 		});
-	  }
-	  
-	  // Clear input and reset reply state
-	  input.value = '';
-	  if (replyingTo) {
-		document.querySelector('.reply-preview')?.remove();
-		replyingTo = null;
-	  }
-	}
-  }
-  
-  // Modify setActiveChannel to use socket.io
-  function setActiveChannel(el, channel) {
-	// Update active state
-	document.querySelectorAll('.channel-item.active, .user-item.active').forEach(item => {
-	  item.classList.remove('active');
-	});
-	el.classList.add('active');
-	
-	// Update current channel
-	currentChannel = channel;
-	isDirectMessage = false;
-	currentUser = null;
-	document.getElementById('currentChannel').textContent = channel;
-	document.querySelector('.chat-title-hash').style.display = 'inline';
-	
-	// Update header info
-	updateChatHeaderInfo();
-	
-	// Close sidebar on mobile
-	if (window.innerWidth <= 768) {
-	  sidebarVisible = false;
-	  document.querySelector('.sidebar').classList.remove('show');
-	}
-	
-	// Join the channel via socket
-	socket.emit('joinChannel', channel);
-	
-	// Reset and wait for message history from server
-	const chatContainer = document.getElementById('chatMessages');
-	chatContainer.innerHTML = '';
-	displayedMessages = [];
-	messagesLoaded = 0;
-	unreadMessages = 0;
-	updateUnreadBadge();
-	
-	// Show loader
-	showLoader();
-  }
-  
-  // Modify setActiveUser to use socket.io
-  function setActiveUser(el, userName) {
-	// Update active state
-	document.querySelectorAll('.channel-item.active, .user-item.active').forEach(item => {
-	  item.classList.remove('active');
-	});
-	el.classList.add('active');
-	
-	// Update current channel
-	currentUser = users.find(user => user.name === userName);
-	isDirectMessage = true;
-	currentChannel = userName;
-	document.getElementById('currentChannel').textContent = userName;
-	document.querySelector('.chat-title-hash').style.display = 'none';
-	
-	// Update header info
-	updateChatHeaderInfo();
-	
-	// Close sidebar on mobile
-	if (window.innerWidth <= 768) {
-	  sidebarVisible = false;
-	  document.querySelector('.sidebar').classList.remove('show');
-	}
-	
-	// Join the direct message chat via socket
-	if (currentUser) {
-	  socket.emit('joinDirectMessage', currentUser.id);
-	}
-	
-	// Reset and wait for message history from server
-	const chatContainer = document.getElementById('chatMessages');
-	chatContainer.innerHTML = '';
-	displayedMessages = [];
-	messagesLoaded = 0;
-	unreadMessages = 0;
-	updateUnreadBadge();
-	
-	// Show loader
-	showLoader();
-  }
-</script>
+
+		socket.on('disconnect', () => {
+			console.log('Disconnesso dal server Socket.IO');
+			currentlyConnected = false;
+			showNotification('Connessione al server persa', true);
+		});
+
+		// Handle received message history
+		socket.on('messageHistory', (history) => {
+			console.log(`Ricevuti ${history.length} messaggi storici`);
+			const chatContainer = document.getElementById('chatMessages');
+			chatContainer.innerHTML = '';
+			displayedMessages = [];
+
+			if (history && history.length > 0) {
+				// Sort messages by timestamp
+				history.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+				// Process and display messages
+				let lastDate = null;
+				const fragment = document.createDocumentFragment();
+
+				history.forEach(message => {
+					// Convert timestamp string to Date object if needed
+					if (typeof message.timestamp === 'string') {
+						message.timestamp = new Date(message.timestamp);
+					}
+
+					// Add date divider if needed
+					const messageDate = message.timestamp.toDateString();
+					if (messageDate !== lastDate) {
+						const divider = document.createElement('div');
+						divider.className = 'date-divider';
+						divider.innerHTML = `<span>${formatDate(message.timestamp)}</span>`;
+						fragment.appendChild(divider);
+						lastDate = messageDate;
+					}
+
+					// Create and add message element
+					const messageEl = createMessageElement(message);
+					fragment.appendChild(messageEl);
+
+					// Add to displayed messages array
+					displayedMessages.push(message);
+				});
+
+				chatContainer.appendChild(fragment);
+			}
+
+			// Hide loader
+			hideLoader();
+
+			// Scroll to bottom
+			scrollToBottom(false);
+
+			// Reset unread count
+			unreadMessages = 0;
+			updateUnreadBadge();
+		});
+
+		// Handle new incoming messages
+		socket.on('newMessage', (message) => {
+			console.log('Nuovo messaggio ricevuto:', message);
+
+			// Convert timestamp string to Date object if needed
+			if (typeof message.timestamp === 'string') {
+				message.timestamp = new Date(message.timestamp);
+			}
+
+			// Add to messages arrays
+			messages.push(message);
+			displayedMessages.push(message);
+
+			// Get the current chat container
+			const chatContainer = document.getElementById('chatMessages');
+
+			// Check if we need to add a new date divider
+			const lastMessage = displayedMessages[displayedMessages.length - 2];
+			if (lastMessage) {
+				const lastDate = new Date(lastMessage.timestamp).toDateString();
+				const newDate = message.timestamp.toDateString();
+				if (newDate !== lastDate) {
+					const divider = document.createElement('div');
+					divider.className = 'date-divider';
+					divider.innerHTML = `<span>${formatDate(message.timestamp)}</span>`;
+					chatContainer.appendChild(divider);
+				}
+			}
+
+			// Create and append message element
+			const messageEl = createMessageElement(message);
+			chatContainer.appendChild(messageEl);
+
+			// Check if we're at the bottom before the new message
+			const isAtBottom = chatContainer.scrollHeight - chatContainer.clientHeight <= chatContainer.scrollTop + 20;
+
+			if (isAtBottom) {
+				// Scroll to the new message
+				scrollToBottom();
+			} else {
+				// Update unread count if not at bottom
+				unreadMessages++;
+				updateUnreadBadge();
+			}
+
+			// If message is not our own, play notification sound
+			if (!message.isOwn) {
+				// You could add a sound notification here
+				// For example: document.getElementById('notificationSound').play();
+			}
+		});
+
+		// Update user typing indicator
+		socket.on('userTyping', (data) => {
+			const userId = data.userId;
+			const isTyping = data.isTyping;
+
+			// Find the user
+			const user = users.find(u => u.id == userId);
+			if (user) {
+				// Show/hide typing indicator
+				// You can implement this UI element
+			}
+		});
+
+		// Monitor user status updates
+		socket.on('userStatusUpdate', (data) => {
+			const userId = data.userId;
+			const status = data.status;
+
+			// Update user status in the users array
+			const user = users.find(u => u.id == userId);
+			if (user) {
+				user.status = status;
+				// Update UI if needed
+			}
+		});
+
+		// Modified setActiveChannel function to use socket.io
+		function setActiveChannel(el, channel) {
+			// Update active state
+			document.querySelectorAll('.channel-item.active, .user-item.active').forEach(item => {
+				item.classList.remove('active');
+			});
+			el.classList.add('active');
+
+			// Update current channel
+			currentChannel = channel;
+			isDirectMessage = false;
+			currentUser = null;
+			document.getElementById('currentChannel').textContent = channel;
+			document.querySelector('.chat-title-hash').style.display = 'inline';
+
+			// Update header info
+			updateChatHeaderInfo();
+
+			// Close sidebar on mobile
+			if (window.innerWidth <= 768) {
+				sidebarVisible = false;
+				document.querySelector('.sidebar').classList.remove('show');
+			}
+
+			// Show loader while loading messages
+			showLoader();
+
+			// Reset message state
+			const chatContainer = document.getElementById('chatMessages');
+			chatContainer.innerHTML = '';
+			displayedMessages = [];
+			messagesLoaded = 0;
+			unreadMessages = 0;
+			updateUnreadBadge();
+
+			// Cancel any pending reply
+			if (replyingTo) {
+				document.querySelector('.reply-preview')?.remove();
+				replyingTo = null;
+			}
+
+			// Join the channel via socket.io
+			if (currentlyConnected) {
+				socket.emit('joinChannel', channel);
+			}
+		}
+
+		// Modified setActiveUser function to use socket.io
+		function setActiveUser(el, userName) {
+			// Update active state
+			document.querySelectorAll('.channel-item.active, .user-item.active').forEach(item => {
+				item.classList.remove('active');
+			});
+			el.classList.add('active');
+
+			// Update current user
+			currentUser = users.find(user => user.name === userName);
+			isDirectMessage = true;
+			currentChannel = userName;
+			document.getElementById('currentChannel').textContent = userName;
+			document.querySelector('.chat-title-hash').style.display = 'none';
+
+			// Update header info
+			updateChatHeaderInfo();
+
+			// Close sidebar on mobile
+			if (window.innerWidth <= 768) {
+				sidebarVisible = false;
+				document.querySelector('.sidebar').classList.remove('show');
+			}
+
+			// Show loader while loading messages
+			showLoader();
+
+			// Reset message state
+			const chatContainer = document.getElementById('chatMessages');
+			chatContainer.innerHTML = '';
+			displayedMessages = [];
+			messagesLoaded = 0;
+			unreadMessages = 0;
+			updateUnreadBadge();
+
+			// Cancel any pending reply
+			if (replyingTo) {
+				document.querySelector('.reply-preview')?.remove();
+				replyingTo = null;
+			}
+
+			// Join the direct message via socket.io
+			if (currentlyConnected && currentUser) {
+				socket.emit('joinDirectMessage', currentUser.id);
+			}
+		}
+
+		// Modified sendMessage function to use socket.io
+		function sendMessage() {
+			const input = document.getElementById('messageInput');
+			const text = input.value.trim();
+
+			if (text && currentlyConnected) {
+				// Create message object
+				const messageData = {
+					text: text,
+					type: 'normal',
+					replyTo: replyingTo
+				};
+
+				try {
+					// Emit message to server based on current chat type
+					if (isDirectMessage && currentUser) {
+						console.log("Invio messaggio diretto a:", currentUser.id);
+						socket.emit('directMessage', {
+							userId: currentUser.id,
+							message: messageData
+						});
+					} else {
+						console.log("Invio messaggio al canale:", currentChannel);
+						socket.emit('channelMessage', {
+							channelName: currentChannel,
+							message: messageData
+						});
+					}
+
+					// Clear input
+					input.value = '';
+
+					// Reset reply state
+					if (replyingTo) {
+						document.querySelector('.reply-preview')?.remove();
+						replyingTo = null;
+					}
+				} catch (error) {
+					console.error("Errore nell'invio del messaggio:", error);
+					showNotification("Errore nell'invio del messaggio", true);
+				}
+			}
+		}
+
+		// Modified forward message function to use socket.io
+		function forwardMessage(messageId) {
+			const message = displayedMessages.find(m => m.id == messageId);
+			if (!message || !currentlyConnected) return;
+
+			// Create forwarded message data
+			const forwardData = {
+				text: message.text,
+				type: 'forwarded',
+				forwardedFrom: message.user
+			};
+
+			try {
+				// Emit message to server based on current chat type
+				if (isDirectMessage && currentUser) {
+					socket.emit('directMessage', {
+						userId: currentUser.id,
+						message: forwardData
+					});
+				} else {
+					socket.emit('channelMessage', {
+						channelName: currentChannel,
+						message: forwardData
+					});
+				}
+
+				// Show notification
+				showNotification('Messaggio inoltrato');
+			} catch (error) {
+				console.error("Errore nell'inoltro del messaggio:", error);
+				showNotification("Errore nell'inoltro del messaggio", true);
+			}
+		}
+
+		// Function to be called at the start of the app
+		function initializeChatApp() {
+			// Initialize socket.io connection is done automatically
+
+			// No need to generate mock messages, they'll come from the server
+
+			// Show loader
+			showLoader();
+
+			// Set up event listeners
+			setupEventListeners();
+
+			// Set up history lock failsafe
+			setupHistoryLockFailsafe();
+
+			// Initialize search clear buttons
+			initializeSearchClearButtons();
+
+			// Update header info
+			updateChatHeaderInfo();
+
+			debug("Chat initialization complete");
+		}
+
+		// Set up all event listeners
+		function setupEventListeners() {
+			// Add your existing event listeners here
+			const chatContainer = document.getElementById('chatMessages');
+
+			// Use a throttled scroll handler
+			let lastScrollHandleTime = 0;
+			chatContainer.addEventListener('scroll', function () {
+				const now = Date.now();
+				if (now - lastScrollHandleTime > 30) {
+					lastScrollHandleTime = now;
+					handleScroll();
+				}
+			}, { passive: true });
+
+			// ... rest of your event listeners ...
+		}
+
+		// Debug function for socket.io
+		function debugSocketIO() {
+			console.log("=== Socket.IO Debug ===");
+			console.log("Connected:", socket.connected);
+			console.log("Current channel:", currentChannel);
+			console.log("Is direct message:", isDirectMessage);
+			console.log("Current user:", currentUser);
+			console.log("Displayed messages:", displayedMessages.length);
+			console.log("========================");
+		}
+
+		// Initialize on document ready
+		document.addEventListener('DOMContentLoaded', initializeChatApp);
+
+		// Add a debug button for testing socket.io
+		/*
+		function addDebugButton() {
+			const btn = document.createElement('button');
+			btn.textContent = "Debug Socket.IO";
+			btn.style.position = "fixed";
+			btn.style.bottom = "10px";
+			btn.style.right = "10px";
+			btn.style.zIndex = "1000";
+			btn.style.padding = "5px 10px";
+			btn.style.background = "#f44336";
+			btn.style.color = "white";
+			btn.style.border = "none";
+			btn.style.borderRadius = "4px";
+			btn.style.cursor = "pointer";
+			btn.addEventListener('click', debugSocketIO);
+			document.body.appendChild(btn);
+		}
+		*/	
+		// Call this after DOM is loaded
+		//setTimeout(addDebugButton, 1000);
+	</script>
 </body>
 
 </html>
