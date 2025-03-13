@@ -1,0 +1,1452 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard 2025</title>
+  <style>
+    /* CSS Dashboard - Parte 1: Stili generali e layout */
+
+    /* Stili generali */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      transition: background-color 0.3s, color 0.3s;
+      color: #333;
+      background-color: #f5f5f5;
+    }
+
+    body.dark {
+      background-color: #121212;
+      color: #f5f5f5;
+    }
+
+    /* Layout */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 24px;
+    }
+
+    body.dark .header {
+      background-color: #1e1e1e;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+    }
+
+    .header-logo {
+      font-size: 24px;
+      margin-right: 12px;
+      color: #6200ee;
+    }
+
+    body.dark .header-logo {
+      color: #bb86fc;
+    }
+
+    .header-title {
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    /* Buttons */
+    .btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      transition: background-color 0.2s;
+    }
+
+    .btn:hover {
+      background-color: #f0f0f0;
+    }
+
+    body.dark .btn:hover {
+      background-color: #333;
+    }
+
+    .btn-menu {
+      display: none;
+    }
+
+    /* User menu */
+    .user-profile {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 4px;
+    }
+
+    .user-profile:hover {
+      background-color: #f0f0f0;
+    }
+
+    body.dark .user-profile:hover {
+      background-color: #333;
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background-color: #e0e0e0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    body.dark .user-avatar {
+      background-color: #444;
+    }
+
+    .user-name {
+      font-weight: 500;
+    }
+
+    .user-menu {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      width: 200px;
+      background-color: #fff;
+      border-radius: 4px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-top: 8px;
+      display: none;
+      z-index: 100;
+    }
+
+    body.dark .user-menu {
+      background-color: #1e1e1e;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .user-menu.active {
+      display: block;
+    }
+
+    .user-menu-header {
+      padding: 16px;
+      border-bottom: 1px solid #eee;
+    }
+
+    body.dark .user-menu-header {
+      border-bottom: 1px solid #333;
+    }
+
+    .user-menu-email {
+      font-size: 14px;
+      color: #666;
+    }
+
+    body.dark .user-menu-email {
+      color: #aaa;
+    }
+
+    .user-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      transition: background-color 0.2s;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .user-menu-item:hover {
+      background-color: #f5f5f5;
+    }
+
+    body.dark .user-menu-item:hover {
+      background-color: #2a2a2a;
+    }
+
+    .user-menu-item.logout {
+      color: #e53935;
+    }
+
+    body.dark .user-menu-item.logout {
+      color: #f44336;
+    }
+
+    .user-menu-divider {
+      height: 1px;
+      background-color: #eee;
+      margin: 8px 0;
+    }
+
+    body.dark .user-menu-divider {
+      background-color: #333;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 240px;
+      background-color: #fff;
+      box-shadow: 2px 0 4px rgba(0,0,0,0.1);
+      z-index: 200;
+      transform: translateX(-100%);
+      transition: transform 0.3s ease;
+    }
+
+    body.dark .sidebar {
+      background-color: #1e1e1e;
+      box-shadow: 2px 0 4px rgba(0,0,0,0.3);
+    }
+
+    .sidebar.active {
+      transform: translateX(0);
+    }
+
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px;
+      border-bottom: 1px solid #eee;
+    }
+
+    body.dark .sidebar-header {
+      border-bottom: 1px solid #333;
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .sidebar-menu {
+      padding: 16px 0;
+    }
+
+    .sidebar-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      transition: background-color 0.2s;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .sidebar-menu-item:hover {
+      background-color: #f5f5f5;
+    }
+
+    body.dark .sidebar-menu-item:hover {
+      background-color: #2a2a2a;
+    }
+
+    .sidebar-menu-item.active {
+      background-color: #e8f0fe;
+      color: #1a73e8;
+    }
+
+    body.dark .sidebar-menu-item.active {
+      background-color: #333;
+      color: #8ab4f8;
+    }
+
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      z-index: 150;
+      visibility: hidden;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .overlay.active {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    /* CSS Dashboard - Parte 2: Componenti e responsive */
+
+    /* Grid Layout */
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      margin: -12px;
+    }
+
+    .col {
+      padding: 12px;
+    }
+
+    .col-full {
+      width: 100%;
+    }
+
+    .col-half {
+      width: 100%;
+    }
+
+    .col-third {
+      width: 100%;
+    }
+
+    .col-quarter {
+      width: 100%;
+    }
+
+    @media (min-width: 768px) {
+      .col-half {
+        width: 50%;
+      }
+      
+      .col-third {
+        width: 33.333%;
+      }
+      
+      .col-quarter {
+        width: 50%;
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .col-quarter {
+        width: 25%;
+      }
+    }
+
+    /* Cards */
+    .card {
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      padding: 16px;
+      height: 100%;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    body.dark .card {
+      background-color: #1e1e1e;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    body.dark .card:hover {
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 500;
+      margin-bottom: 16px;
+      color: #555;
+    }
+
+    body.dark .card-title {
+      color: #ccc;
+    }
+
+    /* Stats Card */
+    .stats-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .stats-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stats-title {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 8px;
+    }
+
+    body.dark .stats-title {
+      color: #aaa;
+    }
+
+    .stats-value {
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    .stats-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .stats-icon.purple {
+      background-color: #f3e8ff;
+      color: #7e22ce;
+    }
+
+    .stats-icon.blue {
+      background-color: #e0f2fe;
+      color: #0284c7;
+    }
+
+    .stats-icon.green {
+      background-color: #dcfce7;
+      color: #16a34a;
+    }
+
+    .stats-icon.orange {
+      background-color: #fff7ed;
+      color: #ea580c;
+    }
+
+    body.dark .stats-icon.purple {
+      background-color: rgba(126, 34, 206, 0.2);
+      color: #c084fc;
+    }
+
+    body.dark .stats-icon.blue {
+      background-color: rgba(2, 132, 199, 0.2);
+      color: #38bdf8;
+    }
+
+    body.dark .stats-icon.green {
+      background-color: rgba(22, 163, 74, 0.2);
+      color: #4ade80;
+    }
+
+    body.dark .stats-icon.orange {
+      background-color: rgba(234, 88, 12, 0.2);
+      color: #fb923c;
+    }
+
+    /* Charts */
+    .chart-container {
+      height: 250px;
+      position: relative;
+      width: 100%;
+    }
+
+    /* Table */
+    .table-container {
+      overflow-x: auto;
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .table th, .table td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+
+    body.dark .table th, body.dark .table td {
+      border-bottom: 1px solid #333;
+    }
+
+    .table th {
+      font-weight: 500;
+      color: #666;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    body.dark .table th {
+      color: #aaa;
+    }
+
+    .table tbody tr:hover {
+      background-color: #f9f9f9;
+    }
+
+    body.dark .table tbody tr:hover {
+      background-color: #252525;
+    }
+
+    /* Status badges */
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .badge-success {
+      background-color: #dcfce7;
+      color: #16a34a;
+    }
+
+    .badge-warning {
+      background-color: #fef3c7;
+      color: #d97706;
+    }
+
+    .badge-error {
+      background-color: #fee2e2;
+      color: #dc2626;
+    }
+
+    .badge-info {
+      background-color: #e0f2fe;
+      color: #0284c7;
+    }
+
+    body.dark .badge-success {
+      background-color: rgba(22, 163, 74, 0.2);
+      color: #4ade80;
+    }
+
+    body.dark .badge-warning {
+      background-color: rgba(217, 119, 6, 0.2);
+      color: #fbbf24;
+    }
+
+    body.dark .badge-error {
+      background-color: rgba(220, 38, 38, 0.2);
+      color: #f87171;
+    }
+
+    body.dark .badge-info {
+      background-color: rgba(2, 132, 199, 0.2);
+      color: #38bdf8;
+    }
+
+    /* Search input */
+    .search-container {
+      position: relative;
+      max-width: 300px;
+      margin-bottom: 16px;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 8px 16px 8px 40px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+
+    body.dark .search-input {
+      background-color: #333;
+      border-color: #444;
+      color: #f5f5f5;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: #6200ee;
+    }
+
+    body.dark .search-input:focus {
+      border-color: #bb86fc;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #888;
+    }
+
+    body.dark .search-icon {
+      color: #aaa;
+    }
+
+    /* Pagination */
+    .pagination {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      margin-top: 16px;
+    }
+
+    .pagination-info {
+      margin-right: auto;
+      font-size: 14px;
+      color: #666;
+    }
+
+    body.dark .pagination-info {
+      color: #aaa;
+    }
+
+    .pagination-button {
+      background: none;
+      border: none;
+      padding: 8px;
+      margin: 0 4px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .pagination-button:hover {
+      background-color: #f0f0f0;
+    }
+
+body.dark .pagination-button {
+  color: #f5f5f5;
+}
+
+body.dark .pagination-button:disabled {
+  color: #666;
+}
+
+    body.dark .pagination-button:hover {
+      background-color: #333;
+    }
+
+/* Modifica per i pulsanti di pagina in dark mode */
+body.dark .pagination-page {
+  color: #f5f5f5;
+}
+
+/* Modifica per il pulsante attivo in dark mode */
+body.dark .pagination-page.active {
+  background-color: #7c4dff; /* Un viola più chiaro e visibile */
+  color: #fff;
+}
+
+/* Per le ellissi in dark mode */
+body.dark .pagination-page.ellipsis {
+  color: #888;
+}
+
+    .pagination-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .pagination-button:disabled:hover {
+      background-color: transparent;
+    }
+
+    .pagination-current {
+      font-weight: 500;
+      padding: 0 8px;
+    }
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+}
+
+.pagination-pages {
+  display: flex;
+  align-items: center;
+}
+
+.pagination-page {
+  min-width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 2px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.pagination-page:hover {
+  background-color: #f0f0f0;
+}
+
+body.dark .pagination-page:hover {
+  background-color: #333;
+}
+
+.pagination-page.active {
+  background-color: #6200ee;
+  color: white;
+}
+
+    /* Responsive adjustments */
+    @media (max-width: 767px) {
+      .btn-menu {
+        display: block;
+      }
+      
+      .user-name {
+        display: none;
+      }
+      
+      .header {
+        padding: 12px;
+      }
+      
+      .card {
+        padding: 12px;
+      }
+      
+      .chart-container {
+        height: 200px;
+      }
+    }
+  </style>
+  <!-- Include Chart.js for better chart rendering -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+</head>
+
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <button id="menuToggle" class="btn btn-menu">☰</button>
+        <div class="header-logo">⚡</div>
+        <div class="header-title">Dashboard 2025</div>
+      </div>
+      <div class="header-actions">
+        <div class="user-profile" id="userProfileToggle">
+          <div class="user-avatar">👤</div>
+          <div class="user-name">Admin</div>
+          <div class="user-menu" id="userMenu">
+            <div class="user-menu-header">
+              <div class="user-menu-name">Admin</div>
+              <div class="user-menu-email">admin@esempio.com</div>
+            </div>
+            <a href="#" class="user-menu-item">
+              <div class="user-menu-icon">👤</div>
+              <div>Profilo</div>
+            </a>
+            <a href="#" class="user-menu-item">
+              <div class="user-menu-icon">⚙️</div>
+              <div>Impostazioni</div>
+            </a>
+            <a href="#" class="user-menu-item">
+              <div class="user-menu-icon">❓</div>
+              <div>Aiuto</div>
+            </a>
+            <div class="user-menu-divider"></div>
+            <a href="#" class="user-menu-item logout">
+              <div class="user-menu-icon">🚪</div>
+              <div>Logout</div>
+            </a>
+          </div>
+        </div>
+        <button id="darkModeToggle" class="btn">🌙</button>
+        <button class="btn">🔔</button>
+      </div>
+    </header>
+    
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <div class="header-logo">⚡</div>
+          <div class="header-title">Dashboard</div>
+        </div>
+        <button id="closeSidebar" class="btn">✕</button>
+      </div>
+      <div class="sidebar-menu">
+        <a href="#" class="sidebar-menu-item active">
+          <div class="sidebar-menu-icon">📊</div>
+          <div>Dashboard</div>
+        </a>
+        <a href="#" class="sidebar-menu-item">
+          <div class="sidebar-menu-icon">🛒</div>
+          <div>Ordini</div>
+        </a>
+        <a href="#" class="sidebar-menu-item">
+          <div class="sidebar-menu-icon">👥</div>
+          <div>Clienti</div>
+        </a>
+        <a href="#" class="sidebar-menu-item">
+          <div class="sidebar-menu-icon">📈</div>
+          <div>Rapporti</div>
+        </a>
+        <a href="#" class="sidebar-menu-item">
+          <div class="sidebar-menu-icon">⚙️</div>
+          <div>Impostazioni</div>
+        </a>
+      </div>
+    </div>
+    <div class="overlay" id="overlay"></div>
+    
+    <!-- Stats Cards -->
+    <div class="row">
+      <div class="col col-quarter">
+        <div class="card stats-card">
+          <div class="stats-info">
+            <div class="stats-title">Utenti attivi</div>
+            <div class="stats-value">2,835</div>
+          </div>
+          <div class="stats-icon blue">👥</div>
+        </div>
+      </div>
+      <div class="col col-quarter">
+        <div class="card stats-card">
+          <div class="stats-info">
+            <div class="stats-title">Prestazioni</div>
+            <div class="stats-value">98.7%</div>
+          </div>
+          <div class="stats-icon purple">📈</div>
+        </div>
+      </div>
+      <div class="col col-quarter">
+        <div class="card stats-card">
+          <div class="stats-info">
+            <div class="stats-title">Ricavi</div>
+            <div class="stats-value">€125,400</div>
+          </div>
+          <div class="stats-icon green">💰</div>
+        </div>
+      </div>
+      <div class="col col-quarter">
+        <div class="card stats-card">
+          <div class="stats-info">
+            <div class="stats-title">Nuovi clienti</div>
+            <div class="stats-value">+432</div>
+          </div>
+          <div class="stats-icon orange">🔥</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Charts -->
+    <div class="row">
+      <div class="col col-half">
+        <div class="card">
+          <div class="card-title">Performance Mensile</div>
+          <div class="chart-container">
+            <canvas id="performanceChart"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="col col-half">
+        <div class="card">
+          <div class="card-title">Distribuzione Dispositivi</div>
+          <div class="chart-container">
+            <canvas id="deviceChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- More Charts -->
+    <div class="row">
+      <div class="col col-half">
+        <div class="card">
+          <div class="card-title">Vendite Settimanali</div>
+          <div class="chart-container">
+            <canvas id="salesChart"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="col col-half">
+        <div class="card">
+          <div class="card-title">Visite per Regione</div>
+          <div class="chart-container">
+            <canvas id="regionChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Table with Search -->
+    <div class="row">
+      <div class="col col-full">
+        <div class="card">
+          <div class="card-title">Log di Sistema</div>
+          <div class="search-container">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="searchInput" class="search-input" placeholder="Cerca nei log...">
+          </div>
+          <div class="table-container">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Tipo</th>
+                  <th>Utente</th>
+                  <th>Azione</th>
+                  <th>Stato</th>
+                </tr>
+              </thead>
+              <tbody id="logTableBody">
+                <!-- Rows will be generated by JS -->
+              </tbody>
+            </table>
+          </div>
+        <div class="pagination">
+          <div class="pagination-info" id="paginationInfo">Visualizzazione 1-5 di 10 elementi</div>
+          <div class="pagination-controls">
+            <button id="prevPageBtn" class="pagination-button">◀</button>
+            <div id="paginationPages" class="pagination-pages">
+              <!-- Le pagine verranno generate dinamicamente qui -->
+            </div>
+            <button id="nextPageBtn" class="pagination-button">▶</button>
+          </div>
+      </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Dati per la dashboard
+
+    // Dati performance mensile
+    const performanceData = [
+      { name: 'Gen', value: 4000 },
+      { name: 'Feb', value: 3000 },
+      { name: 'Mar', value: 2000 },
+      { name: 'Apr', value: 2780 },
+      { name: 'Mag', value: 1890 },
+      { name: 'Giu', value: 2390 },
+      { name: 'Lug', value: 3490 },
+      { name: 'Ago', value: 2800 },
+      { name: 'Set', value: 3200 },
+      { name: 'Ott', value: 2950 },
+      { name: 'Nov', value: 3800 },
+      { name: 'Dic', value: 4100 }
+    ];
+
+    // Dati distribuzione dispositivi
+    const deviceData = [
+      { name: 'Desktop', value: 45, color: '#4F46E5' },
+      { name: 'Mobile', value: 35, color: '#7E22CE' },
+      { name: 'Tablet', value: 20, color: '#0EA5E9' }
+    ];
+
+    // Dati vendite settimanali
+    const salesData = [
+      { day: 'Lun', sales: 1200, returns: 190 },
+      { day: 'Mar', sales: 1300, returns: 130 },
+      { day: 'Mer', sales: 1400, returns: 150 },
+      { day: 'Gio', sales: 1100, returns: 170 },
+      { day: 'Ven', sales: 1700, returns: 120 },
+      { day: 'Sab', sales: 1600, returns: 130 },
+      { day: 'Dom', sales: 1000, returns: 90 }
+    ];
+
+    // Dati visite per regione
+    const regionData = [
+      { name: 'Lombardia', visits: 4200 },
+      { name: 'Lazio', visits: 3800 },
+      { name: 'Campania', visits: 3100 },
+      { name: 'Veneto', visits: 2900 },
+      { name: 'Emilia-R', visits: 2800 },
+      { name: 'Sicilia', visits: 2300 },
+      { name: 'Toscana', visits: 2200 }
+    ];
+
+    // Dati log sistema
+    const logData = [
+      { id: 1, timestamp: '2025-03-10 09:15:23', type: 'INFO', user: 'admin@example.com', action: 'Login', status: 'Success' },
+      { id: 2, timestamp: '2025-03-10 09:22:47', type: 'WARNING', user: 'user1@example.com', action: 'File Upload', status: 'Warning' },
+      { id: 3, timestamp: '2025-03-10 10:05:12', type: 'ERROR', user: 'system', action: 'Database Backup', status: 'Failed' },
+      { id: 4, timestamp: '2025-03-10 10:15:30', type: 'INFO', user: 'user2@example.com', action: 'Modifica Prodotto', status: 'Success' },
+      { id: 5, timestamp: '2025-03-10 10:30:45', type: 'INFO', user: 'user3@example.com', action: 'Nuovo Ordine', status: 'Success' },
+      { id: 6, timestamp: '2025-03-09 14:22:10', type: 'WARNING', user: 'admin@example.com', action: 'Aggiornamento Sistema', status: 'Warning' },
+      { id: 7, timestamp: '2025-03-09 15:45:35', type: 'INFO', user: 'user4@example.com', action: 'Download Report', status: 'Success' },
+      { id: 8, timestamp: '2025-03-09 16:30:20', type: 'ERROR', user: 'system', action: 'Sincronizzazione Dati', status: 'Failed' },
+      { id: 9, timestamp: '2025-03-08 09:05:15', type: 'INFO', user: 'user5@example.com', action: 'Login', status: 'Success' },
+      { id: 10, timestamp: '2025-03-08 11:20:40', type: 'INFO', user: 'user1@example.com', action: 'Modifica Profilo', status: 'Success' }
+    ];
+
+    //====================
+    // UI
+
+    // Elementi DOM
+    const body = document.body;
+    const darkModeToggle = document.getElementById('darkModeToggle');
+    const menuToggle = document.getElementById('menuToggle');
+    const closeSidebar = document.getElementById('closeSidebar');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('overlay');
+    const userProfileToggle = document.getElementById('userProfileToggle');
+    const userMenu = document.getElementById('userMenu');
+    const searchInput = document.getElementById('searchInput');
+    const logTableBody = document.getElementById('logTableBody');
+    const prevPageBtn = document.getElementById('prevPageBtn');
+    const nextPageBtn = document.getElementById('nextPageBtn');
+    const currentPageEl = document.getElementById('currentPage');
+    const paginationInfo = document.getElementById('paginationInfo');
+
+    // Stato
+    let darkMode = false;
+    let currentPage = 1;
+    const rowsPerPage = 5;
+    let filteredData = [...logData];
+
+// Toggle Dark Mode
+    function toggleDarkMode() {
+      darkMode = !darkMode;
+      
+      if (darkMode) {
+        body.classList.add('dark');
+        darkModeToggle.innerHTML = '☀️';
+      } else {
+        body.classList.remove('dark');
+        darkModeToggle.innerHTML = '🌙';
+      }
+      
+      // Salva preferenza
+      localStorage.setItem('darkMode', darkMode ? 'enabled' : 'disabled');
+      
+      // Aggiorna i grafici per il tema scuro/chiaro
+      updateChartTheme();
+    }
+
+    // Toggle Sidebar
+    function toggleSidebar() {
+      sidebar.classList.toggle('active');
+      overlay.classList.toggle('active');
+    }
+
+    // Toggle User Menu
+    function toggleUserMenu(event) {
+      event.stopPropagation();
+      userMenu.classList.toggle('active');
+    }
+
+    // Chiudi User Menu quando si clicca altrove
+    function closeUserMenu(event) {
+      if (userMenu.classList.contains('active') && 
+          !userProfileToggle.contains(event.target)) {
+        userMenu.classList.remove('active');
+      }
+    }
+
+    // Filtra i dati della tabella in base al termine di ricerca
+    function filterTableData() {
+      const searchTerm = searchInput.value.toLowerCase();
+      
+      filteredData = logData.filter(log => 
+        log.timestamp.toLowerCase().includes(searchTerm) ||
+        log.type.toLowerCase().includes(searchTerm) ||
+        log.user.toLowerCase().includes(searchTerm) ||
+        log.action.toLowerCase().includes(searchTerm) ||
+        log.status.toLowerCase().includes(searchTerm)
+      );
+      
+      // Reset alla prima pagina quando si filtra
+      currentPage = 1;
+      updatePagination();
+      renderLogTable();
+    }
+
+    // Aggiorna la paginazione
+    function updatePagination() {
+      const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+      currentPageEl.textContent = currentPage;
+      
+      // Aggiorna info paginazione
+      const start = (currentPage - 1) * rowsPerPage + 1;
+      const end = Math.min(currentPage * rowsPerPage, filteredData.length);
+      paginationInfo.textContent = `Visualizzazione ${start}-${end} di ${filteredData.length} elementi`;
+      
+      // Abilita/disabilita pulsanti di navigazione
+      prevPageBtn.disabled = currentPage === 1;
+      nextPageBtn.disabled = currentPage === totalPages || totalPages === 0;
+    }
+
+    // Pagina precedente
+    function goToPrevPage() {
+      if (currentPage > 1) {
+        currentPage--;
+        updatePagination();
+        renderLogTable();
+      }
+    }
+
+    // Pagina successiva
+    function goToNextPage() {
+      const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+      if (currentPage < totalPages) {
+        currentPage++;
+        updatePagination();
+        renderLogTable();
+      }
+    }
+
+    // Crea badge di stato
+    function createStatusBadge(status) {
+      const badge = document.createElement('span');
+      badge.className = 'badge';
+      
+      switch (status.toLowerCase()) {
+        case 'success':
+          badge.classList.add('badge-success');
+          badge.textContent = 'Successo';
+          break;
+        case 'warning':
+          badge.classList.add('badge-warning');
+          badge.textContent = 'Attenzione';
+          break;
+        case 'failed':
+          badge.classList.add('badge-error');
+          badge.textContent = 'Fallito';
+          break;
+        default:
+          badge.classList.add('badge-info');
+          badge.textContent = status;
+      }
+      
+      return badge;
+    }
+
+    // Renderizza tabella log
+    function renderLogTable() {
+      // Svuota la tabella
+      logTableBody.innerHTML = '';
+      
+      // Calcola l'indice degli elementi da visualizzare
+      const startIndex = (currentPage - 1) * rowsPerPage;
+      const endIndex = Math.min(startIndex + rowsPerPage, filteredData.length);
+      const currentRows = filteredData.slice(startIndex, endIndex);
+      
+      // Aggiungi righe
+      currentRows.forEach(log => {
+        const row = document.createElement('tr');
+        
+        // Timestamp
+        const timestampCell = document.createElement('td');
+        timestampCell.textContent = log.timestamp;
+        row.appendChild(timestampCell);
+        
+        // Tipo
+        const typeCell = document.createElement('td');
+        typeCell.textContent = log.type;
+        row.appendChild(typeCell);
+        
+        // Utente
+        const userCell = document.createElement('td');
+        userCell.textContent = log.user;
+        row.appendChild(userCell);
+        
+        // Azione
+        const actionCell = document.createElement('td');
+        actionCell.textContent = log.action;
+        row.appendChild(actionCell);
+        
+        // Stato
+        const statusCell = document.createElement('td');
+        statusCell.appendChild(createStatusBadge(log.status));
+        row.appendChild(statusCell);
+        
+        logTableBody.appendChild(row);
+      });
+    }
+
+    // Inizializza e renderizza i grafici con Chart.js
+    function initCharts() {
+      // Performance Chart (Line Chart)
+      const performanceChartCtx = document.getElementById('performanceChart').getContext('2d');
+      const performanceChart = new Chart(performanceChartCtx, {
+        type: 'line',
+        data: {
+          labels: performanceData.map(d => d.name),
+          datasets: [{
+            label: 'Performance',
+            data: performanceData.map(d => d.value),
+            borderColor: '#6200ee',
+            backgroundColor: 'rgba(98, 0, 238, 0.1)',
+            tension: 0.4,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+      
+      // Device Chart (Donut Chart)
+      const deviceChartCtx = document.getElementById('deviceChart').getContext('2d');
+      const deviceChart = new Chart(deviceChartCtx, {
+        type: 'doughnut',
+        data: {
+          labels: deviceData.map(d => d.name),
+          datasets: [{
+            data: deviceData.map(d => d.value),
+            backgroundColor: deviceData.map(d => d.color),
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '60%'
+        }
+      });
+      
+      // Sales Chart (Bar Chart)
+      const salesChartCtx = document.getElementById('salesChart').getContext('2d');
+      const salesChart = new Chart(salesChartCtx, {
+        type: 'bar',
+        data: {
+          labels: salesData.map(d => d.day),
+          datasets: [
+            {
+              label: 'Vendite',
+              data: salesData.map(d => d.sales),
+              backgroundColor: '#3b82f6'
+            },
+            {
+              label: 'Resi',
+              data: salesData.map(d => d.returns),
+              backgroundColor: '#ef4444'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+      
+      // Region Chart (Bar Chart)
+      const regionChartCtx = document.getElementById('regionChart').getContext('2d');
+      const regionChart = new Chart(regionChartCtx, {
+        type: 'bar',
+        data: {
+          labels: regionData.map(d => d.name),
+          datasets: [{
+            label: 'Visite',
+            data: regionData.map(d => d.visits),
+            backgroundColor: '#8884d8'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+      
+      // Salva i riferimenti ai grafici per poterli aggiornare con il tema scuro/chiaro
+      window.dashboardCharts = {
+        performanceChart,
+        deviceChart,
+        salesChart,
+        regionChart
+      };
+    }
+
+    // Aggiorna i grafici in base al tema (scuro/chiaro)
+    function updateChartTheme() {
+      if (!window.dashboardCharts) return;
+      
+      const textColor = darkMode ? '#f5f5f5' : '#333';
+      const gridColor = darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+      
+      // Aggiorna le opzioni per tutti i grafici
+      Object.values(window.dashboardCharts).forEach(chart => {
+        if (chart.options.scales) {
+          // Aggiorna colori per grafici con assi
+          if (chart.options.scales.x) {
+            chart.options.scales.x.ticks = { color: textColor };
+            chart.options.scales.x.grid = { color: gridColor };
+          }
+          
+          if (chart.options.scales.y) {
+            chart.options.scales.y.ticks = { color: textColor };
+            chart.options.scales.y.grid = { color: gridColor };
+          }
+        }
+        
+        // Aggiorna opzioni della legenda
+        if (chart.options.plugins && chart.options.plugins.legend) {
+          chart.options.plugins.legend.labels = { color: textColor };
+        }
+        
+        chart.update();
+      });
+    }
+
+    // Event Listeners
+    darkModeToggle.addEventListener('click', toggleDarkMode);
+    menuToggle.addEventListener('click', toggleSidebar);
+    closeSidebar.addEventListener('click', toggleSidebar);
+    overlay.addEventListener('click', toggleSidebar);
+    userProfileToggle.addEventListener('click', toggleUserMenu);
+    document.addEventListener('click', closeUserMenu);
+    searchInput.addEventListener('input', filterTableData);
+    prevPageBtn.addEventListener('click', goToPrevPage);
+    nextPageBtn.addEventListener('click', goToNextPage);
+
+    // Inizializzazione
+    document.addEventListener('DOMContentLoaded', () => {
+      // Carica preferenza Dark Mode all'avvio
+      const savedDarkMode = localStorage.getItem('darkMode');
+      
+      if (savedDarkMode === 'enabled') {
+        darkMode = true;
+        body.classList.add('dark');
+        darkModeToggle.innerHTML = '☀️';
+      }
+      
+      // Inizializza i grafici
+      initCharts();
+      
+      // Aggiorna il tema dei grafici
+      updateChartTheme();
+      
+      // Inizializza la tabella e la paginazione
+      updatePagination();
+      renderLogTable();
+    });
+
+// Aggiungi questo agli elementi DOM esistenti
+const paginationPages = document.getElementById('paginationPages');
+
+// Aggiorna questa funzione
+function updatePagination() {
+  const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+  
+  // Aggiorna info paginazione
+  const start = (currentPage - 1) * rowsPerPage + 1;
+  const end = Math.min(currentPage * rowsPerPage, filteredData.length);
+  paginationInfo.textContent = `Visualizzazione ${start}-${end} di ${filteredData.length} elementi`;
+  
+  // Abilita/disabilita pulsanti di navigazione
+  prevPageBtn.disabled = currentPage === 1;
+  nextPageBtn.disabled = currentPage === totalPages || totalPages === 0;
+  
+  // Genera i pulsanti delle pagine
+  renderPaginationPages(totalPages);
+}
+
+// Aggiungi questa nuova funzione
+function renderPaginationPages(totalPages) {
+  paginationPages.innerHTML = '';
+  
+  // Determina quali numeri di pagina mostrare
+  let startPage = Math.max(1, currentPage - 2);
+  let endPage = Math.min(totalPages, startPage + 4);
+  
+  // Aggiusta se siamo vicini alla fine
+  if (endPage - startPage < 4 && startPage > 1) {
+    startPage = Math.max(1, endPage - 4);
+  }
+  
+  // Aggiungi la prima pagina e '...' se necessario
+  if (startPage > 1) {
+    addPageButton(1);
+    if (startPage > 2) {
+      addEllipsis();
+    }
+  }
+  
+  // Aggiungi le pagine intermedie
+  for (let i = startPage; i <= endPage; i++) {
+    addPageButton(i);
+  }
+  
+  // Aggiungi l'ultima pagina e '...' se necessario
+  if (endPage < totalPages) {
+    if (endPage < totalPages - 1) {
+      addEllipsis();
+    }
+    addPageButton(totalPages);
+  }
+}
+
+// Aggiungi questa funzione helper
+function addPageButton(pageNum) {
+  const pageButton = document.createElement('div');
+  pageButton.className = 'pagination-page';
+  if (pageNum === currentPage) {
+    pageButton.classList.add('active');
+  }
+  pageButton.textContent = pageNum;
+  pageButton.addEventListener('click', () => {
+    if (pageNum !== currentPage) {
+      currentPage = pageNum;
+      updatePagination();
+      renderLogTable();
+    }
+  });
+  paginationPages.appendChild(pageButton);
+}
+
+// Aggiungi questa funzione helper
+function addEllipsis() {
+  const ellipsis = document.createElement('div');
+  ellipsis.className = 'pagination-page';
+  ellipsis.textContent = '...';
+  ellipsis.style.cursor = 'default';
+  paginationPages.appendChild(ellipsis);
+}
+
+  </script>
+</body>
+</html>
