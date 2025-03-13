@@ -1258,6 +1258,56 @@
 			font-size: 13px;
 			opacity: 0.6;
 		}
+		/* Stile per l'indicatore di typing */
+		.typing-indicator {
+			padding: 8px 16px;
+			display: flex;
+			align-items: center;
+			margin-bottom: 8px;
+			color: var(--text-color);
+			opacity: 0.7;
+		}
+		
+		.typing-bubble {
+			display: flex;
+			align-items: center;
+			margin-right: 8px;
+		}
+		
+		.dot {
+			height: 8px;
+			width: 8px;
+			border-radius: 50%;
+			background-color: var(--text-color);
+			margin-right: 4px;
+			opacity: 0.7;
+			animation: typingAnimation 1.5s infinite ease-in-out;
+		}
+		
+		.dot:nth-child(1) {
+			animation-delay: 0s;
+		}
+		
+		.dot:nth-child(2) {
+			animation-delay: 0.3s;
+		}
+		
+		.dot:nth-child(3) {
+			animation-delay: 0.6s;
+		}
+		
+		@keyframes typingAnimation {
+			0% {
+				transform: translateY(0);
+			}
+			30% {
+				transform: translateY(-4px);
+			}
+			60% {
+				transform: translateY(0);
+			}
+		}
+
 	</style>
 </head>
 
@@ -1397,6 +1447,15 @@
 			<div class="scroll-bottom-btn" id="scrollBottomBtn">
 				<i class="fas fa-chevron-down"></i>
 				<div class="new-messages-badge" id="newMessagesBadge" style="display: none;">0</div>
+			</div>
+
+			<div class="typing-indicator" id="typingIndicator" style="display: none;">
+				<div class="typing-bubble">
+					<div class="dot"></div>
+					<div class="dot"></div>
+					<div class="dot"></div>
+				</div>
+				<span id="typingText">Someone is typing...</span>
 			</div>
 
 			<div class="input-area">
@@ -3111,7 +3170,7 @@
 			const chatContainer = document.getElementById('chatMessages');
 			// Check if we're at the bottom before the new message
 			const isAtBottom = chatContainer.scrollHeight - chatContainer.clientHeight <= chatContainer.scrollTop + 20;
-			
+
 			// Check if we need to add a new date divider
 			const lastMessage = displayedMessages[displayedMessages.length - 2];
 			if (lastMessage) {
@@ -3156,6 +3215,40 @@
 			if (user) {
 				// Show/hide typing indicator
 				// You can implement this UI element
+			}
+		});
+
+		// Aggiungi questo codice nella sezione degli eventi socket.io
+		socket.on('modelInference', (data) => {
+			console.log('Model inference event:', data);
+			const typingIndicator = document.getElementById('typingIndicator');
+			const typingText = document.getElementById('typingText');
+			
+			if (data.status === 'started') {
+				// Trova il nome dell'utente
+				let userName = 'Someone';
+				if (data.userId) {
+					const user = users.find(u => u.id == data.userId);
+					if (user) {
+						userName = user.name;
+					}
+				}
+				
+				// Mostra l'indicatore di typing
+				typingText.textContent = `${userName} is typing...`;
+				typingIndicator.style.display = 'flex';
+				
+				// Assicurati che sia visibile se l'utente è al fondo della chat
+				const chatContainer = document.getElementById('chatMessages');
+				const isAtBottom = (chatContainer.scrollHeight - chatContainer.clientHeight) <= (chatContainer.scrollTop + 20);
+				if (isAtBottom) {
+					requestAnimationFrame(() => {
+						scrollToBottom();
+					});
+				}
+			} else if (data.status === 'completed') {
+				// Nascondi l'indicatore di typing
+				typingIndicator.style.display = 'none';
 			}
 		});
 
