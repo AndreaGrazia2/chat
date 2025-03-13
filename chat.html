@@ -2422,6 +2422,11 @@
 				return;
 			}
 			const chatContainer = document.getElementById('chatMessages');
+			
+			// Forza un reflow del DOM per assicurare che scrollHeight sia aggiornato
+			// eslint-disable-next-line no-unused-expressions
+			chatContainer.scrollHeight;
+			
 			chatContainer.scrollTo({
 				top: chatContainer.scrollHeight,
 				behavior: smooth ? 'smooth' : 'auto'
@@ -3104,7 +3109,9 @@
 
 			// Get the current chat container
 			const chatContainer = document.getElementById('chatMessages');
-
+			// Check if we're at the bottom before the new message
+			const isAtBottom = chatContainer.scrollHeight - chatContainer.clientHeight <= chatContainer.scrollTop + 20;
+			
 			// Check if we need to add a new date divider
 			const lastMessage = displayedMessages[displayedMessages.length - 2];
 			if (lastMessage) {
@@ -3122,12 +3129,10 @@
 			const messageEl = createMessageElement(message);
 			chatContainer.appendChild(messageEl);
 
-			// Check if we're at the bottom before the new message
-			const isAtBottom = chatContainer.scrollHeight - chatContainer.clientHeight <= chatContainer.scrollTop + 20;
-
 			if (isAtBottom) {
-				// Scroll to the new message
-				scrollToBottom();
+				requestAnimationFrame(() => {
+					scrollToBottom();
+				});
 			} else {
 				// Update unread count if not at bottom
 				unreadMessages++;

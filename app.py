@@ -1,6 +1,7 @@
 import os
 import json
 import random
+import requests
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_socketio import SocketIO, emit, join_room, leave_room
@@ -12,6 +13,37 @@ load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev_key')
 socketio = SocketIO(app, cors_allowed_origins="*")
+
+# OpenRouter API configuration
+OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
+OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
+
+# Function to call OpenRouter API
+def get_llm_response(message_text):
+    if not OPENROUTER_API_KEY:
+        return "API key not configured. Please set OPENROUTER_API_KEY in your environment."
+    
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    data = {
+        "model": "google/gemma-3-27b-it:free",  # You can change this to any model supported by OpenRouter
+        "messages": [
+            {"role": "system", "content": "You are a helpful assistant in a chat application."},
+            {"role": "user", "content": message_text}
+        ]
+    }
+    
+    try:
+        response = requests.post(OPENROUTER_API_URL, headers=headers, json=data)
+        response.raise_for_status()
+        result = response.json()
+        return result['choices'][0]['message']['content']
+    except Exception as e:
+        print(f"Error calling OpenRouter API: {e}")
+        return f"Sorry, I couldn't generate a response. Error: {str(e)}"
 
 # In-memory data store (replace with a database in production)
 users = [
@@ -356,7 +388,6 @@ def handle_channel_message(data):
     room = f"channel:{channel_name}"
     emit('newMessage', new_message, room=room)
 
-
 @socketio.on('directMessage')
 def handle_direct_message(data):
     user_id = data.get('userId')
@@ -405,56 +436,41 @@ def handle_direct_message(data):
     # Send to recipient
     emit('newMessage', new_message, room=dm_key)
 
-    # After a short delay, send a simulated response from the other user
-    if random.random() < 0.7:  # 70% chance to auto-reply
-        socketio.sleep(random.randint(1, 5))  # Wait 1-5 seconds
+    # Get response from LLM
+    message_id_counter += 1
+    recipient = next((u for u in users if str(u["id"]) == str(user_id)), None)
 
-        message_id_counter += 1
-        recipient = next(
-            (u for u in users if str(u["id"]) == str(user_id)), None)
+    if recipient:
+        # Emit model inference started event
+        emit('modelInference', {'userId': user_id, 'status': 'started'}, room=dm_key)
+        
+        # Get response from OpenRouter API
+        llm_response = get_llm_response(message_data.get('text', ''))
+        
+        # Calculate a more natural typing delay based on response length
+        # Minimum 1 second, maximum 3 seconds
+        typing_delay = min(3, max(1, 0.05 * len(llm_response)))
+        socketio.sleep(typing_delay)
+        
+        # Emit model inference completed event
+        emit('modelInference', {'userId': user_id, 'status': 'completed'}, room=dm_key)
+        
+        # Create response message
+        response = {
+            "id": message_id_counter,
+            "user": recipient,
+            "text": llm_response,
+            "timestamp": datetime.now().isoformat(),
+            "isOwn": False,
+            "type": "normal",
+            "fileData": None,
+            "forwardedFrom": None,
+            "replyTo": new_message if random.random() < 0.3 else None  # 30% chance to be a reply
+        }
 
-        if recipient:
-            # Determine if this will be a reply to the user's message
-            is_reply = random.random() < 0.3  # 30% chance to be a reply
-
-            # Choose message type (normal, file, forwarded)
-            message_type = "normal"
-            file_data = None
-            forwarded_from = None
-            reply_obj = None
-
-            rand_val = random.random()
-            if rand_val < 0.1:  # 10% chance for file
-                message_type = "file"
-                file_data = random.choice(file_types)
-            elif rand_val < 0.2:  # 10% chance for forwarded
-                message_type = "forwarded"
-                forward_user_id = random.randint(1, len(users)-1)
-                # Don't forward from the same user
-                while forward_user_id == int(user_id):
-                    forward_user_id = random.randint(1, len(users)-1)
-                forwarded_from = users[forward_user_id]
-
-            if is_reply:
-                reply_obj = new_message
-
-            # Create response message
-            response = {
-                "id": message_id_counter,
-                "user": recipient,
-                "text": random.choice(message_texts),
-                "timestamp": datetime.now().isoformat(),
-                "isOwn": False,
-                "type": message_type,
-                "fileData": file_data,
-                "forwardedFrom": forwarded_from,
-                "replyTo": reply_obj
-            }
-
-            # Store and send the message
-            messages["directMessages"][dm_key].append(response)
-            emit('newMessage', response, room=dm_key)
-
+        # Store and send the message
+        messages["directMessages"][dm_key].append(response)
+        emit('newMessage', response, room=dm_key)
 
 @socketio.on('typing')
 def handle_typing(data):
