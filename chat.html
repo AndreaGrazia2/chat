@@ -1821,12 +1821,12 @@
 						'<span class="search-result-match">$1</span>'
 					);
 					resultItem.innerHTML = `
-        <div class="search-result-header">
-          <div class="search-result-name">${result.message.user.name}</div>
-          <div class="search-result-date">${formatTime(result.message.timestamp)}</div>
-        </div>
-        <div class="search-result-text">${highlightedText}</div>
-      `;
+		<div class="search-result-header">
+		  <div class="search-result-name">${result.message.user.name}</div>
+		  <div class="search-result-date">${formatTime(result.message.timestamp)}</div>
+		</div>
+		<div class="search-result-text">${highlightedText}</div>
+	  `;
 					// Click handler to navigate to the message
 					resultItem.addEventListener('click', () => {
 						currentSearchIndex = index;
@@ -1867,12 +1867,12 @@
 						'<span class="search-result-match">$1</span>'
 					);
 					resultItem.innerHTML = `
-        <div class="search-result-header">
-          <div class="search-result-name">${result.message.user.name}</div>
-          <div class="search-result-date">${formatTime(result.message.timestamp)}</div>
-        </div>
-        <div class="search-result-text">${highlightedText}</div>
-      `;
+		<div class="search-result-header">
+		  <div class="search-result-name">${result.message.user.name}</div>
+		  <div class="search-result-date">${formatTime(result.message.timestamp)}</div>
+		</div>
+		<div class="search-result-text">${highlightedText}</div>
+	  `;
 					// Click handler to navigate to the message
 					resultItem.addEventListener('click', () => {
 						currentSearchIndex = index;
@@ -2186,63 +2186,63 @@
 					quoteIcon = `<i class="fas fa-share"></i>`;
 				}
 				quotedHtml = `
-      <div class="quoted-message">
-        <div class="quoted-user">${quoteIcon} ${message.replyTo.user.name}</div>
-        <div class="quoted-text">${message.replyTo.text}</div>
-      </div>
-    `;
+	  <div class="quoted-message">
+		<div class="quoted-user">${quoteIcon} ${message.replyTo.user.name}</div>
+		<div class="quoted-text">${message.replyTo.text}</div>
+	  </div>
+	`;
 			}
 			// Handle forwarded message display
 			let forwardedHtml = '';
 			if (message.type === 'forwarded' && message.forwardedFrom) {
 				forwardedHtml = `
-      <div class="forwarded-header">
-        <i class="fas fa-share"></i> Forwarded from ${message.forwardedFrom.name}
-      </div>
-    `;
+	  <div class="forwarded-header">
+		<i class="fas fa-share"></i> Forwarded from ${message.forwardedFrom.name}
+	  </div>
+	`;
 			}
 			// Handle file attachment display
 			let fileHtml = '';
 			if (message.type === 'file' && message.fileData) {
 				const file = message.fileData;
 				fileHtml = `
-      <div class="file-attachment">
-        <div class="file-icon">
-          <i class="fas ${file.icon}"></i>
-        </div>
-        <div class="file-info">
-          <div class="file-name">${file.name}.${file.ext}</div>
-          <div class="file-size">${file.size}</div>
-        </div>
-        <div class="file-download">
-          <i class="fas fa-download"></i>
-        </div>
-      </div>
-    `;
+	  <div class="file-attachment">
+		<div class="file-icon">
+		  <i class="fas ${file.icon}"></i>
+		</div>
+		<div class="file-info">
+		  <div class="file-name">${file.name}.${file.ext}</div>
+		  <div class="file-size">${file.size}</div>
+		</div>
+		<div class="file-download">
+		  <i class="fas fa-download"></i>
+		</div>
+	  </div>
+	`;
 			}
 			// Add check marks for own messages
 			const statusIndicator = message.isOwn ? '<i class="fas fa-check"></i>' : '';
 			// Process text to convert URLs to links
 			const processedText = linkifyText(message.text);
 			messageEl.innerHTML = `
-    <div class="avatar">
-      <img src="${message.user.avatar}" alt="${message.user.name}">
-    </div>
-    <div class="message-content">
-      <div class="message-header">
-        <div class="user-name">${message.user.name}</div>
-      </div>
-      <div class="message-bubble ${message.type === 'forwarded' ? 'forwarded-message' : ''}">
-        ${forwardedHtml}
-        ${quotedHtml}
-        <div class="message-text">${processedText}</div>
-        ${fileHtml}
-      </div>
-      <div class="message-actions">
-        <button class="reply-button" data-message-id="${message.id}">↩️ Reply</button>
-        <button class="menu-button" data-message-id="${message.id}">⋮</button>
-      </div>
-    </div>
+	<div class="avatar">
+	  <img src="${message.user.avatar}" alt="${message.user.name}">
+	</div>
+	<div class="message-content">
+	  <div class="message-header">
+		<div class="user-name">${message.user.name}</div>
+	  </div>
+	  <div class="message-bubble ${message.type === 'forwarded' ? 'forwarded-message' : ''}">
+		${forwardedHtml}
+		${quotedHtml}
+		<div class="message-text">${processedText}</div>
+		${fileHtml}
+	  </div>
+	  <div class="message-actions">
+		<button class="reply-button" data-message-id="${message.id}">↩️ Reply</button>
+		<button class="menu-button" data-message-id="${message.id}">⋮</button>
+	  </div>
+	</div>
   `;
 			// Creiamo il timestamp separato
 			const timestamp = document.createElement('div');
@@ -2586,11 +2586,11 @@
 			const editArea = document.createElement('div');
 			editArea.className = 'edit-area';
 			editArea.innerHTML = `
-    <textarea class="edit-input" style="width: 100%; min-height: 40px; padding: 4px; border: 1px solid var(--primary); border-radius: 4px; resize: vertical; background: var(--bg-main); color: var(--text-color);">${originalText}</textarea>
-    <div class="edit-actions" style="display: flex; margin-top: 6px; gap: 8px;">
-      <button class="save-edit" style="background: var(--primary); color: white; border: none; padding: 2px 8px; border-radius: 4px; cursor: pointer;">Save</button>
-      <button class="cancel-edit" style="background: none; border: 1px solid var(--border-color); padding: 2px 8px; border-radius: 4px; cursor: pointer; color: var(--text-color);">Cancel</button>
-    </div>
+	<textarea class="edit-input" style="width: 100%; min-height: 40px; padding: 4px; border: 1px solid var(--primary); border-radius: 4px; resize: vertical; background: var(--bg-main); color: var(--text-color);">${originalText}</textarea>
+	<div class="edit-actions" style="display: flex; margin-top: 6px; gap: 8px;">
+	  <button class="save-edit" style="background: var(--primary); color: white; border: none; padding: 2px 8px; border-radius: 4px; cursor: pointer;">Save</button>
+	  <button class="cancel-edit" style="background: none; border: 1px solid var(--border-color); padding: 2px 8px; border-radius: 4px; cursor: pointer; color: var(--text-color);">Cancel</button>
+	</div>
   `;
 			// Clear the text element and add our edit area
 			textEl.innerHTML = '';
@@ -2733,8 +2733,8 @@
 			const replyPreview = document.createElement('div');
 			replyPreview.className = 'reply-preview';
 			replyPreview.innerHTML = `
-    <div class="reply-text">${typeIcon} Replying to ${message.user.name}: "${message.text.substring(0, 30)}${message.text.length > 30 ? '...' : ''}"</div>
-    <button class="cancel-reply">✕</button>
+	<div class="reply-text">${typeIcon} Replying to ${message.user.name}: "${message.text.substring(0, 30)}${message.text.length > 30 ? '...' : ''}"</div>
+	<button class="cancel-reply">✕</button>
   `;
 			const inputArea = document.querySelector('.input-area');
 			inputArea.insertBefore(replyPreview, document.querySelector('.message-input-container'));
@@ -2979,6 +2979,161 @@
 			});
 		});
 	</script>
+	<!-- Add this before the closing </body> tag -->
+<script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+<script>
+  // Socket.io connection
+  const socket = io();
+  
+  // Socket event listeners
+  socket.on('connect', () => {
+	console.log('Connected to server');
+	
+	// Join the default channel
+	socket.emit('joinChannel', 'general');
+  });
+  
+  socket.on('initialData', (data) => {
+	console.log('Received initial data:', data);
+	// You can use this data to populate users and channels
+  });
+  
+  socket.on('messageHistory', (messages) => {
+	console.log('Received message history:', messages);
+	// You can use this to populate the chat history
+  });
+  
+  socket.on('newMessage', (message) => {
+	console.log('New message received:', message);
+	// Add the new message to the chat
+  });
+  
+  socket.on('userTyping', (data) => {
+	console.log('User typing:', data);
+	// Show typing indicator
+  });
+  
+  socket.on('userStatusUpdate', (data) => {
+	console.log('User status update:', data);
+	// Update user status in the UI
+  });
+  
+  // Modify the sendMessage function to use socket.io
+  function sendMessage() {
+	const input = document.getElementById('messageInput');
+	const text = input.value.trim();
+	if (text) {
+	  // Create message object
+	  const newMessage = {
+		user: users[0], // 'You'
+		text: text,
+		isOwn: true,
+		replyTo: replyingTo,
+		type: 'normal'
+	  };
+	  
+	  // Emit to server based on current chat type
+	  if (isDirectMessage && currentUser) {
+		socket.emit('directMessage', {
+		  userId: currentUser.id,
+		  message: newMessage
+		});
+	  } else {
+		socket.emit('channelMessage', {
+		  channelName: currentChannel,
+		  message: newMessage
+		});
+	  }
+	  
+	  // Clear input and reset reply state
+	  input.value = '';
+	  if (replyingTo) {
+		document.querySelector('.reply-preview')?.remove();
+		replyingTo = null;
+	  }
+	}
+  }
+  
+  // Modify setActiveChannel to use socket.io
+  function setActiveChannel(el, channel) {
+	// Update active state
+	document.querySelectorAll('.channel-item.active, .user-item.active').forEach(item => {
+	  item.classList.remove('active');
+	});
+	el.classList.add('active');
+	
+	// Update current channel
+	currentChannel = channel;
+	isDirectMessage = false;
+	currentUser = null;
+	document.getElementById('currentChannel').textContent = channel;
+	document.querySelector('.chat-title-hash').style.display = 'inline';
+	
+	// Update header info
+	updateChatHeaderInfo();
+	
+	// Close sidebar on mobile
+	if (window.innerWidth <= 768) {
+	  sidebarVisible = false;
+	  document.querySelector('.sidebar').classList.remove('show');
+	}
+	
+	// Join the channel via socket
+	socket.emit('joinChannel', channel);
+	
+	// Reset and wait for message history from server
+	const chatContainer = document.getElementById('chatMessages');
+	chatContainer.innerHTML = '';
+	displayedMessages = [];
+	messagesLoaded = 0;
+	unreadMessages = 0;
+	updateUnreadBadge();
+	
+	// Show loader
+	showLoader();
+  }
+  
+  // Modify setActiveUser to use socket.io
+  function setActiveUser(el, userName) {
+	// Update active state
+	document.querySelectorAll('.channel-item.active, .user-item.active').forEach(item => {
+	  item.classList.remove('active');
+	});
+	el.classList.add('active');
+	
+	// Update current channel
+	currentUser = users.find(user => user.name === userName);
+	isDirectMessage = true;
+	currentChannel = userName;
+	document.getElementById('currentChannel').textContent = userName;
+	document.querySelector('.chat-title-hash').style.display = 'none';
+	
+	// Update header info
+	updateChatHeaderInfo();
+	
+	// Close sidebar on mobile
+	if (window.innerWidth <= 768) {
+	  sidebarVisible = false;
+	  document.querySelector('.sidebar').classList.remove('show');
+	}
+	
+	// Join the direct message chat via socket
+	if (currentUser) {
+	  socket.emit('joinDirectMessage', currentUser.id);
+	}
+	
+	// Reset and wait for message history from server
+	const chatContainer = document.getElementById('chatMessages');
+	chatContainer.innerHTML = '';
+	displayedMessages = [];
+	messagesLoaded = 0;
+	unreadMessages = 0;
+	updateUnreadBadge();
+	
+	// Show loader
+	showLoader();
+  }
+</script>
 </body>
 
 </html>
