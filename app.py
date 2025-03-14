@@ -1,3 +1,6 @@
+import gevent.monkey
+gevent.monkey.patch_all()
+
 import os
 import json
 import random
@@ -47,68 +50,61 @@ def error_handler(e):
 
 # Function to call OpenRouter API
 def get_llm_response(message_text):
-    """Versione sicura che previene ricorsioni e gestisce tutti gli errori possibili"""
+    """Versione che usa subprocess per evitare problemi di ricorsione"""
     if not OPENROUTER_API_KEY:
         return "API key not configured. Please set OPENROUTER_API_KEY in your environment."
     
-    # Limita la dimensione dell'input per evitare problemi
-    safe_message = str(message_text)[:500] if message_text else ""
+    import subprocess
+    import tempfile
+    import json
+    import os
     
     try:
-        headers = {
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json"
-        }
-        
-        # Riduci la complessità dei dati
-        data = {
+        # Crea il payload JSON per l'API
+        payload = {
             "model": "google/gemma-3-27b-it:free",
             "messages": [
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": safe_message}
+                {"role": "system", "content": "You are a helpful assistant in a chat application."},
+                {"role": "user", "content": message_text}
             ]
         }
         
-        # Usa un timeout breve e non utilizzare json direttamente per evitare ricorsioni
-        raw_response = requests.post(
-            OPENROUTER_API_URL, 
-            headers=headers, 
-            data=json.dumps(data), 
-            timeout=10
-        )
+        # Salva il payload in un file temporaneo
+        with tempfile.NamedTemporaryFile(suffix='.json', mode='w+', delete=False) as f:
+            json.dump(payload, f)
+            payload_file = f.name
         
-        # Controlla manualmente il codice di stato
-        if raw_response.status_code != 200:
-            return f"Error: API returned status code {raw_response.status_code}"
+        # Comando curl per inviare la richiesta
+        cmd = [
+            'curl', '-s', '-X', 'POST',
+            '-H', f'Authorization: Bearer {OPENROUTER_API_KEY}',
+            '-H', 'Content-Type: application/json',
+            '-d', f'@{payload_file}',
+            OPENROUTER_API_URL
+        ]
         
-        # Analizza manualmente la risposta JSON
+        # Esegui curl in un processo separato
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        
+        # Elimina il file temporaneo
+        os.unlink(payload_file)
+        
+        # Verifica se ci sono errori
+        if result.returncode != 0:
+            return f"API call failed: {result.stderr}"
+        
+        # Analizza la risposta JSON
         try:
-            # Usa loads anziché l'oggetto response.json() per maggiore controllo
-            parsed = json.loads(raw_response.text)
-            choices = parsed.get('choices', [])
-            
-            if not choices:
-                return "API returned empty choices"
-                
-            first_choice = choices[0]
-            message = first_choice.get('message', {})
-            content = message.get('content', '')
-            
-            # Limita la dimensione dell'output
-            return content[:1000] if content else "Empty response from API"
-            
-        except json.JSONDecodeError:
-            return "Error: Could not parse API response as JSON"
-            
-    except requests.exceptions.Timeout:
-        return "API request timed out after 10 seconds"
-    except requests.exceptions.ConnectionError:
-        return "Error: Could not connect to API"
+            response_data = json.loads(result.stdout)
+            return response_data['choices'][0]['message']['content']
+        except (json.JSONDecodeError, KeyError, IndexError) as e:
+            return f"Error parsing API response: {str(e)}"
+        
+    except subprocess.TimeoutExpired:
+        return "API call timed out after 10 seconds"
     except Exception as e:
-        # Cattura qualsiasi altra eccezione senza propagarla
-        error_type = type(e).__name__
-        return f"Unexpected error: {error_type}"
-
+        return f"Error during API call: {str(e)}"
+		
 # In-memory data store (replace with a database in production)
 users = [
     {"id": 1, "name": "You", "avatar": "https://i.pravatar.cc/150?img=1", "status": "online"},
