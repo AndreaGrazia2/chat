@@ -143,17 +143,32 @@ function handleMessageHistory(history) {
 function handleNewMessage(message) {
     console.log('Nuovo messaggio ricevuto:', message);
 
-    // Se è un messaggio nostro che abbiamo già mostrato, non mostrarlo di nuovo
+    // Converti timestamp se necessario
+    if (typeof message.timestamp === 'string') {
+        message.timestamp = new Date(message.timestamp);
+    }
+
+    // Verifica se questo messaggio è un duplicato
+    let isDuplicate = false;
+    
+    // Se è un messaggio nostro o con nome utente "You", controlla se è un duplicato
     if (message.isOwn || (message.user && message.user.name === "You")) {
-        // Troviamo se abbiamo già questo messaggio o uno molto simile
         const recentMessages = displayedMessages.filter(m => {
-            return m.isOwn && 
-                   m.text === message.text && 
-                   (new Date() - new Date(m.timestamp) < 5000); // 5 secondi
+            // Verifica il testo del messaggio
+            const textMatch = m.text === message.text;
+            
+            // Verifica se il messaggio è recente (inviato negli ultimi 5 secondi)
+            const isRecent = new Date() - new Date(m.timestamp) < 5000;
+            
+            // Controlla se è di proprietà dell'utente
+            const isOwnMessage = m.isOwn;
+            
+            return isOwnMessage && textMatch && isRecent;
         });
         
         if (recentMessages.length > 0) {
-            // Aggiorniamo solo lo stato
+            // È un duplicato, aggiorniamo solo lo stato
+            isDuplicate = true;
             const existingMsg = recentMessages[0];
             const existingEl = document.querySelector(`.message-container[data-message-id="${existingMsg.id}"]`);
             
@@ -166,13 +181,12 @@ function handleNewMessage(message) {
                 }
                 existingMsg.status = 'sent';
             }
-            return; // Ignora messaggio duplicato
         }
     }
-
-    // Converti timestamp se necessario
-    if (typeof message.timestamp === 'string') {
-        message.timestamp = new Date(message.timestamp);
+    
+    // Se è un duplicato, interrompiamo qui l'esecuzione
+    if (isDuplicate) {
+        return;
     }
     
     // Salva posizione di scroll attuale
@@ -183,9 +197,6 @@ function handleNewMessage(message) {
     
     // Calcola se siamo vicini al fondo (entro 50px invece di 2px)
     const isNearBottom = (currentScrollHeight - clientHeight - currentScrollTop) <= 50;
-    
-    // Salva un riferimento alla funzione originale senza sovrascriverla
-    const originalScrollToBottom = window.scrollToBottom;
     
     // Aggiungi ai messaggi
     messages.push(message);
@@ -221,7 +232,7 @@ function handleNewMessage(message) {
     } else {
         // Se siamo vicini al fondo, scorriamo giù
         setTimeout(() => {
-            originalScrollToBottom(true);
+            scrollToBottom(true);
             
             // Nascondi l'indicatore di digitazione
             if (!message.isOwn) {

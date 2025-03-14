@@ -12,7 +12,10 @@ load_dotenv()
 
 app = Flask(__name__, static_folder='static')
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev_key')
-socketio = SocketIO(app, cors_allowed_origins="*")
+# Nella parte iniziale del file, dopo gli import
+from flask_socketio import SocketIO, emit, join_room, leave_room
+# Aggiungi questa riga
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
 
 # OpenRouter API configuration
 OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
@@ -509,6 +512,15 @@ def handle_status_change(data):
             break
 
 
+# Modifica la parte finale del file
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
-    socketio.run(app, host='0.0.0.0', port=port, debug=True)
+    
+    # In modalità sviluppo, usa il server integrato di Flask
+    if os.getenv('FLASK_ENV') == 'development':
+        socketio.run(app, host='0.0.0.0', port=port, debug=True)
+    else:
+        # In produzione, il server sarà gestito da Gunicorn
+        # Questo codice non verrà eseguito quando si usa Gunicorn
+        print("Per eseguire in produzione, usa: gunicorn -c gunicorn_config.py app:app")
+        socketio.run(app, host='0.0.0.0', port=port, debug=False)

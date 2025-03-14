@@ -7,10 +7,14 @@ services:
     repo: https://github.com/xbeat/chat
     branch: main
     autoDeploy: true    
-    buildCommand: pip install -r requirements.txt
-    startCommand: python app.py
+    buildCommand: pip install -r requirements.txt gunicorn gevent
+    startCommand: gunicorn --worker-class gevent --workers 1 --bind 0.0.0.0:$PORT app:app
     envVars:
       - key: ENV
         value: prod
+      - key: FLASK_ENV
+        value: production
+      - key: SECRET_KEY
+        sync: false
       - key: OPENROUTER_API_KEY
         sync: false
