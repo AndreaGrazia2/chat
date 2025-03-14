@@ -13,6 +13,13 @@ import time
 import sys
 sys.setrecursionlimit(1000)  # Imposta un limite di ricorsione sicura
 
+# All'inizio di app.py, dopo gli import
+try:
+    import geventwebsocket
+    print("gevent-websocket versione:", geventwebsocket.__version__)
+except ImportError:
+    print("ERRORE: gevent-websocket non è installato!")
+
 # Load environment variables
 load_dotenv()
 
@@ -104,7 +111,7 @@ def get_llm_response(message_text):
         return "API call timed out after 10 seconds"
     except Exception as e:
         return f"Error during API call: {str(e)}"
-		
+
 # In-memory data store (replace with a database in production)
 users = [
     {"id": 1, "name": "You", "avatar": "https://i.pravatar.cc/150?img=1", "status": "online"},
