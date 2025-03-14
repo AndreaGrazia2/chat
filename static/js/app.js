@@ -1307,13 +1307,31 @@ function sendMessage() {
         // Aggiungi immediatamente ai messaggi visualizzati
         displayedMessages.push(newMessage);
         
-        // Crea e aggiungi l'elemento al DOM
+        // Salva posizione di scroll attuale
         const chatContainer = document.getElementById('chatMessages');
+        const currentScrollTop = chatContainer.scrollTop;
+        const currentScrollHeight = chatContainer.scrollHeight;
+        const clientHeight = chatContainer.clientHeight;
+        
+        // Calcola se siamo "quasi" in fondo (entro 150px - circa 2 messaggi)
+        const isNearBottom = (currentScrollHeight - clientHeight - currentScrollTop) <= 150;
+        
+        // Crea e aggiungi l'elemento al DOM
         const messageEl = createMessageElement(newMessage);
         chatContainer.appendChild(messageEl);
         
-        // Scorri in basso
-        scrollToBottom();
+        // Scorri in basso se l'utente era vicino al fondo
+        if (isNearBottom) {
+            scrollToBottom();
+        } else {
+            // Altrimenti incrementa contatore messaggi non letti
+            unreadMessages++;
+            updateUnreadBadge();
+            
+            // Forza la visualizzazione del pulsante scrollBottom
+            const scrollBtn = document.getElementById('scrollBottomBtn');
+            scrollBtn.classList.add('visible');
+        }
         
         // Prepara dati per il server
         const messageData = {

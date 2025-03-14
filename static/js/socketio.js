@@ -140,18 +140,6 @@ function handleMessageHistory(history) {
  * Gestisce la ricezione di un nuovo messaggio
  * @param {Object} message - Oggetto messaggio
  */
-/**
- * Gestisce la ricezione di un nuovo messaggio
- * @param {Object} message - Oggetto messaggio
- */
-/**
- * Gestisce la ricezione di un nuovo messaggio
- * @param {Object} message - Oggetto messaggio
- */
-/**
- * Gestisce la ricezione di un nuovo messaggio
- * @param {Object} message - Oggetto messaggio
- */
 function handleNewMessage(message) {
     console.log('Nuovo messaggio ricevuto:', message);
 
@@ -193,8 +181,8 @@ function handleNewMessage(message) {
     const currentScrollHeight = chatContainer.scrollHeight;
     const clientHeight = chatContainer.clientHeight;
     
-    // Calcola rigorosamente se siamo in fondo (entro 2px)
-    const isExactlyAtBottom = (currentScrollHeight - clientHeight - currentScrollTop) <= 2;
+    // Calcola se siamo "quasi" in fondo (entro 150px - circa 2 messaggi)
+    const isNearBottom = (currentScrollHeight - clientHeight - currentScrollTop) <= 150;
     
     // BLOCCO TOTALE di gestione scroll automatica
     // Sovrascriviamo temporaneamente scrollToBottom per impedire scrolling automatico
@@ -226,7 +214,7 @@ function handleNewMessage(message) {
     chatContainer.appendChild(messageEl);
     
     // Aggiorna variabili globali
-    if (!isExactlyAtBottom) {
+    if (!isNearBottom) {
         unreadMessages++;
         const badge = document.getElementById('newMessagesBadge');
         badge.textContent = unreadMessages > 99 ? '99+' : unreadMessages;
@@ -244,8 +232,8 @@ function handleNewMessage(message) {
     setTimeout(() => {
         window.scrollToBottom = originalScrollToBottom;
         
-        // Se eravamo esattamente in fondo, ora possiamo scrollare
-        if (isExactlyAtBottom) {
+        // Se eravamo quasi in fondo, ora possiamo scrollare
+        if (isNearBottom) {
             originalScrollToBottom(true);
         }
         
