@@ -643,14 +643,16 @@ def rate_limit_llm_request(user_id):
     return False
 
 # Modifica la parte finale del file
+# Modifica la parte finale del file
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
     
     # In modalità sviluppo, usa il server integrato di Flask
     if os.getenv('FLASK_ENV') == 'development':
-        socketio.run(app, host='0.0.0.0', port=port, debug=True)
+        print(f"Avvio del server di sviluppo su http://0.0.0.0:{port}")
+        socketio.run(app, host='0.0.0.0', port=port, debug=True, use_reloader=False)
     else:
         # In produzione, il server sarà gestito da Gunicorn
         # Questo codice non verrà eseguito quando si usa Gunicorn
-        print("Per eseguire in produzione, usa: gunicorn -c gunicorn_config.py app:app")
+        print(f"Avvio del server in modalità produzione su http://0.0.0.0:{port}")
         socketio.run(app, host='0.0.0.0', port=port, debug=False)
