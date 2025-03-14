@@ -44,41 +44,54 @@ def error_handler(e):
     print(f"Socket.IO error: {str(e)}")
 
 # Function to call OpenRouter API
-
-
 def get_llm_response(message_text):
+    """Funzione sicura per chiamare l'API di OpenRouter evitando ricorsioni"""
+    # Limite di profondità per prevenire ricorsioni
+    import sys
+    old_recursion_limit = sys.getrecursionlimit()
+    sys.setrecursionlimit(100)  # Valore basso per bloccare ricorsioni profonde
+
     if not OPENROUTER_API_KEY:
         return "API key not configured. Please set OPENROUTER_API_KEY in your environment."
-
-    headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "Content-Type": "application/json"
-    }
-
-    data = {
-        # You can change this to any model supported by OpenRouter
-        "model": "google/gemma-3-27b-it:free",
-        "messages": [
-            {"role": "system",
-                "content": "You are a helpful assistant in a chat application."},
-            {"role": "user", "content": message_text}
-        ]
-    }
-
+    
     try:
-        # Add timeout parameter to prevent hanging requests
-        response = requests.post(
-            OPENROUTER_API_URL, headers=headers, json=data, timeout=10)
-        response.raise_for_status()
-        result = response.json()
-        return result['choices'][0]['message']['content']
+        headers = {
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        data = {
+            "model": "google/gemma-3-27b-it:free",
+            "messages": [
+                {"role": "system", "content": "You are a helpful assistant in a chat application."},
+                {"role": "user", "content": str(message_text)[:500]}  # Limita lunghezza input
+            ]
+        }
+        
+        # Usa un timeout molto breve
+        response = requests.post(OPENROUTER_API_URL, headers=headers, json=data, timeout=5)
+        
+        # Verifica codice di stato manualmente
+        if response.status_code != 200:
+            return f"API error: status code {response.status_code}"
+        
+        # Analizza risposta in modo sicuro
+        try:
+            result = response.json()
+            content = result.get('choices', [{}])[0].get('message', {}).get('content', '')
+            return str(content)[:1000]  # Limita lunghezza output
+        except:
+            return "Error parsing API response"
+            
     except requests.exceptions.Timeout:
-        print("OpenRouter API request timed out")
-        return "Sorry, the request timed out. Please try again later."
+        return "API request timed out."
+    except requests.exceptions.RequestException as e:
+        return f"API request error: {str(e)}"
     except Exception as e:
-        print(f"Error calling OpenRouter API: {e}")
-        return f"Sorry, I couldn't generate a response. Error: {str(e)}"
-
+        return f"Unexpected error: {str(e)}"
+    finally:
+        # Ripristina limite di ricorsione
+        sys.setrecursionlimit(old_recursion_limit)
 
 # In-memory data store (replace with a database in production)
 users = [
@@ -299,7 +312,7 @@ def handle_connect():
 
 
 @socketio.on('disconnect')
-def handle_disconnect():
+def handle_disconnect(sid=None):
     print('Client disconnected')
 
 
