@@ -469,7 +469,7 @@ def handle_direct_message(data):
             "type": "normal",
             "fileData": None,
             "forwardedFrom": None,
-            "replyTo": new_message if random.random() < 0.3 else None  # 30% chance to be a reply
+            "replyTo": new_message
         }
 
         # Store and send the message

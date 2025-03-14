@@ -140,6 +140,18 @@ function handleMessageHistory(history) {
  * Gestisce la ricezione di un nuovo messaggio
  * @param {Object} message - Oggetto messaggio
  */
+/**
+ * Gestisce la ricezione di un nuovo messaggio
+ * @param {Object} message - Oggetto messaggio
+ */
+/**
+ * Gestisce la ricezione di un nuovo messaggio
+ * @param {Object} message - Oggetto messaggio
+ */
+/**
+ * Gestisce la ricezione di un nuovo messaggio
+ * @param {Object} message - Oggetto messaggio
+ */
 function handleNewMessage(message) {
     console.log('Nuovo messaggio ricevuto:', message);
 
@@ -174,18 +186,27 @@ function handleNewMessage(message) {
     if (typeof message.timestamp === 'string') {
         message.timestamp = new Date(message.timestamp);
     }
-
+    
+    // Salva posizione di scroll attuale
+    const chatContainer = document.getElementById('chatMessages');
+    const currentScrollTop = chatContainer.scrollTop;
+    const currentScrollHeight = chatContainer.scrollHeight;
+    const clientHeight = chatContainer.clientHeight;
+    
+    // Calcola rigorosamente se siamo in fondo (entro 2px)
+    const isExactlyAtBottom = (currentScrollHeight - clientHeight - currentScrollTop) <= 2;
+    
+    // BLOCCO TOTALE di gestione scroll automatica
+    // Sovrascriviamo temporaneamente scrollToBottom per impedire scrolling automatico
+    const originalScrollToBottom = window.scrollToBottom;
+    window.scrollToBottom = function() {
+        console.log("Scrolling automatico bloccato");
+        return false;
+    };
+    
     // Aggiungi ai messaggi
     messages.push(message);
     displayedMessages.push(message);
-
-    // Determina con precisione se siamo a fondo pagina
-    const chatContainer = document.getElementById('chatMessages');
-    // Misurazione più precisa - usa una soglia minore (20px) per essere più sicuri
-    const isAtBottom = chatContainer.scrollHeight - chatContainer.clientHeight <= chatContainer.scrollTop + 20;
-    
-    // Salva questa informazione per usarla dopo l'aggiunta del messaggio
-    const wasAtBottom = isAtBottom;
 
     // Aggiungi separatori di data se necessario
     const lastMessage = displayedMessages[displayedMessages.length - 2];
@@ -203,25 +224,36 @@ function handleNewMessage(message) {
     // Crea e aggiungi elemento messaggio
     const messageEl = createMessageElement(message);
     chatContainer.appendChild(messageEl);
-
-    // Ora che abbiamo aggiunto il messaggio, gestisci lo scrolling
-    if (wasAtBottom) {
-        // L'utente era già in fondo, quindi scorri automaticamente
-        requestAnimationFrame(() => {
-            scrollToBottom(true); // Usa animazione
-        });
-    } else {
-        // L'utente stava leggendo messaggi precedenti, non scrollare
-        // Incrementa il contatore e mostra il pulsante con il pallino
+    
+    // Aggiorna variabili globali
+    if (!isExactlyAtBottom) {
         unreadMessages++;
-        updateUnreadBadge();
-        toggleScrollBottomButton(true); // Forza la visualizzazione del pulsante
+        const badge = document.getElementById('newMessagesBadge');
+        badge.textContent = unreadMessages > 99 ? '99+' : unreadMessages;
+        badge.style.display = 'flex';
+        
+        // Forza la visualizzazione del pulsante scrollBottom
+        const scrollBtn = document.getElementById('scrollBottomBtn');
+        scrollBtn.classList.add('visible');
     }
-
-    // Se il messaggio non è dell'utente, nascondi l'indicatore di typing
-    if (!message.isOwn) {
-        document.getElementById('typingIndicator').style.display = 'none';
-    }
+    
+    // Ripristina la posizione di scroll esatta
+    chatContainer.scrollTop = currentScrollTop;
+    
+    // Ripristina la funzione originale dopo breve tempo
+    setTimeout(() => {
+        window.scrollToBottom = originalScrollToBottom;
+        
+        // Se eravamo esattamente in fondo, ora possiamo scrollare
+        if (isExactlyAtBottom) {
+            originalScrollToBottom(true);
+        }
+        
+        // Nascondi l'indicatore di digitazione
+        if (!message.isOwn) {
+            document.getElementById('typingIndicator').style.display = 'none';
+        }
+    }, 300);
 }
 
 /**
