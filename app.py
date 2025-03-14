@@ -7,6 +7,8 @@ from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from dotenv import load_dotenv
 import time
+import sys
+sys.setrecursionlimit(1000)  # Imposta un limite di ricorsione sicura
 
 # Load environment variables
 load_dotenv()
@@ -45,14 +47,12 @@ def error_handler(e):
 
 # Function to call OpenRouter API
 def get_llm_response(message_text):
-    """Funzione sicura per chiamare l'API di OpenRouter evitando ricorsioni"""
-    # Limite di profondità per prevenire ricorsioni
-    import sys
-    old_recursion_limit = sys.getrecursionlimit()
-    sys.setrecursionlimit(100)  # Valore basso per bloccare ricorsioni profonde
-
+    """Versione sicura che previene ricorsioni e gestisce tutti gli errori possibili"""
     if not OPENROUTER_API_KEY:
         return "API key not configured. Please set OPENROUTER_API_KEY in your environment."
+    
+    # Limita la dimensione dell'input per evitare problemi
+    safe_message = str(message_text)[:500] if message_text else ""
     
     try:
         headers = {
@@ -60,38 +60,54 @@ def get_llm_response(message_text):
             "Content-Type": "application/json"
         }
         
+        # Riduci la complessità dei dati
         data = {
             "model": "google/gemma-3-27b-it:free",
             "messages": [
-                {"role": "system", "content": "You are a helpful assistant in a chat application."},
-                {"role": "user", "content": str(message_text)[:500]}  # Limita lunghezza input
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": safe_message}
             ]
         }
         
-        # Usa un timeout molto breve
-        response = requests.post(OPENROUTER_API_URL, headers=headers, json=data, timeout=5)
+        # Usa un timeout breve e non utilizzare json direttamente per evitare ricorsioni
+        raw_response = requests.post(
+            OPENROUTER_API_URL, 
+            headers=headers, 
+            data=json.dumps(data), 
+            timeout=10
+        )
         
-        # Verifica codice di stato manualmente
-        if response.status_code != 200:
-            return f"API error: status code {response.status_code}"
+        # Controlla manualmente il codice di stato
+        if raw_response.status_code != 200:
+            return f"Error: API returned status code {raw_response.status_code}"
         
-        # Analizza risposta in modo sicuro
+        # Analizza manualmente la risposta JSON
         try:
-            result = response.json()
-            content = result.get('choices', [{}])[0].get('message', {}).get('content', '')
-            return str(content)[:1000]  # Limita lunghezza output
-        except:
-            return "Error parsing API response"
+            # Usa loads anziché l'oggetto response.json() per maggiore controllo
+            parsed = json.loads(raw_response.text)
+            choices = parsed.get('choices', [])
+            
+            if not choices:
+                return "API returned empty choices"
+                
+            first_choice = choices[0]
+            message = first_choice.get('message', {})
+            content = message.get('content', '')
+            
+            # Limita la dimensione dell'output
+            return content[:1000] if content else "Empty response from API"
+            
+        except json.JSONDecodeError:
+            return "Error: Could not parse API response as JSON"
             
     except requests.exceptions.Timeout:
-        return "API request timed out."
-    except requests.exceptions.RequestException as e:
-        return f"API request error: {str(e)}"
+        return "API request timed out after 10 seconds"
+    except requests.exceptions.ConnectionError:
+        return "Error: Could not connect to API"
     except Exception as e:
-        return f"Unexpected error: {str(e)}"
-    finally:
-        # Ripristina limite di ricorsione
-        sys.setrecursionlimit(old_recursion_limit)
+        # Cattura qualsiasi altra eccezione senza propagarla
+        error_type = type(e).__name__
+        return f"Unexpected error: {error_type}"
 
 # In-memory data store (replace with a database in production)
 users = [
