@@ -350,7 +350,7 @@ function handleScroll() {
     
     // Verifica se siamo in cima
     const isAtTop = scrollTop <= 5;
-    const isAtBottom = scrollHeight - clientHeight <= scrollTop + 20;
+    const isAtBottom = scrollHeight - clientHeight <= scrollTop + 50;
     
     // Pull-to-refresh
     if (isAtTop && lastScrollPosition > scrollTop) {
@@ -1149,9 +1149,15 @@ function createMessageElement(message) {
         `;
     }
     
-    // Aggiungi spunte per messaggi propri
-    const statusIndicator = message.isOwn ? '<i class="fas fa-check"></i>' : '';
-    
+     // Aggiungi spunte per messaggi propri con stato
+    let statusIndicator = '';
+    if (message.isOwn) {
+        if (message.status === 'sending') {
+            statusIndicator = '<i class="fas fa-clock" style="opacity: 0.5;"></i>';
+        } else {
+            statusIndicator = '<i class="fas fa-check"></i>';
+        }
+    }   
     // Elabora testo per convertire URL in link
     const processedText = linkifyText(message.text);
     
@@ -1198,9 +1204,15 @@ function toggleScrollBottomButton(show) {
     
     if (show) {
         btn.classList.add('visible');
+        // Se ci sono messaggi non letti, mostra il pallino
+        if (unreadMessages > 0) {
+            const badge = document.getElementById('newMessagesBadge');
+            badge.textContent = unreadMessages > 99 ? '99+' : unreadMessages;
+            badge.style.display = 'flex';
+        }
     } else {
         btn.classList.remove('visible');
-        // Reset conteggio non letti quando si scorre in basso
+        // Reset conteggio non letti
         unreadMessages = 0;
         updateUnreadBadge();
     }
@@ -1241,6 +1253,13 @@ function scrollToBottom(smooth = true) {
         behavior: smooth ? 'smooth' : 'auto'
     });
     
+    // Reset contatore messaggi non letti
+    unreadMessages = 0;
+    updateUnreadBadge();
+    
+    // Nascondi il pulsante scroll
+    toggleScrollBottomButton(false);
+    
     debug("Scrolled to bottom", { smooth });
 }
 
@@ -1271,35 +1290,68 @@ function sendMessage() {
     const input = document.getElementById('messageInput');
     const text = input.value.trim();
     
-    if (text && currentlyConnected) {
-        // Crea oggetto messaggio
+    if (text) {
+        // Crea oggetto messaggio con ID temporaneo
+        const tempId = "temp-" + Date.now();
+        const newMessage = {
+            id: tempId,
+            user: users[0], // "You"
+            text: text,
+            timestamp: new Date(),
+            isOwn: true,
+            type: 'normal',
+            replyTo: replyingTo,
+            status: 'sending' // Nuovo stato per tracciare l'invio
+        };
+        
+        // Aggiungi immediatamente ai messaggi visualizzati
+        displayedMessages.push(newMessage);
+        
+        // Crea e aggiungi l'elemento al DOM
+        const chatContainer = document.getElementById('chatMessages');
+        const messageEl = createMessageElement(newMessage);
+        chatContainer.appendChild(messageEl);
+        
+        // Scorri in basso
+        scrollToBottom();
+        
+        // Prepara dati per il server
         const messageData = {
             text: text,
             type: 'normal',
-            replyTo: replyingTo
+            replyTo: replyingTo,
+            tempId: tempId // Invia l'ID temporaneo per il riconoscimento
         };
         
-        try {
-            // Emetti messaggio al server in base al tipo di chat
-            if (isDirectMessage && currentUser) {
-                console.log("Invio messaggio diretto a:", currentUser.id);
-                sendDirectMessage(currentUser.id, messageData);
-            } else {
-                console.log("Invio messaggio al canale:", currentChannel);
-                sendChannelMessage(currentChannel, messageData);
+        // Se è un messaggio diretto, mostra subito l'indicatore di digitazione
+        if (isDirectMessage && currentUser) {
+            const typingIndicator = document.getElementById('typingIndicator');
+            const typingText = document.getElementById('typingText');
+            typingText.textContent = `${currentUser.name} is typing...`;
+            typingIndicator.style.display = 'flex';
+        }
+        
+        // Invia al server (se connesso)
+        if (currentlyConnected) {
+            try {
+                if (isDirectMessage && currentUser) {
+                    sendDirectMessage(currentUser.id, messageData);
+                } else {
+                    sendChannelMessage(currentChannel, messageData);
+                }
+            } catch (error) {
+                console.error("Errore nell'invio del messaggio:", error);
+                showNotification("Errore nell'invio del messaggio", true);
             }
-            
-            // Cancella input
-            input.value = '';
-            
-            // Reset stato risposta
-            if (replyingTo) {
-                document.querySelector('.reply-preview')?.remove();
-                replyingTo = null;
-            }
-        } catch (error) {
-            console.error("Errore nell'invio del messaggio:", error);
-            showNotification("Errore nell'invio del messaggio", true);
+        }
+        
+        // Cancella input
+        input.value = '';
+        
+        // Reset stato risposta
+        if (replyingTo) {
+            document.querySelector('.reply-preview')?.remove();
+            replyingTo = null;
         }
     }
 }

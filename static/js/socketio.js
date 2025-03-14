@@ -10,11 +10,11 @@
 // Importa socket.io-client per i test
 let io;
 if (typeof window !== 'undefined' && window.io) {
-    // Nel browser, usa la variabile globale io
-    io = window.io;
+	// Nel browser, usa la variabile globale io
+	io = window.io;
 } else if (typeof require !== 'undefined') {
-    // In Node.js (per i test), importa socket.io-client
-    io = require('socket.io-client');
+	// In Node.js (per i test), importa socket.io-client
+	io = require('socket.io-client');
 }
 
 // Variabili globali per Socket.IO
@@ -25,15 +25,15 @@ let currentlyConnected = false;
  * Inizializza la connessione Socket.IO
  */
 function initializeSocketIO() {
-    socket = io({
-        debug: false,
-        autoConnect: true,
-        reconnection: true,
-        forceNew: true
-    });
+	socket = io({
+		debug: false,
+		autoConnect: true,
+		reconnection: true,
+		forceNew: true
+	});
 
-    setupSocketIOEvents();
-    return socket;
+	setupSocketIOEvents();
+	return socket;
 }
 
 /**
@@ -77,55 +77,63 @@ function handleSocketDisconnect() {
  * @param {Array} history - Array di messaggi
  */
 function handleMessageHistory(history) {
-	console.log(`Ricevuti ${history.length} messaggi storici`);
-	const chatContainer = document.getElementById('chatMessages');
-	chatContainer.innerHTML = '';
-	displayedMessages = [];
+    console.log(`Ricevuti ${history.length} messaggi storici`);
+    const chatContainer = document.getElementById('chatMessages');
+    chatContainer.innerHTML = '';
+    displayedMessages = [];
 
-	if (history && history.length > 0) {
-		// Sort messages by timestamp
-		history.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    if (history && history.length > 0) {
+        // Sort messages by timestamp
+        history.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-		// Process and display messages
-		let lastDate = null;
-		const fragment = document.createDocumentFragment();
+        // Process and display messages
+        let lastDate = null;
+        const fragment = document.createDocumentFragment();
 
-		history.forEach(message => {
-			// Convert timestamp string to Date object if needed
-			if (typeof message.timestamp === 'string') {
-				message.timestamp = new Date(message.timestamp);
-			}
+        history.forEach(message => {
+            // Convert timestamp string to Date object if needed
+            if (typeof message.timestamp === 'string') {
+                message.timestamp = new Date(message.timestamp);
+            }
+            
+            // Assicurati che il messaggio replyTo sia valido
+            if (message.replyTo && typeof message.replyTo === 'object') {
+                // Se è un'oggetto vuoto, impostiamo a null
+                if (Object.keys(message.replyTo).length === 0) {
+                    message.replyTo = null;
+                }
+            }
 
-			// Add date divider if needed
-			const messageDate = message.timestamp.toDateString();
-			if (messageDate !== lastDate) {
-				const divider = document.createElement('div');
-				divider.className = 'date-divider';
-				divider.innerHTML = `<span>${formatDate(message.timestamp)}</span>`;
-				fragment.appendChild(divider);
-				lastDate = messageDate;
-			}
+            // Add date divider if needed
+            const messageDate = message.timestamp.toDateString();
+            if (messageDate !== lastDate) {
+                const divider = document.createElement('div');
+                divider.className = 'date-divider';
+                divider.innerHTML = `<span>${formatDate(message.timestamp)}</span>`;
+                fragment.appendChild(divider);
+                lastDate = messageDate;
+            }
 
-			// Create and add message element
-			const messageEl = createMessageElement(message);
-			fragment.appendChild(messageEl);
+            // Create and add message element
+            const messageEl = createMessageElement(message);
+            fragment.appendChild(messageEl);
 
-			// Add to displayed messages array
-			displayedMessages.push(message);
-		});
+            // Add to displayed messages array
+            displayedMessages.push(message);
+        });
 
-		chatContainer.appendChild(fragment);
-	}
+        chatContainer.appendChild(fragment);
+    }
 
-	// Hide loader
-	hideLoader();
+    // Hide loader
+    hideLoader();
 
-	// Scroll to bottom
-	scrollToBottom(false);
+    // Scroll to bottom
+    scrollToBottom(false);
 
-	// Reset unread count
-	unreadMessages = 0;
-	updateUnreadBadge();
+    // Reset unread count
+    unreadMessages = 0;
+    updateUnreadBadge();
 }
 
 /**
@@ -133,54 +141,87 @@ function handleMessageHistory(history) {
  * @param {Object} message - Oggetto messaggio
  */
 function handleNewMessage(message) {
-	console.log('Nuovo messaggio ricevuto:', message);
+    console.log('Nuovo messaggio ricevuto:', message);
 
-	// Convert timestamp string to Date object if needed
-	if (typeof message.timestamp === 'string') {
-		message.timestamp = new Date(message.timestamp);
-	}
+    // Se è un messaggio nostro che abbiamo già mostrato, non mostrarlo di nuovo
+    if (message.isOwn || (message.user && message.user.name === "You")) {
+        // Troviamo se abbiamo già questo messaggio o uno molto simile
+        const recentMessages = displayedMessages.filter(m => {
+            return m.isOwn && 
+                   m.text === message.text && 
+                   (new Date() - new Date(m.timestamp) < 5000); // 5 secondi
+        });
+        
+        if (recentMessages.length > 0) {
+            // Aggiorniamo solo lo stato
+            const existingMsg = recentMessages[0];
+            const existingEl = document.querySelector(`.message-container[data-message-id="${existingMsg.id}"]`);
+            
+            if (existingEl) {
+                // Cambiamo icona da orologio a spunta
+                const statusIcon = existingEl.parentElement.querySelector('.timestamp i');
+                if (statusIcon) {
+                    statusIcon.className = 'fas fa-check';
+                    statusIcon.style.opacity = '1';
+                }
+                existingMsg.status = 'sent';
+            }
+            return; // Ignora messaggio duplicato
+        }
+    }
 
-	// Add to messages arrays
-	messages.push(message);
-	displayedMessages.push(message);
+    // Converti timestamp se necessario
+    if (typeof message.timestamp === 'string') {
+        message.timestamp = new Date(message.timestamp);
+    }
 
-	// Get the current chat container
-	const chatContainer = document.getElementById('chatMessages');
-	// Check if we're at the bottom before the new message
-	const isAtBottom = chatContainer.scrollHeight - chatContainer.clientHeight <= chatContainer.scrollTop + 20;
+    // Aggiungi ai messaggi
+    messages.push(message);
+    displayedMessages.push(message);
 
-	// Check if we need to add a new date divider
-	const lastMessage = displayedMessages[displayedMessages.length - 2];
-	if (lastMessage) {
-		const lastDate = new Date(lastMessage.timestamp).toDateString();
-		const newDate = message.timestamp.toDateString();
-		if (newDate !== lastDate) {
-			const divider = document.createElement('div');
-			divider.className = 'date-divider';
-			divider.innerHTML = `<span>${formatDate(message.timestamp)}</span>`;
-			chatContainer.appendChild(divider);
-		}
-	}
+    // Determina con precisione se siamo a fondo pagina
+    const chatContainer = document.getElementById('chatMessages');
+    // Misurazione più precisa - usa una soglia minore (20px) per essere più sicuri
+    const isAtBottom = chatContainer.scrollHeight - chatContainer.clientHeight <= chatContainer.scrollTop + 20;
+    
+    // Salva questa informazione per usarla dopo l'aggiunta del messaggio
+    const wasAtBottom = isAtBottom;
 
-	// Create and append message element
-	const messageEl = createMessageElement(message);
-	chatContainer.appendChild(messageEl);
+    // Aggiungi separatori di data se necessario
+    const lastMessage = displayedMessages[displayedMessages.length - 2];
+    if (lastMessage) {
+        const lastDate = new Date(lastMessage.timestamp).toDateString();
+        const newDate = message.timestamp.toDateString();
+        if (newDate !== lastDate) {
+            const divider = document.createElement('div');
+            divider.className = 'date-divider';
+            divider.innerHTML = `<span>${formatDate(message.timestamp)}</span>`;
+            chatContainer.appendChild(divider);
+        }
+    }
 
-	if (isAtBottom) {
-		requestAnimationFrame(() => {
-			scrollToBottom();
-		});
-	} else {
-		// Update unread count if not at bottom
-		unreadMessages++;
-		updateUnreadBadge();
-	}
+    // Crea e aggiungi elemento messaggio
+    const messageEl = createMessageElement(message);
+    chatContainer.appendChild(messageEl);
 
-	// If message is not our own, play notification sound
-	if (!message.isOwn) {
-		// You could add a sound notification here
-		// For example: document.getElementById('notificationSound').play();
-	}
+    // Ora che abbiamo aggiunto il messaggio, gestisci lo scrolling
+    if (wasAtBottom) {
+        // L'utente era già in fondo, quindi scorri automaticamente
+        requestAnimationFrame(() => {
+            scrollToBottom(true); // Usa animazione
+        });
+    } else {
+        // L'utente stava leggendo messaggi precedenti, non scrollare
+        // Incrementa il contatore e mostra il pulsante con il pallino
+        unreadMessages++;
+        updateUnreadBadge();
+        toggleScrollBottomButton(true); // Forza la visualizzazione del pulsante
+    }
+
+    // Se il messaggio non è dell'utente, nascondi l'indicatore di typing
+    if (!message.isOwn) {
+        document.getElementById('typingIndicator').style.display = 'none';
+    }
 }
 
 /**
@@ -335,59 +376,57 @@ function debugSocketIO() {
 	console.log("========================");
 }
 
-// ... existing code ...
-
 // Esporta le funzioni per i test
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-      initializeSocket: initializeSocketIO,
-      sendMessage: function(text) {
-        if (socket) {
-          socket.emit('channelMessage', {
-            channelName: 'general',
-            message: {
-              text: text,
-              replyTo: null
-            }
-          });
-        }
-      },
-      editMessage: function(messageId, newText) {
-        if (socket) {
-          socket.emit('editMessage', {
-            id: messageId,
-            text: newText,
-            channel: 'general',
-            isDirectMessage: false
-          });
-        }
-      },
-      deleteMessage: function(messageId) {
-        if (socket) {
-          socket.emit('deleteMessage', {
-            id: messageId,
-            channel: 'general',
-            isDirectMessage: false
-          });
-        }
-      },
-      reconnectSocket: function() {
-        if (socket && !socket.connected) {
-          socket.connect();
-          console.log('Attempting to reconnect...');
-        } else {
-          console.log('Socket already connected');
-        }
-      },
-      joinChannel: function(channelName) {
-        if (socket) {
-          socket.emit('joinChannel', channelName);
-        }
-      },
-      leaveChannel: function(channelName) {
-        if (socket) {
-          socket.emit('leaveChannel', channelName);
-        }
-      }
-    };
+	module.exports = {
+		initializeSocket: initializeSocketIO,
+		sendMessage: function (text) {
+			if (socket) {
+				socket.emit('channelMessage', {
+					channelName: 'general',
+					message: {
+						text: text,
+						replyTo: null
+					}
+				});
+			}
+		},
+		editMessage: function (messageId, newText) {
+			if (socket) {
+				socket.emit('editMessage', {
+					id: messageId,
+					text: newText,
+					channel: 'general',
+					isDirectMessage: false
+				});
+			}
+		},
+		deleteMessage: function (messageId) {
+			if (socket) {
+				socket.emit('deleteMessage', {
+					id: messageId,
+					channel: 'general',
+					isDirectMessage: false
+				});
+			}
+		},
+		reconnectSocket: function () {
+			if (socket && !socket.connected) {
+				socket.connect();
+				console.log('Attempting to reconnect...');
+			} else {
+				console.log('Socket already connected');
+			}
+		},
+		joinChannel: function (channelName) {
+			if (socket) {
+				socket.emit('joinChannel', channelName);
+			}
+		},
+		leaveChannel: function (channelName) {
+			if (socket) {
+				socket.emit('leaveChannel', channelName);
+			}
+		}
+	};
 }

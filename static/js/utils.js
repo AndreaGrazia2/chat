@@ -73,18 +73,32 @@ function hideLoader() {
  * @returns {string} - Testo con link cliccabili
  */
 function linkifyText(text) {
-	if (!text) return '';
-	// Gestisce i link evidenziati personalizzati
-	text = text.replace(/<span class="link-example">(https?:\/\/[^\s<]+)<\/span>/g,
-		function (match, url) {
-			return `<a href="${url}" target="_blank" rel="noopener" class="link-example">${url}</a>`;
-		}
-	);
-	// Gestisce altri URL normali
-	const urlRegex = /(?<!<a[^>]*>)(https?:\/\/[^\s<]+)(?![^<]*<\/a>)/g;
-	return text.replace(urlRegex, function (url) {
-		return `<a href="${url}" target="_blank" rel="noopener">${url}</a>`;
-	});
+    if (!text) return '';
+    
+    // Converti a stringa per sicurezza
+    text = String(text);
+    
+    // Sanitizza il testo prima di processarlo (solo per testo non HTML)
+    if (!text.includes('<span class="link-example">')) {
+        text = text.replace(/&/g, '&amp;')
+                  .replace(/</g, '&lt;')
+                  .replace(/>/g, '&gt;')
+                  .replace(/"/g, '&quot;')
+                  .replace(/'/g, '&#039;');
+    }
+    
+    // Gestisce i link evidenziati personalizzati
+    text = text.replace(/<span class="link-example">(https?:\/\/[^\s<]+)<\/span>/g,
+        function (match, url) {
+            return `<a href="${url}" target="_blank" rel="noopener" class="link-example">${url}</a>`;
+        }
+    );
+    
+    // Gestisce altri URL normali (evitando di match URL già linkificati)
+    const urlRegex = /(?<!<a[^>]*>)(https?:\/\/[^\s<]+)(?![^<]*<\/a>)/g;
+    return text.replace(urlRegex, function (url) {
+        return `<a href="${url}" target="_blank" rel="noopener">${url}</a>`;
+    });
 }
 
 /**
