@@ -12,3 +12,5 @@ services:
     envVars:
       - key: ENV
         value: prod
+      - key: OPENROUTER_API_KEY
+        sync: false
