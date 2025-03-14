@@ -1655,3 +1655,17 @@ function initializeSearchClearButtons() {
 
 // Inizializza l'app quando il DOM è caricato
 document.addEventListener('DOMContentLoaded', initializeApp);
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+      initializeApp,
+      createMessageElement,
+      scrollToBottom,
+      filterSidebarItems,
+      toggleSidebar,
+      toggleSearchPanel,
+      editMessage,
+      deleteMessage,
+      initializeSearchClearButtons
+    };
+  }

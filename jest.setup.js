@@ -1,0 +1,23 @@
+// Definisci variabili globali utilizzate in app.js
+global.DEBUG = false;
+global.currentChannel = 'general';
+global.isDirectMessage = false;
+global.currentUser = null;
+global.displayedMessages = [];
+global.messages = [];
+global.messagesLoaded = 0;
+global.unreadMessages = 0;
+global.searchResults = [];
+global.currentSearchIndex = -1;
+global.searchOpen = false;
+global.sidebarVisible = false;
+global.replyingTo = null;
+global.historyScrollLock = false;
+global.lastHistoryLockTime = 0;
+global.loadingMore = false;
+global.pendingEditOperation = null;
+global.currentlyConnected = false;
+global.batchSize = 20;
+global.totalMessages = 100;
+global.lastMessageId = 0;
+global.users = [];

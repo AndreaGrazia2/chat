@@ -7,6 +7,16 @@
  * - Invio e ricezione messaggi in tempo reale
  */
 
+// Importa socket.io-client per i test
+let io;
+if (typeof window !== 'undefined' && window.io) {
+    // Nel browser, usa la variabile globale io
+    io = window.io;
+} else if (typeof require !== 'undefined') {
+    // In Node.js (per i test), importa socket.io-client
+    io = require('socket.io-client');
+}
+
 // Variabili globali per Socket.IO
 let socket;
 let currentlyConnected = false;
@@ -15,14 +25,15 @@ let currentlyConnected = false;
  * Inizializza la connessione Socket.IO
  */
 function initializeSocketIO() {
-	socket = io({
-		debug: false,
-		autoConnect: true,
-		reconnection: true,
-		forceNew: true
-	});
+    socket = io({
+        debug: false,
+        autoConnect: true,
+        reconnection: true,
+        forceNew: true
+    });
 
-	setupSocketIOEvents();
+    setupSocketIOEvents();
+    return socket;
 }
 
 /**
@@ -322,4 +333,61 @@ function debugSocketIO() {
 	console.log("Current user:", currentUser);
 	console.log("Displayed messages:", displayedMessages.length);
 	console.log("========================");
+}
+
+// ... existing code ...
+
+// Esporta le funzioni per i test
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+      initializeSocket: initializeSocketIO,
+      sendMessage: function(text) {
+        if (socket) {
+          socket.emit('channelMessage', {
+            channelName: 'general',
+            message: {
+              text: text,
+              replyTo: null
+            }
+          });
+        }
+      },
+      editMessage: function(messageId, newText) {
+        if (socket) {
+          socket.emit('editMessage', {
+            id: messageId,
+            text: newText,
+            channel: 'general',
+            isDirectMessage: false
+          });
+        }
+      },
+      deleteMessage: function(messageId) {
+        if (socket) {
+          socket.emit('deleteMessage', {
+            id: messageId,
+            channel: 'general',
+            isDirectMessage: false
+          });
+        }
+      },
+      reconnectSocket: function() {
+        if (socket && !socket.connected) {
+          socket.connect();
+          console.log('Attempting to reconnect...');
+        } else {
+          console.log('Socket already connected');
+        }
+      },
+      joinChannel: function(channelName) {
+        if (socket) {
+          socket.emit('joinChannel', channelName);
+        }
+      },
+      leaveChannel: function(channelName) {
+        if (socket) {
+          socket.emit('leaveChannel', channelName);
+        }
+      }
+    };
 }

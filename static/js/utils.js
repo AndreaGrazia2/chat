@@ -146,3 +146,17 @@ function showConfirmDialog(message, confirmCallback) {
 		confirmDialog.style.display = 'none';
 	});
 }
+
+// Alla fine del file, aggiungi:
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    debug,
+    formatTime,
+    formatDate,
+    showLoader,
+    hideLoader,
+    linkifyText,
+    showNotification,
+    showConfirmDialog
+  };
+}
