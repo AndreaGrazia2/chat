@@ -181,16 +181,11 @@ function handleNewMessage(message) {
     const currentScrollHeight = chatContainer.scrollHeight;
     const clientHeight = chatContainer.clientHeight;
     
-    // Calcola se siamo "quasi" in fondo (entro 150px - circa 2 messaggi)
-    const isNearBottom = (currentScrollHeight - clientHeight - currentScrollTop) <= 150;
+    // Calcola se siamo vicini al fondo (entro 50px invece di 2px)
+    const isNearBottom = (currentScrollHeight - clientHeight - currentScrollTop) <= 50;
     
-    // BLOCCO TOTALE di gestione scroll automatica
-    // Sovrascriviamo temporaneamente scrollToBottom per impedire scrolling automatico
+    // Salva un riferimento alla funzione originale senza sovrascriverla
     const originalScrollToBottom = window.scrollToBottom;
-    window.scrollToBottom = function() {
-        console.log("Scrolling automatico bloccato");
-        return false;
-    };
     
     // Aggiungi ai messaggi
     messages.push(message);
@@ -223,25 +218,17 @@ function handleNewMessage(message) {
         // Forza la visualizzazione del pulsante scrollBottom
         const scrollBtn = document.getElementById('scrollBottomBtn');
         scrollBtn.classList.add('visible');
-    }
-    
-    // Ripristina la posizione di scroll esatta
-    chatContainer.scrollTop = currentScrollTop;
-    
-    // Ripristina la funzione originale dopo breve tempo
-    setTimeout(() => {
-        window.scrollToBottom = originalScrollToBottom;
-        
-        // Se eravamo quasi in fondo, ora possiamo scrollare
-        if (isNearBottom) {
+    } else {
+        // Se siamo vicini al fondo, scorriamo giù
+        setTimeout(() => {
             originalScrollToBottom(true);
-        }
-        
-        // Nascondi l'indicatore di digitazione
-        if (!message.isOwn) {
-            document.getElementById('typingIndicator').style.display = 'none';
-        }
-    }, 300);
+            
+            // Nascondi l'indicatore di digitazione
+            if (!message.isOwn) {
+                document.getElementById('typingIndicator').style.display = 'none';
+            }
+        }, 100);
+    }
 }
 
 /**
