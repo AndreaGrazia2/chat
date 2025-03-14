@@ -7,3 +7,4 @@ workers = 1
 worker_class = "geventwebsocket.gunicorn.workers.GeventWebSocketWorker"
 timeout = 120
 keepalive = 5
+loglevel = "debug"  # Aggiungiamo più log per il debu

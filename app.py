@@ -16,7 +16,7 @@ sys.setrecursionlimit(1000)  # Imposta un limite di ricorsione sicura
 # All'inizio di app.py, dopo gli import
 try:
     import geventwebsocket
-    print("gevent-websocket versione:", geventwebsocket.__version__)
+    print("gevent-websocket è installato correttamente")
 except ImportError:
     print("ERRORE: gevent-websocket non è installato!")
 
