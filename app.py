@@ -6,47 +6,79 @@ from datetime import datetime, timedelta
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from dotenv import load_dotenv
+import time
 
 # Load environment variables
 load_dotenv()
 
 app = Flask(__name__, static_folder='static')
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev_key')
-# Nella parte iniziale del file, dopo gli import
-from flask_socketio import SocketIO, emit, join_room, leave_room
-# Aggiungi questa riga
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
+
+socketio = SocketIO(app, cors_allowed_origins="*",
+                    async_mode='gevent', ping_timeout=60, ping_interval=25)
 
 # OpenRouter API configuration
 OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
+# Gestore eccezioni per Flask
+
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    """Gestisce tutte le eccezioni non catturate"""
+    # Registra l'errore
+    print(f"Errore non gestito: {str(e)}")
+    # Se è una richiesta API, restituisce un errore JSON
+    if request.path.startswith('/api/'):
+        return jsonify({"error": "Internal server error", "message": str(e)}), 500
+    # Altrimenti restituisce una pagina di errore
+    return render_template('chat.html'), 500
+
+# Gestore errori per Socket.IO
+
+
+@socketio.on_error()
+def error_handler(e):
+    """Gestisce le eccezioni durante le operazioni Socket.IO"""
+    print(f"Socket.IO error: {str(e)}")
+
 # Function to call OpenRouter API
+
+
 def get_llm_response(message_text):
     if not OPENROUTER_API_KEY:
         return "API key not configured. Please set OPENROUTER_API_KEY in your environment."
-    
+
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json"
     }
-    
+
     data = {
-        "model": "google/gemma-3-27b-it:free",  # You can change this to any model supported by OpenRouter
+        # You can change this to any model supported by OpenRouter
+        "model": "google/gemma-3-27b-it:free",
         "messages": [
-            {"role": "system", "content": "You are a helpful assistant in a chat application."},
+            {"role": "system",
+                "content": "You are a helpful assistant in a chat application."},
             {"role": "user", "content": message_text}
         ]
     }
-    
+
     try:
-        response = requests.post(OPENROUTER_API_URL, headers=headers, json=data)
+        # Add timeout parameter to prevent hanging requests
+        response = requests.post(
+            OPENROUTER_API_URL, headers=headers, json=data, timeout=10)
         response.raise_for_status()
         result = response.json()
         return result['choices'][0]['message']['content']
+    except requests.exceptions.Timeout:
+        print("OpenRouter API request timed out")
+        return "Sorry, the request timed out. Please try again later."
     except Exception as e:
         print(f"Error calling OpenRouter API: {e}")
         return f"Sorry, I couldn't generate a response. Error: {str(e)}"
+
 
 # In-memory data store (replace with a database in production)
 users = [
@@ -232,9 +264,12 @@ def index():
     return send_from_directory('.', 'chat.html')
 
 # Rotta per servire file statici CSS
+
+
 @app.route('/static/<path:filename>')
 def serve_static(filename):
     return send_from_directory('static', filename)
+
 
 @app.route('/api/users')
 def get_users():
@@ -395,6 +430,7 @@ def handle_channel_message(data):
     room = f"channel:{channel_name}"
     emit('newMessage', new_message, room=room)
 
+
 @socketio.on('directMessage')
 def handle_direct_message(data):
     user_id = data.get('userId')
@@ -448,36 +484,77 @@ def handle_direct_message(data):
     recipient = next((u for u in users if str(u["id"]) == str(user_id)), None)
 
     if recipient:
-        # Emit model inference started event
-        emit('modelInference', {'userId': user_id, 'status': 'started'}, room=dm_key)
-        
-        # Get response from OpenRouter API
-        llm_response = get_llm_response(message_data.get('text', ''))
-        
-        # Calculate a more natural typing delay based on response length
-        # Minimum 1 second, maximum 3 seconds
-        typing_delay = min(3, max(1, 0.05 * len(llm_response)))
-        socketio.sleep(typing_delay)
-        
-        # Emit model inference completed event
-        emit('modelInference', {'userId': user_id, 'status': 'completed'}, room=dm_key)
-        
-        # Create response message
-        response = {
-            "id": message_id_counter,
-            "user": recipient,
-            "text": llm_response,
-            "timestamp": datetime.now().isoformat(),
-            "isOwn": False,
-            "type": "normal",
-            "fileData": None,
-            "forwardedFrom": None,
-            "replyTo": new_message
-        }
+        # Verifica se la richiesta deve essere limitat
+        if rate_limit_llm_request(user_id):
+			# Invia messaggio di errore per rate limiting
+            rate_limit_message = {
+				"id": message_id_counter,
+				"user": recipient,
+				"text": "Per favore attendi qualche secondo prima di inviare un altro messaggio.",
+				"timestamp": datetime.now().isoformat(),
+				"isOwn": False,
+				"type": "normal",
+				"fileData": None,
+				"forwardedFrom": None,
+				"replyTo": new_message
+			}
+            messages["directMessages"][dm_key].append(rate_limit_message)
+            emit('newMessage', rate_limit_message, room=dm_key)
+            return
 
-        # Store and send the message
-        messages["directMessages"][dm_key].append(response)
-        emit('newMessage', response, room=dm_key)
+        try:
+            # Emit model inference started event
+            emit('modelInference', {'userId': user_id, 'status': 'started'}, room=dm_key)
+            
+            # Get response from OpenRouter API
+            llm_response = get_llm_response(message_data.get('text', ''))
+            
+            # Calculate a more natural typing delay based on response length
+            # Minimum 1 second, maximum 3 seconds
+            typing_delay = min(3, max(1, 0.05 * len(llm_response)))
+            socketio.sleep(typing_delay)
+            
+            # Emit model inference completed event
+            emit('modelInference', {'userId': user_id, 'status': 'completed'}, room=dm_key)
+            
+            # Create response message
+            response = {
+                "id": message_id_counter,
+                "user": recipient,
+                "text": llm_response,
+                "timestamp": datetime.now().isoformat(),
+                "isOwn": False,
+                "type": "normal",
+                "fileData": None,
+                "forwardedFrom": None,
+                "replyTo": new_message
+            }
+
+            # Store and send the message
+            messages["directMessages"][dm_key].append(response)
+            emit('newMessage', response, room=dm_key)
+            
+        except Exception as e:
+            print(f"Error processing LLM response: {e}")
+            
+            # Emit error notification
+            emit('modelInference', {'userId': user_id, 'status': 'error'}, room=dm_key)
+            
+            # Send fallback message
+            fallback_response = {
+                "id": message_id_counter,
+                "user": recipient,
+                "text": "Mi dispiace, non sono riuscito a generare una risposta. Riprova più tardi.",
+                "timestamp": datetime.now().isoformat(),
+                "isOwn": False,
+                "type": "normal",
+                "fileData": None,
+                "forwardedFrom": None,
+                "replyTo": new_message
+            }
+            
+            messages["directMessages"][dm_key].append(fallback_response)
+            emit('newMessage', fallback_response, room=dm_key)
 
 @socketio.on('typing')
 def handle_typing(data):
@@ -511,6 +588,27 @@ def handle_status_change(data):
                  'userId': user_id, 'status': status}, broadcast=True)
             break
 
+# Struttura dati per prevenire cicli infiniti
+last_llm_requests = {}
+
+def rate_limit_llm_request(user_id):
+    """
+    Verifica se una richiesta LLM per lo stesso utente è stata effettuata troppo recentemente.
+    Restituisce True se la richiesta dovrebbe essere bloccata, False altrimenti.
+    """
+    global last_llm_requests
+    
+    current_time = time.time()
+    last_request_time = last_llm_requests.get(user_id, 0)
+    
+    # Blocca richieste troppo frequenti (meno di 2 secondi tra una richiesta e l'altra)
+    if current_time - last_request_time < 2:
+        print(f"Rate limiting LLM request for user {user_id}")
+        return True
+    
+    # Aggiorna il timestamp dell'ultima richiesta
+    last_llm_requests[user_id] = current_time
+    return False
 
 # Modifica la parte finale del file
 if __name__ == '__main__':
