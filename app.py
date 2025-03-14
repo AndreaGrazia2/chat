@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev_key')
 socketio = SocketIO(app, cors_allowed_origins="*")
 
@@ -228,6 +228,10 @@ generate_test_messages()
 def index():
     return send_from_directory('.', 'chat.html')
 
+# Rotta per servire file statici CSS
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    return send_from_directory('static', filename)
 
 @app.route('/api/users')
 def get_users():
