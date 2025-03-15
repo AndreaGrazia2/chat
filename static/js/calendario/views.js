@@ -812,75 +812,7 @@ function renderizzaVistaLista() {
  * Apre il modal per visualizzare/modificare un evento
  * @param {string} id - ID dell'evento
  */
-function apriModalEvento(id) {
-    console.log("Apertura modal per evento:", id); // Aggiungi questo log
-    const evento = eventi.find(e => e.id === id);
-    if (!evento) return;
-    
-    // Aggiorna il titolo del modal
-    document.getElementById('modalTitle').textContent = 'Modifica Evento';
-    
-    // Compila il form con i dati dell'evento
-    document.getElementById('eventTitle').value = evento.titolo;
-    document.getElementById('eventDescription').value = evento.descrizione;
-    
-    const dataInizio = new Date(evento.dataInizio);
-    const dataFine = new Date(evento.dataFine);
-    
-    document.getElementById('eventDate').value = dataInizio.toISOString().split('T')[0];
-    document.getElementById('eventTime').value = dataInizio.toTimeString().substring(0, 5);
-    document.getElementById('eventEndDate').value = dataFine.toISOString().split('T')[0];
-    document.getElementById('eventEndTime').value = dataFine.toTimeString().substring(0, 5);
-    document.getElementById('eventCategory').value = evento.categoria;
-    
-    // Mostra il pulsante elimina
-    const footerElement = document.querySelector('.modal-footer');
-    if (!document.getElementById('deleteEvent')) {
-        const deleteButton = document.createElement('button');
-        deleteButton.className = 'btn btn-text delete';
-        deleteButton.id = 'deleteEvent';
-        deleteButton.textContent = 'Elimina';
-        footerElement.insertBefore(deleteButton, document.getElementById('cancelEvent'));
-        
-        // Aggiungi l'event listener per eliminare l'evento
-        deleteButton.addEventListener('click', () => {
-            eliminaEvento(id);
-            chiudiModal('eventModal');
-        });
-    }
-    
-    // Aggiorna l'event listener del pulsante salva
-    const saveButton = document.getElementById('saveEvent');
-    saveButton.onclick = () => {
-        // Raccogli i dati dal form
-        const titolo = document.getElementById('eventTitle').value;
-        const descrizione = document.getElementById('eventDescription').value;
-        const data = document.getElementById('eventDate').value;
-        const ora = document.getElementById('eventTime').value;
-        const dataFine = document.getElementById('eventEndDate').value;
-        const oraFine = document.getElementById('eventEndTime').value;
-        const categoria = document.getElementById('eventCategory').value;
-        
-        // Crea le date
-        const dataInizio = new Date(`${data}T${ora}`);
-        const dataFinale = new Date(`${dataFine}T${oraFine}`);
-        
-        // Aggiorna l'evento
-        modificaEvento(id, {
-            titolo,
-            descrizione,
-            dataInizio,
-            dataFine: dataFinale,
-            categoria
-        });
-        
-        // Chiudi il modal
-        chiudiModal('eventModal');
-    };
-    
-    // Apri il modal
-    apriModal('eventModal');
-}
+
 
 /**
  * Apre il modal per creare un nuovo evento
