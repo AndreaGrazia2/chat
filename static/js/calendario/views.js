@@ -327,3 +327,196 @@ function aggiornaViste() {
     renderizzaMiniCalendario();
     aggiornaVista();
 }
+
+/**
+ * Apre il modal per visualizzare/modificare un evento
+ * @param {string} id - ID dell'evento da visualizzare
+ */
+function apriModalEvento(id) {
+    // Trova l'evento
+    const evento = eventi.find(e => e.id === id);
+    if (!evento) return;
+    
+    // Aggiorna il titolo del modal
+    document.getElementById('modalTitle').textContent = 'Modifica Evento';
+    
+    // Popola il form
+    document.getElementById('eventTitle').value = evento.titolo;
+    document.getElementById('eventDescription').value = evento.descrizione || '';
+    
+    const dataInizio = new Date(evento.dataInizio);
+    const dataFine = new Date(evento.dataFine);
+    
+    document.getElementById('eventDate').value = dataInizio.toISOString().split('T')[0];
+    document.getElementById('eventTime').value = dataInizio.toTimeString().substring(0, 5);
+    document.getElementById('eventEndDate').value = dataFine.toISOString().split('T')[0];
+    document.getElementById('eventEndTime').value = dataFine.toTimeString().substring(0, 5);
+    document.getElementById('eventCategory').value = evento.categoria;
+    
+    // Aggiungi il pulsante elimina se non esiste già
+    let deleteButton = document.getElementById('deleteEvent');
+    if (!deleteButton) {
+        deleteButton = document.createElement('button');
+        deleteButton.id = 'deleteEvent';
+        deleteButton.className = 'btn btn-danger';
+        deleteButton.textContent = 'Elimina';
+        
+        // Inserisci il pulsante nel footer del modal
+        const modalFooter = document.querySelector('.modal-footer');
+        modalFooter.insertBefore(deleteButton, document.getElementById('cancelEvent'));
+    }
+    
+    // Aggiorna l'event listener del pulsante elimina
+    deleteButton.onclick = () => {
+        // Apri il modal di conferma
+        apriModalConfermaEliminazione(id);
+    };
+    
+    // Aggiorna l'event listener del pulsante salva
+    const saveButton = document.getElementById('saveEvent');
+    saveButton.onclick = () => {
+        // Raccogli i dati dal form
+        const titolo = document.getElementById('eventTitle').value;
+        const descrizione = document.getElementById('eventDescription').value;
+        const data = document.getElementById('eventDate').value;
+        const ora = document.getElementById('eventTime').value;
+        const dataFine = document.getElementById('eventEndDate').value;
+        const oraFine = document.getElementById('eventEndTime').value;
+        const categoria = document.getElementById('eventCategory').value;
+        
+        // Verifica che il titolo sia stato inserito
+        if (!titolo.trim()) {
+            alert('Inserisci un titolo per l\'evento');
+            return;
+        }
+        
+        // Verifica che la descrizione sia stata inserita
+        if (!descrizione.trim()) {
+            apriModalAvviso('Inserisci una descrizione per l\'evento');
+            return;
+        }
+        
+        // Crea le date
+        const dataInizio = new Date(`${data}T${ora}`);
+        const dataFinale = new Date(`${dataFine}T${oraFine}`);
+        
+        // Modifica l'evento
+        modificaEvento(id, {
+            titolo,
+            descrizione,
+            dataInizio,
+            dataFine: dataFinale,
+            categoria
+        });
+        
+        // Chiudi il modal
+        chiudiModal('eventModal');
+    };
+    
+    // Apri il modal
+    apriModal('eventModal');
+}
+
+/**
+ * Apre il modal di conferma eliminazione
+ * @param {string} id - ID dell'evento da eliminare
+ */
+function apriModalConfermaEliminazione(id) {
+    // Crea il modal se non esiste
+    let modal = document.getElementById('confirmDeleteModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'confirmDeleteModal';
+        modal.className = 'modal';
+        
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Conferma eliminazione</h3>
+                    <button class="close-modal" id="closeConfirmDeleteModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>Sei sicuro di voler eliminare questo evento?</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-text" id="cancelDelete">Annulla</button>
+                    <button class="btn btn-danger" id="confirmDelete">Elimina</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Aggiungi gli event listener
+        document.getElementById('closeConfirmDeleteModal').addEventListener('click', () => {
+            chiudiModal('confirmDeleteModal');
+        });
+        
+        document.getElementById('cancelDelete').addEventListener('click', () => {
+            chiudiModal('confirmDeleteModal');
+        });
+    }
+    
+    // Aggiorna l'event listener per il pulsante di conferma
+    document.getElementById('confirmDelete').onclick = () => {
+        // Elimina l'evento
+        eliminaEvento(id);
+        
+        // Chiudi entrambi i modal
+        chiudiModal('confirmDeleteModal');
+        chiudiModal('eventModal');
+    };
+    
+    // Apri il modal
+    apriModal('confirmDeleteModal');
+}
+
+/**
+ * Apre un modal di avviso
+ * @param {string} messaggio - Messaggio da mostrare
+ */
+function apriModalAvviso(messaggio) {
+    // Crea il modal se non esiste
+    let modal = document.getElementById('alertModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'alertModal';
+        modal.className = 'modal';
+        
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Avviso</h3>
+                    <button class="close-modal" id="closeAlertModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p id="alertMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary" id="confirmAlert">OK</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Aggiungi gli event listener
+        document.getElementById('closeAlertModal').addEventListener('click', () => {
+            chiudiModal('alertModal');
+        });
+        
+        document.getElementById('confirmAlert').addEventListener('click', () => {
+            chiudiModal('alertModal');
+        });
+    }
+    
+    // Aggiorna il messaggio
+    document.getElementById('alertMessage').textContent = messaggio;
+    
+    // Apri il modal
+    apriModal('alertModal');
+}
