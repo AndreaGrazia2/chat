@@ -44,8 +44,56 @@
 .navigation-controls {
 	display: flex;
 	align-items: center;
-	gap: 8px;
-	margin-bottom: 12px;
+	justify-content: space-between;
+	padding: 8px 16px;
+	background-color: var(--bg-main);
+	/* Rimosso il border-bottom */
+}
+
+.calendar-title {
+	display: flex;
+	align-items: center;
+}
+
+.nav-btn {
+	background: none;
+	border: none;
+	color: white;
+	cursor: pointer;
+	width: 32px;
+	height: 32px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+}
+
+.nav-btn:hover {
+	background-color: rgba(255, 255, 255, 0.1);
+}
+
+.current-date {
+	font-size: 18px;
+	font-weight: 600;
+	color: white;
+	margin: 0 12px;
+}
+
+.today-btn {
+	padding: 8px 16px;
+	background-color: var(--primary); /* Cambiato per essere simile a "Nuovo Evento" */
+	border: none;
+	border-radius: 4px;
+	color: white;
+	font-size: 14px;
+	font-weight: 500;
+	cursor: pointer;
+	transition: background-color 0.2s;
+	margin: 0 20px; /* Aggiunto più spazio ai lati */
+}
+
+.today-btn:hover {
+	background-color: #1a68d9; /* Colore hover simile a btn-primary */
 }
 
 .view-selector {
@@ -61,14 +109,13 @@
 	border: none;
 	cursor: pointer;
 	transition: background-color 0.2s, color 0.2s;
-	color: var(--text-color);
+	color: white;
 }
 
 .view-btn:hover {
-	background-color: var(--hover-bg);
+	background-color: rgba(255, 255, 255, 0.1);
 }
 
-/* Stile per il pulsante attivo */
 .view-btn.active {
 	background-color: var(--primary);
 	color: white;
