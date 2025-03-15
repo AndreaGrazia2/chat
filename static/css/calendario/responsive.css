@@ -1,0 +1,264 @@
+/* ==========================================================================
+   Responsive.css - Media queries e adattamenti per vari dispositivi
+   ========================================================================== */
+
+/* ===== DESKTOP (default) ===== */
+/* Gli stili di default sono già ottimizzati per desktop */
+
+/* Nascondi elementi mobile in desktop */
+#menuToggle, #closeSidebar {
+	display: none;
+}
+
+/* ===== TABLET (max-width: 992px) ===== */
+@media (max-width: 992px) {
+	/* Layout principale */
+	.app-container {
+		grid-template-columns: 1fr;
+	}
+
+	/* Sidebar */
+	.sidebar {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 280px;
+		height: 100%;
+		z-index: 20;
+		transform: translateX(-100%);
+		transition: transform 0.3s ease;
+	}
+
+	.sidebar.active {
+		transform: translateX(0);
+	}
+
+	/* Mostra il pulsante menu in tablet/mobile */
+	#menuToggle {
+		display: flex;
+	}
+
+	/* Mostra il pulsante chiudi sidebar in tablet/mobile */
+	#closeSidebar {
+		display: flex;
+	}
+
+	/* Header */
+	.header {
+		grid-column: 1 / 2;
+		padding: 0 12px;
+	}
+
+	.header-center {
+		display: none;
+	}
+
+	.header-actions {
+		gap: 8px;
+	}
+
+	.current-date {
+		font-size: 14px;
+	}
+
+	/* Calendar area */
+	.calendar-area {
+		grid-column: 1 / 2;
+	}
+
+	/* Vista mensile */
+	.calendar-grid {
+		grid-auto-rows: minmax(80px, 1fr);
+	}
+
+	/* Modal */
+	.modal-content {
+		max-width: 90%;
+	}
+
+	/* Form */
+	.form-row {
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	/* Bottoni */
+	.btn-primary span {
+		display: none;
+	}
+
+	/* View selector (mobile) */
+	.mobile-view-selector {
+		display: flex;
+		position: fixed;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		background-color: var(--bg-main);
+		border-top: 1px solid var(--border-color);
+		z-index: 10;
+	}
+
+	.mobile-view-btn {
+		flex: 1;
+		padding: 12px 8px;
+		text-align: center;
+		border: none;
+		background: none;
+		color: var(--text-color);
+		cursor: pointer;
+	}
+
+	.mobile-view-btn.active {
+		color: var(--primary);
+		border-top: 2px solid var(--primary);
+	}
+
+	.mobile-view-btn i {
+		display: block;
+		margin-bottom: 4px;
+		font-size: 16px;
+	}
+
+	.mobile-view-btn span {
+		font-size: 12px;
+	}
+}
+
+/* ===== SMARTPHONE (max-width: 768px) ===== */
+@media (max-width: 768px) {
+	/* Header */
+	.header {
+		padding: 0 8px;
+	}
+
+	.header-title span {
+		display: none;
+	}
+
+	.header-actions {
+		gap: 4px;
+	}
+
+	.btn-text {
+		padding: 6px 8px;
+		font-size: 12px;
+	}
+
+	.current-date {
+		font-size: 12px;
+		max-width: 80px;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	/* Vista mensile */
+	.weekday {
+		padding: 8px 4px;
+		font-size: 12px;
+	}
+
+	.calendar-day {
+		padding: 4px;
+	}
+
+	.day-number {
+		font-size: 12px;
+		margin-bottom: 4px;
+	}
+
+	.event {
+		padding: 2px 4px;
+		font-size: 10px;
+		margin-bottom: 2px;
+	}
+
+	/* Vista settimanale e giornaliera */
+	.time-labels {
+		width: 40px;
+	}
+
+	.time-label {
+		font-size: 10px;
+		padding: 2px;
+	}
+
+	/* Modal */
+	.modal-content {
+		max-width: 95%;
+		max-height: 80vh;
+	}
+
+	.modal-header h3 {
+		font-size: 16px;
+	}
+
+	/* Form */
+	.form-group {
+		margin-bottom: 12px;
+	}
+
+	.form-row {
+		margin-bottom: 12px;
+	}
+
+	/* Mini calendario */
+	.mini-calendar-day {
+		font-size: 10px;
+	}
+
+	/* Vista lista */
+	.list-event {
+		flex-direction: column;
+		padding: 8px;
+	}
+
+	.list-event-time {
+		width: 100%;
+		margin-bottom: 4px;
+	}
+
+	.list-event-title {
+		font-size: 14px;
+	}
+
+	.list-event-description {
+		font-size: 11px;
+	}
+}
+
+/* ===== SMARTPHONE PICCOLI (max-width: 480px) ===== */
+@media (max-width: 480px) {
+	/* Header */
+	.header-actions .btn-icon {
+		width: 32px;
+		height: 32px;
+	}
+
+	/* Vista mensile */
+	.calendar-grid {
+		grid-auto-rows: minmax(60px, 1fr);
+	}
+
+	/* Mostra al massimo 2 eventi per cella */
+	.calendar-day .event:nth-child(n+3) {
+		display: none;
+	}
+
+	/* Modal */
+	.modal-content {
+		max-height: 70vh;
+	}
+
+	/* Form */
+	label {
+		font-size: 12px;
+		margin-bottom: 4px;
+	}
+
+	input, textarea, select {
+		padding: 6px 8px;
+		font-size: 12px;
+	}
+}

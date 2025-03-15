@@ -1,0 +1,422 @@
+/* ==========================================================================
+   Components.css - Stili per componenti dell'interfaccia del calendario
+   ========================================================================== */
+
+/* ===== BOTTONI E CONTROLLI ===== */
+.btn {
+	background: none;
+	border: none;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: background-color 0.2s, color 0.2s;
+	padding: 8px;
+	border-radius: 4px;
+	color: var(--text-color);
+}
+
+.btn:hover {
+	background-color: var(--hover-bg);
+}
+
+.btn-icon {
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+}
+
+.btn-text {
+	padding: 8px 12px;
+}
+
+.btn-primary {
+	background-color: var(--primary);
+	color: white;
+	padding: 8px 16px;
+}
+
+.btn-primary:hover {
+	background-color: #1a68d9;
+}
+
+/* ===== SELETTORE VISTA ===== */
+.navigation-controls {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 12px;
+}
+
+.view-selector {
+	display: flex;
+	border: 1px solid var(--border-color);
+	border-radius: 4px;
+	overflow: hidden;
+}
+
+.view-btn {
+	padding: 8px 16px;
+	background: none;
+	border: none;
+	cursor: pointer;
+	transition: background-color 0.2s, color 0.2s;
+	color: var(--text-color);
+}
+
+.view-btn:hover {
+	background-color: var(--hover-bg);
+}
+
+.view-btn.active {
+	background-color: var(--bg-main); /* Modificato: usa lo stesso sfondo di "Mese" */
+	color: var(--primary); /* Modificato: usa il colore primario invece del bianco */
+	font-weight: 500; /* Aggiunto: rende il testo più visibile */
+	border-bottom: 2px solid var(--primary); /* Aggiunto: indica visivamente la selezione */
+}
+
+.view-btn:hover {
+	background-color: var(--hover-bg);
+}
+
+.view-btn.active {
+	background-color: var(--primary);
+	color: white;
+}
+
+/* ===== MINI CALENDARIO ===== */
+.mini-calendar {
+	margin-bottom: 24px;
+}
+
+.mini-calendar-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 8px;
+}
+
+.mini-calendar-title {
+	font-weight: 600;
+}
+
+.mini-calendar-grid {
+	display: grid;
+	grid-template-columns: repeat(7, 1fr);
+	gap: 2px;
+}
+
+.mini-calendar-day {
+	aspect-ratio: 1/1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 12px;
+	border-radius: 50%;
+	cursor: pointer;
+}
+
+.mini-calendar-day:hover {
+	background-color: var(--hover-bg);
+}
+
+.mini-calendar-day.today {
+	background-color: var(--primary);
+	color: white;
+}
+
+.mini-calendar-day.selected {
+	background-color: var(--today-bg);
+}
+
+.mini-calendar-day.other-month {
+	opacity: 0.4;
+}
+
+.mini-calendar-weekday {
+	text-align: center;
+	font-size: 11px;
+	padding: 4px 0;
+	color: var(--text-color);
+	opacity: 0.7;
+}
+
+/* ===== CATEGORIE ===== */
+.categories-section {
+	margin-top: 24px;
+}
+
+.categories-section h3 {
+	margin-bottom: 12px;
+	font-size: 16px;
+}
+
+.categories-list {
+	list-style: none;
+}
+
+.category-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 0;
+}
+
+.category-color {
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+}
+
+/* ===== VISTA MENSILE ===== */
+.calendar-grid-header {
+	display: grid;
+	grid-template-columns: repeat(7, 1fr);
+	border-bottom: 1px solid var(--border-color);
+}
+
+.weekday {
+	padding: 12px;
+	text-align: center;
+	font-weight: 500;
+}
+
+.calendar-grid {
+	display: grid;
+	grid-template-columns: repeat(7, 1fr);
+	grid-auto-rows: minmax(100px, 1fr);
+	border-left: 1px solid var(--grid-line);
+}
+
+.calendar-day {
+	border-right: 1px solid var(--grid-line);
+	border-bottom: 1px solid var(--grid-line);
+	padding: 8px;
+	overflow: hidden;
+	position: relative;
+}
+
+.calendar-day.today {
+	background-color: var(--today-bg);
+}
+
+.calendar-day.other-month {
+	background-color: var(--secondary-bg);
+	opacity: 0.7;
+}
+
+.day-number {
+	font-weight: 500;
+	margin-bottom: 8px;
+}
+
+.today .day-number {
+	background-color: var(--primary);
+	color: white;
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+/* ===== EVENTI ===== */
+.event {
+	padding: 4px 8px;
+	border-radius: 4px;
+	margin-bottom: 4px;
+	font-size: 12px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	cursor: pointer;
+	color: white; /* Modificato: rimosso !important per permettere override */
+	font-weight: 500;
+	transition: transform 0.2s;
+}
+
+/* Aggiunto: regola per il testo degli eventi in modalità light */
+.light-theme .event {
+	color: white; /* Mantiene il bianco per eventi colorati */
+}
+
+.event:hover {
+	transform: translateY(-1px);
+}
+
+.event.work {
+	background-color: var(--event-work);
+}
+
+.event.personal {
+	background-color: var(--event-personal);
+}
+
+.event.family {
+	background-color: var(--event-family);
+}
+
+.event.health {
+	background-color: var(--event-health);
+}
+
+.more-events {
+	font-size: 12px;
+	color: var(--primary);
+	cursor: pointer;
+	padding: 2px 0;
+}
+
+.more-events:hover {
+	text-decoration: underline;
+}
+
+/* Intervento radicale per risolvere i problemi del calendario
+
+Dopo aver analizzato attentamente le immagini, è chiaro che abbiamo bisogno di un intervento più deciso per risolvere i problemi persistenti:
+
+1. Le etichette delle ore non sono allineate correttamente
+2. Il drag and drop degli eventi non funziona
+3. La visualizzazione generale necessita di miglioramenti
+
+Ecco una soluzione completa che risolve questi problemi:
+
+## 1. Correzione del CSS per l'allineamento delle ore
+```css
+/* ===== VISTA SETTIMANALE E GIORNALIERA ===== */
+.time-grid-container {
+    display: flex;
+    height: calc(100vh - 60px);
+    overflow-y: auto;
+}
+
+.time-labels {
+    width: 60px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--grid-line);
+    padding-top: 30px; /* Spazio per allineare con le intestazioni */
+    position: relative;
+}
+
+.time-label {
+    position: absolute;
+    right: 8px;
+    font-size: 12px;
+    color: var(--text-color);
+    opacity: 0.7;
+    height: auto;
+    line-height: 1;
+    transform: translateY(-50%);
+}
+
+/* Posiziona ogni etichetta oraria in modo preciso */
+.time-label:nth-child(1) { top: 0px; }
+.time-label:nth-child(2) { top: 60px; }
+.time-label:nth-child(3) { top: 120px; }
+.time-label:nth-child(4) { top: 180px; }
+.time-label:nth-child(5) { top: 240px; }
+.time-label:nth-child(6) { top: 300px; }
+.time-label:nth-child(7) { top: 360px; }
+.time-label:nth-child(8) { top: 420px; }
+.time-label:nth-child(9) { top: 480px; }
+.time-label:nth-child(10) { top: 540px; }
+.time-label:nth-child(11) { top: 600px; }
+.time-label:nth-child(12) { top: 660px; }
+.time-label:nth-child(13) { top: 720px; }
+.time-label:nth-child(14) { top: 780px; }
+.time-label:nth-child(15) { top: 840px; }
+.time-label:nth-child(16) { top: 900px; }
+.time-label:nth-child(17) { top: 960px; }
+.time-label:nth-child(18) { top: 1020px; }
+.time-label:nth-child(19) { top: 1080px; }
+.time-label:nth-child(20) { top: 1140px; }
+.time-label:nth-child(21) { top: 1200px; }
+.time-label:nth-child(22) { top: 1260px; }
+.time-label:nth-child(23) { top: 1320px; }
+.time-label:nth-child(24) { top: 1380px; }
+.time-label:nth-child(25) { display: none; } /* Nasconde l'etichetta 24:00 */
+
+.week-grid, .day-grid {
+    display: grid;
+    grid-auto-rows: 60px;
+    flex: 1;
+    margin-top: 30px; /* Allinea con le etichette del tempo */
+    border-top: 1px solid var(--grid-line);
+}
+
+.week-grid {
+    grid-template-columns: repeat(7, 1fr);
+}
+
+.day-grid {
+    grid-template-columns: 1fr;
+}
+
+.time-slot-header {
+    position: sticky;
+    top: 0;
+    background-color: var(--bg-main);
+    padding: 8px;
+    border-bottom: 1px solid var(--border-color);
+    font-weight: 500;
+    z-index: 1;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.time-slot {
+    border-right: 1px solid var(--grid-line);
+    border-bottom: 1px solid var(--grid-line);
+    position: relative;
+    background-color: var(--bg-main);
+}
+
+/* ===== EVENTI ===== */
+.time-event {
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    padding: 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    color: white !important;
+    z-index: 1;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    user-select: none;
+}
+
+.time-event.work {
+    background-color: var(--event-work);
+}
+
+.time-event.personal {
+    background-color: var(--event-personal);
+}
+
+.time-event.family {
+    background-color: var(--event-family);
+}
+
+.time-event.health {
+    background-color: var(--event-health);
+}
+
+/* Stili per il drag and drop */
+.draggable {
+    cursor: move;
+}
+
+.dragging {
+    opacity: 0.7;
+    z-index: 100;
+}
+
+.drag-over {
+    background-color: rgba(0, 0, 0, 0.05);
+}

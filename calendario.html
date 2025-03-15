@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Calendario</title>
+	<!-- CSS Files -->
+	<link rel="stylesheet" href="static/css/calendario/base.css">
+	<link rel="stylesheet" href="static/css/calendario/components.css">
+	<link rel="stylesheet" href="static/css/calendario/utilities.css">
+	<link rel="stylesheet" href="static/css/calendario/responsive.css">
+	<!-- Font Awesome per le icone -->
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body class="light-theme">
+	<div class="app-container">
+		<!-- Header principale -->
+		<header class="header">
+			<div class="header-left">
+				<button id="menuToggle" class="btn btn-icon">
+					<i class="fas fa-bars"></i>
+				</button>
+				<div class="header-title">
+					<i class="far fa-calendar-alt"></i>
+					<span>Calendario</span>
+				</div>
+			</div>
+			<div class="header-center">
+				<div class="navigation-controls">
+					<button id="prevBtn" class="btn btn-icon">
+						<i class="fas fa-chevron-left"></i>
+					</button>
+					<div class="current-date">Marzo 2025</div>
+					<button id="nextBtn" class="btn btn-icon">
+						<i class="fas fa-chevron-right"></i>
+					</button>
+					<button id="todayBtn" class="btn btn-text">Oggi</button>
+				</div>
+				<div class="view-selector">
+					<button class="view-btn active" data-view="month">Mese</button>
+					<button class="view-btn" data-view="week">Settimana</button>
+					<button class="view-btn" data-view="day">Giorno</button>
+					<button class="view-btn" data-view="list">Lista</button>
+				</div>
+			</div>
+			<div class="header-actions">
+				<button id="addEventBtn" class="btn btn-primary">
+					<i class="fas fa-plus"></i>
+					<span>Nuovo Evento</span>
+				</button>
+				<button id="darkModeToggle" class="btn btn-icon">
+					<i class="fas fa-moon"></i>
+				</button>
+			</div>
+		</header>
+
+		<!-- Sidebar -->
+		<aside class="sidebar" id="sidebar">
+			<div class="sidebar-header">
+				<div class="sidebar-logo">
+					<i class="far fa-calendar-alt"></i>
+					<span>Calendario</span>
+				</div>
+				<button id="closeSidebar" class="btn btn-icon">
+					<i class="fas fa-times"></i>
+				</button>
+			</div>
+			<div class="sidebar-content">
+				<div class="mini-calendar" id="miniCalendar"></div>
+				<div class="categories-section">
+					<h3>Categorie</h3>
+					<ul class="categories-list">
+						<li class="category-item">
+							<span class="category-color" style="background-color: #4285F4;"></span>
+							<span class="category-name">Lavoro</span>
+						</li>
+						<li class="category-item">
+							<span class="category-color" style="background-color: #EA4335;"></span>
+							<span class="category-name">Personale</span>
+						</li>
+						<li class="category-item">
+							<span class="category-color" style="background-color: #FBBC05;"></span>
+							<span class="category-name">Famiglia</span>
+						</li>
+						<li class="category-item">
+							<span class="category-color" style="background-color: #34A853;"></span>
+							<span class="category-name">Salute</span>
+						</li>
+					</ul>
+				</div>
+			</div>
+		</aside>
+
+		<!-- Overlay per la sidebar mobile -->
+		<div class="overlay" id="overlay"></div>
+
+		<!-- Area principale del calendario -->
+		<main class="calendar-area">
+			<!-- Vista mensile (default) -->
+			<div class="calendar-view month-view active" id="monthView">
+				<div class="calendar-grid-header">
+					<div class="weekday">Lun</div>
+					<div class="weekday">Mar</div>
+					<div class="weekday">Mer</div>
+					<div class="weekday">Gio</div>
+					<div class="weekday">Ven</div>
+					<div class="weekday">Sab</div>
+					<div class="weekday">Dom</div>
+				</div>
+				<div class="calendar-grid" id="monthGrid"></div>
+			</div>
+
+			<!-- Vista settimanale -->
+			<div class="calendar-view week-view" id="weekView">
+				<div class="time-grid-container">
+					<div class="time-labels">
+						<div class="time-label">00:00</div>
+						<div class="time-label">01:00</div>
+						<div class="time-label">02:00</div>
+						<div class="time-label">03:00</div>
+						<div class="time-label">04:00</div>
+						<div class="time-label">05:00</div>
+						<div class="time-label">06:00</div>
+						<div class="time-label">07:00</div>
+						<div class="time-label">08:00</div>
+						<div class="time-label">09:00</div>
+						<div class="time-label">10:00</div>
+						<div class="time-label">11:00</div>
+						<div class="time-label">12:00</div>
+						<div class="time-label">13:00</div>
+						<div class="time-label">14:00</div>
+						<div class="time-label">15:00</div>
+						<div class="time-label">16:00</div>
+						<div class="time-label">17:00</div>
+						<div class="time-label">18:00</div>
+						<div class="time-label">19:00</div>
+						<div class="time-label">20:00</div>
+						<div class="time-label">21:00</div>
+						<div class="time-label">22:00</div>
+						<div class="time-label">23:00</div>
+						<div class="time-label">24:00</div>
+					</div>
+					<div class="week-grid" id="weekGrid"></div>
+				</div>
+			</div>
+
+			<!-- Vista giornaliera -->
+			<div class="calendar-view day-view" id="dayView">
+				<div class="time-grid-container">
+					<div class="time-labels">
+						<div class="time-label">00:00</div>
+						<div class="time-label">01:00</div>
+						<div class="time-label">02:00</div>
+						<div class="time-label">03:00</div>
+						<div class="time-label">04:00</div>
+						<div class="time-label">05:00</div>
+						<div class="time-label">06:00</div>
+						<div class="time-label">07:00</div>
+						<div class="time-label">08:00</div>
+						<div class="time-label">09:00</div>
+						<div class="time-label">10:00</div>
+						<div class="time-label">11:00</div>
+						<div class="time-label">12:00</div>
+						<div class="time-label">13:00</div>
+						<div class="time-label">14:00</div>
+						<div class="time-label">15:00</div>
+						<div class="time-label">16:00</div>
+						<div class="time-label">17:00</div>
+						<div class="time-label">18:00</div>
+						<div class="time-label">19:00</div>
+						<div class="time-label">20:00</div>
+						<div class="time-label">21:00</div>
+						<div class="time-label">22:00</div>
+						<div class="time-label">23:00</div>
+						<div class="time-label">24:00</div>
+					</div>
+					<div class="day-grid" id="dayGrid"></div>
+				</div>
+			</div>
+
+			<!-- Vista lista -->
+			<div class="calendar-view list-view" id="listView">
+				<div class="list-container" id="eventsList"></div>
+			</div>
+		</main>
+	</div>
+
+	<!-- Modal per aggiungere/modificare eventi -->
+	<div class="modal" id="eventModal">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h3 id="modalTitle">Nuovo Evento</h3>
+				<button class="close-modal" id="closeModal">
+					<i class="fas fa-times"></i>
+				</button>
+			</div>
+			<div class="modal-body">
+				<form id="eventForm">
+					<div class="form-group">
+						<label for="eventTitle">Titolo</label>
+						<input type="text" id="eventTitle" required>
+					</div>
+					<div class="form-row">
+						<div class="form-group">
+							<label for="eventDate">Data</label>
+							<input type="date" id="eventDate" required>
+						</div>
+						<div class="form-group">
+							<label for="eventTime">Ora</label>
+							<input type="time" id="eventTime">
+						</div>
+					</div>
+					<div class="form-row">
+						<div class="form-group">
+							<label for="eventEndDate">Data fine</label>
+							<input type="date" id="eventEndDate">
+						</div>
+						<div class="form-group">
+							<label for="eventEndTime">Ora fine</label>
+							<input type="time" id="eventEndTime">
+						</div>
+					</div>
+					<div class="form-group">
+						<label for="eventDescription">Descrizione</label>
+						<textarea id="eventDescription" rows="3"></textarea>
+					</div>
+					<div class="form-group">
+						<label for="eventCategory">Categoria</label>
+						<select id="eventCategory">
+							<option value="work">Lavoro</option>
+							<option value="personal">Personale</option>
+							<option value="family">Famiglia</option>
+							<option value="health">Salute</option>
+						</select>
+					</div>
+				</form>
+			</div>
+			<div class="modal-footer">
+				<button class="btn btn-text" id="cancelEvent">Annulla</button>
+				<button class="btn btn-primary" id="saveEvent">Salva</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- Modal per visualizzare più eventi in un giorno -->
+	<div class="modal" id="eventsListModal">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h3 id="eventsListModalTitle">Eventi del 15 Marzo</h3>
+				<button class="close-modal" id="closeEventsListModal">
+					<i class="fas fa-times"></i>
+				</button>
+			</div>
+			<div class="modal-body">
+				<div class="events-list" id="eventsListModalContent"></div>
+			</div>
+		</div>
+	</div>
+
+	<!-- JavaScript Files -->
+	<script src="static/js/calendario/utils.js"></script>
+	<script src="static/js/calendario/calendar.js"></script>
+	<script src="static/js/calendario/events.js"></script>
+	<script src="static/js/calendario/views.js"></script>
+	<script src="static/js/calendario/mobile.js"></script>
+	<script src="static/js/calendario/app.js"></script>
+</body>
+
+</html>
