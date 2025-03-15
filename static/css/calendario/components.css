@@ -223,67 +223,50 @@
 
 /* ===== EVENTI ===== */
 .event {
-	padding: 4px 8px;
-	border-radius: 4px;
-	margin-bottom: 4px;
-	font-size: 12px;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	cursor: pointer;
-	color: white; /* Modificato: rimosso !important per permettere override */
-	font-weight: 500;
-	transition: transform 0.2s;
-}
-
-/* Aggiunto: regola per il testo degli eventi in modalità light */
-.light-theme .event {
-	color: white; /* Mantiene il bianco per eventi colorati */
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    color: white !important;
+    font-weight: 500;
+    transition: transform 0.2s;
 }
 
 .event:hover {
-	transform: translateY(-1px);
+    transform: translateY(-1px);
 }
 
 .event.work {
-	background-color: var(--event-work);
+    background-color: var(--event-work);
 }
 
 .event.personal {
-	background-color: var(--event-personal);
+    background-color: var(--event-personal);
 }
 
 .event.family {
-	background-color: var(--event-family);
+    background-color: var(--event-family);
 }
 
 .event.health {
-	background-color: var(--event-health);
+    background-color: var(--event-health);
 }
 
 .more-events {
-	font-size: 12px;
-	color: var(--primary);
-	cursor: pointer;
-	padding: 2px 0;
+    font-size: 12px;
+    color: var(--primary);
+    cursor: pointer;
+    padding: 2px 0;
 }
 
 .more-events:hover {
-	text-decoration: underline;
+    text-decoration: underline;
 }
 
-/* Intervento radicale per risolvere i problemi del calendario
-
-Dopo aver analizzato attentamente le immagini, è chiaro che abbiamo bisogno di un intervento più deciso per risolvere i problemi persistenti:
-
-1. Le etichette delle ore non sono allineate correttamente
-2. Il drag and drop degli eventi non funziona
-3. La visualizzazione generale necessita di miglioramenti
-
-Ecco una soluzione completa che risolve questi problemi:
-
-## 1. Correzione del CSS per l'allineamento delle ore
-```css
 /* ===== VISTA SETTIMANALE E GIORNALIERA ===== */
 .time-grid-container {
     display: flex;
@@ -295,76 +278,31 @@ Ecco una soluzione completa che risolve questi problemi:
     width: 60px;
     flex-shrink: 0;
     border-right: 1px solid var(--grid-line);
-    padding-top: 30px; /* Spazio per allineare con le intestazioni */
-    position: relative;
 }
 
 .time-label {
-    position: absolute;
-    right: 8px;
+    height: 60px;
+    padding: 4px 8px 4px 0;
+    text-align: right;
     font-size: 12px;
     color: var(--text-color);
     opacity: 0.7;
-    height: auto;
-    line-height: 1;
-    transform: translateY(-50%);
-}
-
-/* Posiziona ogni etichetta oraria in modo preciso */
-.time-label:nth-child(1) { top: 0px; }
-.time-label:nth-child(2) { top: 60px; }
-.time-label:nth-child(3) { top: 120px; }
-.time-label:nth-child(4) { top: 180px; }
-.time-label:nth-child(5) { top: 240px; }
-.time-label:nth-child(6) { top: 300px; }
-.time-label:nth-child(7) { top: 360px; }
-.time-label:nth-child(8) { top: 420px; }
-.time-label:nth-child(9) { top: 480px; }
-.time-label:nth-child(10) { top: 540px; }
-.time-label:nth-child(11) { top: 600px; }
-.time-label:nth-child(12) { top: 660px; }
-.time-label:nth-child(13) { top: 720px; }
-.time-label:nth-child(14) { top: 780px; }
-.time-label:nth-child(15) { top: 840px; }
-.time-label:nth-child(16) { top: 900px; }
-.time-label:nth-child(17) { top: 960px; }
-.time-label:nth-child(18) { top: 1020px; }
-.time-label:nth-child(19) { top: 1080px; }
-.time-label:nth-child(20) { top: 1140px; }
-.time-label:nth-child(21) { top: 1200px; }
-.time-label:nth-child(22) { top: 1260px; }
-.time-label:nth-child(23) { top: 1320px; }
-.time-label:nth-child(24) { top: 1380px; }
-.time-label:nth-child(25) { display: none; } /* Nasconde l'etichetta 24:00 */
-
-.week-grid, .day-grid {
-    display: grid;
-    grid-auto-rows: 60px;
-    flex: 1;
-    margin-top: 30px; /* Allinea con le etichette del tempo */
-    border-top: 1px solid var(--grid-line);
+    position: relative;
+    top: -10px;
 }
 
 .week-grid {
+    display: grid;
     grid-template-columns: repeat(7, 1fr);
+    grid-auto-rows: 60px;
+    flex: 1;
 }
 
 .day-grid {
+    display: grid;
     grid-template-columns: 1fr;
-}
-
-.time-slot-header {
-    position: sticky;
-    top: 0;
-    background-color: var(--bg-main);
-    padding: 8px;
-    border-bottom: 1px solid var(--border-color);
-    font-weight: 500;
-    z-index: 1;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    grid-auto-rows: 60px;
+    flex: 1;
 }
 
 .time-slot {
@@ -374,21 +312,50 @@ Ecco una soluzione completa che risolve questi problemi:
     background-color: var(--bg-main);
 }
 
-/* ===== EVENTI ===== */
+.time-slot.current-time {
+    background-color: rgba(29, 116, 245, 0.1);
+}
+
+.time-slot-header {
+    position: sticky;
+    top: 0;
+    background-color: var(--bg-main);
+    padding: 8px;
+    border-bottom: 1px solid var(--grid-line);
+    font-weight: 500;
+    z-index: 1;
+}
+
 .time-event {
     position: absolute;
     left: 4px;
     right: 4px;
-    padding: 8px;
+    padding: 4px;
     border-radius: 4px;
     font-size: 12px;
     overflow: hidden;
     cursor: pointer;
     color: white !important;
     z-index: 1;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    user-select: none;
+}
+
+.time-event-title {
+    font-weight: 500;
+    margin-bottom: 2px;
+}
+
+.time-event-time {
+    font-size: 10px;
+    opacity: 0.9;
+}
+
+.time-event-description {
+    font-size: 10px;
+    opacity: 0.9;
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .time-event.work {
@@ -407,16 +374,74 @@ Ecco una soluzione completa che risolve questi problemi:
     background-color: var(--event-health);
 }
 
-/* Stili per il drag and drop */
-.draggable {
-    cursor: move;
+/* ===== VISTA LISTA ===== */
+.list-container {
+    padding: 16px;
 }
 
-.dragging {
-    opacity: 0.7;
-    z-index: 100;
+.list-day {
+    margin-bottom: 24px;
 }
 
-.drag-over {
-    background-color: rgba(0, 0, 0, 0.05);
+.list-day-header {
+    font-weight: 600;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.list-event {
+    display: flex;
+    padding: 12px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    background-color: var(--secondary-bg);
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.list-event:hover {
+    transform: translateY(-2px);
+}
+
+.list-event-time {
+    width: 100px;
+    flex-shrink: 0;
+}
+
+.list-event-content {
+    flex: 1;
+}
+
+.list-event-title {
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.list-event-description {
+    font-size: 12px;
+    color: var(--text-color);
+    opacity: 0.8;
+}
+
+.list-event-category {
+    width: 8px;
+    border-radius: 4px;
+    margin-right: 12px;
+}
+
+.list-event-category.work {
+    background-color: var(--event-work);
+}
+
+.list-event-category.personal {
+    background-color: var(--event-personal);
+}
+
+.list-event-category.family {
+    background-color: var(--event-family);
+}
+
+.list-event-category.health {
+    background-color: var(--event-health);
 }

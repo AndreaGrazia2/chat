@@ -372,7 +372,7 @@ function renderizzaVistaSettimanale() {
     const eventiSettimana = getEventiSettimana(inizioSettimana, fineSettimana);
     
     // Crea le celle orarie per ogni ora e giorno
-    for (let ora = 0; ora < 25; ora++) {
+    for (let ora = 0; ora < 24; ora++) {
         for (let giorno = 0; giorno < 7; giorno++) {
             const dataOra = new Date(giorniSettimana[giorno]);
             dataOra.setHours(ora, 0, 0);
@@ -813,6 +813,7 @@ function renderizzaVistaLista() {
  * @param {string} id - ID dell'evento
  */
 function apriModalEvento(id) {
+    console.log("Apertura modal per evento:", id); // Aggiungi questo log
     const evento = eventi.find(e => e.id === id);
     if (!evento) return;
     
