@@ -228,6 +228,18 @@ function apriModalNuovoEvento(data) {
         const oraFine = document.getElementById('eventEndTime').value;
         const categoria = document.getElementById('eventCategory').value;
         
+        // Verifica che il titolo sia stato inserito
+        if (!titolo.trim()) {
+            apriModalAvviso('Inserisci un titolo per l\'evento');
+            return;
+        }
+        
+        // Verifica che la descrizione sia stata inserita
+        if (!descrizione.trim()) {
+            apriModalAvviso('Inserisci una descrizione per l\'evento');
+            return;
+        }
+        
         // Crea le date
         const dataInizio = new Date(`${data}T${ora}`);
         const dataFinale = new Date(`${dataFine}T${oraFine}`);
