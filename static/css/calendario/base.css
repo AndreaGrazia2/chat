@@ -15,7 +15,53 @@
 	--secondary-dark: #383d48;
 	--border-light: #e0e0e0;
 	--border-dark: #394050;
-	--event-work: #4285F4;
+	/* Aggiungiamo/modifichiamo solo le variabili di colore per la modalità light */
+	:root {
+	    /* Colori base */
+	    --bg-main: #ffffff;
+	    --bg-secondary: #f5f5f5;
+	    --text-color: #333333;
+	    --text-color-secondary: #666666;
+	    --border-color: #e0e0e0;
+	    --grid-line: #eeeeee;
+	    
+	    /* Colori per gli eventi */
+	    --event-work: #4285F4;
+	    --event-personal: #EA4335;
+	    --event-family: #FBBC05;
+	    --event-health: #34A853;
+	    
+	    /* Colori UI */
+	    --primary: #1a73e8;
+	    --hover-bg: rgba(0, 0, 0, 0.05);
+	    --today-bg: rgba(26, 115, 232, 0.1);
+	    
+	    /* Colori per la navigazione */
+	    --nav-text: #333333;
+	    --nav-bg: #f5f5f5;
+	    --nav-active: #1a73e8;
+	    --nav-active-text: #ffffff;
+	}
+	
+	/* Modalità dark */
+	.dark-theme {
+	    --bg-main: #1e1e1e;
+	    --bg-secondary: #2d2d2d;
+	    --text-color: #e0e0e0;
+	    --text-color-secondary: #a0a0a0;
+	    --border-color: #444444;
+	    --grid-line: #333333;
+	    
+	    /* Colori UI */
+	    --hover-bg: rgba(255, 255, 255, 0.1);
+	    --today-bg: rgba(26, 115, 232, 0.2);
+	    
+	    /* Colori per la navigazione */
+	    --nav-text: #e0e0e0;
+	    --nav-bg: #2d2d2d;
+	    --nav-active: #1a73e8;
+	    --nav-active-text: #ffffff;
+	}
 	--event-personal: #EA4335;
 	--event-family: #FBBC05;
 	--event-health: #34A853;

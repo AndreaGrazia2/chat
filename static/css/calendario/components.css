@@ -632,3 +632,89 @@
     min-height: 100px;
     resize: vertical;
 }
+
+/* Modifichiamo solo le parti relative alla barra di navigazione e al mini calendario */
+
+.current-date {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-color);
+    margin: 0 12px;
+}
+
+.nav-btn {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.nav-btn:hover {
+    background-color: var(--hover-bg);
+}
+
+.view-btn {
+    padding: 8px 16px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+    color: var(--text-color);
+}
+
+.view-btn:hover {
+    background-color: var(--hover-bg);
+}
+
+.view-btn.active {
+    background-color: var(--primary);
+    color: white;
+    font-weight: 500;
+}
+
+/* ===== MINI CALENDARIO ===== */
+.mini-calendar-title {
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.mini-calendar-day {
+    aspect-ratio: 1/1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    border-radius: 50%;
+    cursor: pointer;
+    color: var(--text-color);
+}
+
+.mini-calendar-day:hover {
+    background-color: var(--hover-bg);
+}
+
+.mini-calendar-day.today {
+    background-color: var(--primary);
+    color: white;
+}
+
+.mini-calendar-day.selected {
+    background-color: var(--today-bg);
+}
+
+.mini-calendar-day.other-month {
+    opacity: 0.4;
+}
+
+.mini-calendar-weekday {
+    text-align: center;
+    font-size: 11px;
+    padding: 4px 0;
+    color: var(--text-color-secondary);
+}
