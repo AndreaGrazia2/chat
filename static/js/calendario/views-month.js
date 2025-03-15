@@ -102,6 +102,7 @@ function renderizzaVistaMensile() {
             const dataStr = moreElement.closest('.calendar-day').dataset.date;
             const [anno, mese, giorno] = dataStr.split('-').map(Number);
             const data = new Date(anno, mese - 1, giorno);
+            console.log('Cliccato su più eventi:', data);
             apriModalListaEventi(data);
         });
     });

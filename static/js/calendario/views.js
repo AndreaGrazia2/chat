@@ -186,12 +186,6 @@ function renderizzaMiniCalendario() {
 }
 
 /**
- * Apre il modal per visualizzare/modificare un evento
- * @param {string} id - ID dell'evento
- */
-
-
-/**
  * Apre il modal per creare un nuovo evento
  * @param {Date} data - Data iniziale per l'evento
  */
@@ -309,7 +303,8 @@ function apriModalListaEventi(data) {
 function apriModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
-        modal.classList.add('active');
+        // Cambiamo questo per usare display invece di classi
+        modal.style.display = 'block';
     }
 }
 
@@ -320,7 +315,8 @@ function apriModal(modalId) {
 function chiudiModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
-        modal.classList.remove('active');
+        // Cambiamo questo per usare display invece di classi
+        modal.style.display = 'none';
     }
 }
 

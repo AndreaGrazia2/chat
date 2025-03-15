@@ -705,7 +705,8 @@
 }
 
 .mini-calendar-day.selected {
-    background-color: var(--today-bg);
+    background-color: rgba(108, 138, 208, 1); /* Colore più distinguibile */
+    color: white; /* Testo bianco per migliore leggibilità */
 }
 
 .mini-calendar-day.other-month {
