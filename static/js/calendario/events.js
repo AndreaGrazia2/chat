@@ -6,6 +6,7 @@
 let eventi = [];
 
 // Categorie di eventi disponibili
+// Definizione delle categorie
 const categorie = {
     work: {
         nome: 'Lavoro',
@@ -165,87 +166,90 @@ function getEventiSettimana(dataInizio, dataFine) {
  * Salva gli eventi (in localStorage per demo, in un'implementazione reale si userebbe un'API)
  */
 function salvaEventi() {
-    localStorage.setItem('calendario_eventi', JSON.stringify(eventi));
+    localStorage.setItem('eventi', JSON.stringify(eventi));
     // In un'implementazione reale, qui si chiamerebbe l'API per salvare gli eventi
 }
 
 /**
  * Carica gli eventi dal localStorage (o da un'API in un'implementazione reale)
  */
+// Carica gli eventi dal localStorage
 function caricaEventi() {
-    const eventiSalvati = localStorage.getItem('calendario_eventi');
+    const eventiSalvati = localStorage.getItem('eventi');
     if (eventiSalvati) {
-        try {
-            eventi = JSON.parse(eventiSalvati).map(evento => ({
-                ...evento,
-                dataInizio: new Date(evento.dataInizio),
-                dataFine: new Date(evento.dataFine),
-                creato: new Date(evento.creato),
-                modificato: evento.modificato ? new Date(evento.modificato) : null
-            }));
-        } catch (error) {
-            console.error('Errore nel caricamento degli eventi:', error);
-            eventi = [];
-        }
+        eventi = JSON.parse(eventiSalvati);
+        
+        // Converti le stringhe di data in oggetti Date
+        eventi.forEach(evento => {
+            evento.dataInizio = new Date(evento.dataInizio);
+            evento.dataFine = new Date(evento.dataFine);
+        });
+        console.log(`Caricati ${eventi.length} eventi dal localStorage`);
+    } else {
+        // Se non ci sono eventi, genera eventi di test
+        console.log('Nessun evento trovato, genero eventi di test...');
+        generaEventiTest(15);
     }
-    // In un'implementazione reale, qui si chiamerebbe l'API per caricare gli eventi
 }
 
-/**
- * Crea eventi di esempio per la demo
- */
-function creaEventiDemo() {
-    // Se ci sono già eventi, non creare quelli di esempio
-    if (eventi.length > 0) return;
+// Genera eventi casuali per testare il calendario
+function generaEventiTest(numEventi = 15) {
+    const categorie = ['work', 'personal', 'family', 'health'];
+    const titoli = [
+        'Riunione', 'Appuntamento', 'Compleanno', 'Visita medica', 
+        'Conferenza', 'Cena', 'Pranzo', 'Lezione', 'Allenamento',
+        'Scadenza progetto', 'Viaggio', 'Vacanza', 'Anniversario'
+    ];
+    const descrizioni = [
+        'Importante non mancare', 'Ricordati di portare i documenti',
+        'Confermare presenza', 'Preparare presentazione',
+        'Chiamare prima per confermare', 'Portare un regalo',
+        'Prenotare in anticipo', 'Rivedere appunti'
+    ];
     
-    const oggi = new Date();
-    const anno = oggi.getFullYear();
-    const mese = oggi.getMonth();
+    // Data di inizio: un mese indietro
+    const dataInizioRange = new Date();
+    dataInizioRange.setMonth(dataInizioRange.getMonth() - 1);
     
-    // Evento oggi
-    aggiungiEvento({
-        titolo: 'Riunione di lavoro',
-        descrizione: 'Discussione sul nuovo progetto',
-        dataInizio: new Date(anno, mese, oggi.getDate(), 10, 0),
-        dataFine: new Date(anno, mese, oggi.getDate(), 11, 30),
-        categoria: 'work'
-    });
+    // Data di fine: due mesi avanti
+    const dataFineRange = new Date();
+    dataFineRange.setMonth(dataFineRange.getMonth() + 2);
     
-    // Evento domani
-    aggiungiEvento({
-        titolo: 'Appuntamento medico',
-        descrizione: 'Visita di controllo',
-        dataInizio: new Date(anno, mese, oggi.getDate() + 1, 15, 0),
-        dataFine: new Date(anno, mese, oggi.getDate() + 1, 16, 0),
-        categoria: 'health'
-    });
+    for (let i = 0; i < numEventi; i++) {
+        // Genera una data casuale nel range
+        const dataInizio = new Date(
+            dataInizioRange.getTime() + 
+            Math.random() * (dataFineRange.getTime() - dataInizioRange.getTime())
+        );
+        
+        // Imposta un'ora casuale (8-20)
+        dataInizio.setHours(Math.floor(Math.random() * 12) + 8, 0, 0);
+        
+        // Durata casuale (30min - 2h)
+        const durata = (Math.floor(Math.random() * 4) + 1) * 30;
+        const dataFine = new Date(dataInizio);
+        dataFine.setMinutes(dataFine.getMinutes() + durata);
+        
+        // Scegli categoria, titolo e descrizione casuali
+        const categoria = categorie[Math.floor(Math.random() * categorie.length)];
+        const titolo = titoli[Math.floor(Math.random() * titoli.length)];
+        const descrizione = descrizioni[Math.floor(Math.random() * descrizioni.length)];
+        
+        // Aggiungi l'evento
+        eventi.push({
+            id: generaId(), // Ora questa funzione esiste
+            titolo,
+            descrizione,
+            dataInizio,
+            dataFine,
+            categoria
+        });
+    }
     
-    // Evento tra 3 giorni
-    aggiungiEvento({
-        titolo: 'Cena di famiglia',
-        descrizione: 'Ristorante Da Luigi',
-        dataInizio: new Date(anno, mese, oggi.getDate() + 3, 20, 0),
-        dataFine: new Date(anno, mese, oggi.getDate() + 3, 22, 30),
-        categoria: 'family'
-    });
+    // Salva gli eventi
+    salvaEventi();
     
-    // Evento la prossima settimana
-    aggiungiEvento({
-        titolo: 'Compleanno di Marco',
-        descrizione: 'Portare un regalo',
-        dataInizio: new Date(anno, mese, oggi.getDate() + 7, 18, 0),
-        dataFine: new Date(anno, mese, oggi.getDate() + 7, 23, 0),
-        categoria: 'personal'
-    });
-    
-    // Evento tutto il giorno
-    aggiungiEvento({
-        titolo: 'Conferenza Web',
-        descrizione: 'Conferenza annuale sulle tecnologie web',
-        dataInizio: new Date(anno, mese, oggi.getDate() + 10, 9, 0),
-        dataFine: new Date(anno, mese, oggi.getDate() + 10, 18, 0),
-        categoria: 'work'
-    });
+    console.log(`Generati ${numEventi} eventi di test`);
 }
 
 // Implementazione del drag and drop per gli eventi
@@ -703,4 +707,47 @@ function updateCurrentTimeIndicator() {
     }
 }
 
-// ... existing code ...
+// Funzione per aggiornare l'indicatore dell'ora corrente
+function updateCurrentTimeIndicator() {
+    console.log('Updating current time indicator');
+    
+    // Rimuovi eventuali indicatori esistenti
+    document.querySelectorAll('.current-time-indicator').forEach(el => el.remove());
+    
+    // Ottieni l'ora corrente
+    const now = new Date();
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    
+    // Calcola la posizione verticale in base all'ora corrente
+    const hourHeight = 60; // Altezza di ogni slot orario in pixel
+    const topPosition = (hours * hourHeight) + (minutes / 60 * hourHeight) + 50; // +50 per l'header
+    
+    // Crea l'indicatore per la vista giornaliera
+    const dayGrid = document.querySelector('.day-grid');
+    if (dayGrid) {
+        const indicator = document.createElement('div');
+        indicator.className = 'current-time-indicator';
+        indicator.style.top = `${topPosition}px`;
+        dayGrid.appendChild(indicator);
+        console.log('Added time indicator to day view at position:', topPosition);
+    }
+    
+    // Crea l'indicatore per la vista settimanale
+    const weekGrid = document.querySelector('.week-grid');
+    if (weekGrid) {
+        const indicator = document.createElement('div');
+        indicator.className = 'current-time-indicator';
+        indicator.style.top = `${topPosition}px`;
+        weekGrid.appendChild(indicator);
+        console.log('Added time indicator to week view at position:', topPosition);
+    }
+}
+
+/**
+ * Genera un ID univoco per gli eventi
+ * @returns {string} - ID univoco
+ */
+function generaId() {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+}

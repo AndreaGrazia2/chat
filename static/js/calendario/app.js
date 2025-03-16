@@ -14,7 +14,9 @@ function initApp() {
     caricaEventi();
     
     // Crea eventi di esempio se non ce ne sono
-    creaEventiDemo();
+    if (eventi.length === 0) {
+        generaEventiTest(15); // Modificato da creaEventiDemo a generaEventiTest
+    }
     
     // Inizializza le viste del calendario
     inizializzaViste();
