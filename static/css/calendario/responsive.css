@@ -49,6 +49,7 @@
 		padding: 0 12px;
 	}
 
+	/* Nascondiamo sempre la vista centrale su tablet */
 	.header-center {
 		display: none;
 	}
@@ -64,6 +65,8 @@
 	/* Calendar area */
 	.calendar-area {
 		grid-column: 1 / 2;
+		/* Aggiungiamo padding-bottom per evitare che il contenuto venga nascosto dalla barra mobile */
+		padding-bottom: 60px;
 	}
 
 	/* Vista mensile */
@@ -87,7 +90,7 @@
 		display: none;
 	}
 
-	/* View selector (mobile) */
+	/* View selector (mobile) - Assicuriamoci che sia sempre visibile su tablet */
 	.mobile-view-selector {
 		display: flex;
 		position: fixed;
@@ -97,6 +100,7 @@
 		background-color: var(--bg-main);
 		border-top: 1px solid var(--border-color);
 		z-index: 10;
+		height: 60px; /* Altezza fissa per la barra mobile */
 	}
 
 	.mobile-view-btn {

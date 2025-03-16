@@ -80,19 +80,6 @@ function updateMobileViewSelector() {
     const mobileViewSelector = document.querySelector('.mobile-view-selector');
     if (!mobileViewSelector) return;
     
-    // Mostra il selettore solo su schermi piccoli
-    if (window.innerWidth <= 768) {
-        mobileViewSelector.style.display = 'flex';
-        
-        // Aggiungi padding al fondo del calendario per fare spazio al selettore
-        document.querySelector('.calendar-area').style.paddingBottom = '60px';
-    } else {
-        mobileViewSelector.style.display = 'none';
-        
-        // Rimuovi il padding
-        document.querySelector('.calendar-area').style.paddingBottom = '0';
-    }
-    
     // Aggiorna il pulsante attivo
     document.querySelectorAll('.mobile-view-btn').forEach(btn => {
         btn.classList.remove('active');
