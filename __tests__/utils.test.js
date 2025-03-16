@@ -8,7 +8,7 @@ const {
   hideLoader,
   showNotification,
   showConfirmDialog
-} = require('../static/js/utils');
+} = require('../chat/static/js/utils');
 
 // Test esistenti per formatTime, formatDate e linkifyText
 describe('formatTime', () => {

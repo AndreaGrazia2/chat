@@ -5,10 +5,10 @@ const {
   scrollToBottom,
   toggleSidebar,
   toggleSearchPanel
-} = require('../static/js/app');
+} = require('../chat/static/js/app');
 
 // Mock delle funzioni di utils.js che potrebbero essere usate in app.js
-jest.mock('../static/js/utils', () => ({
+jest.mock('../chat/static/js/utils', () => ({
   formatTime: jest.fn(date => '12:00'),
   formatDate: jest.fn(date => 'January 1'),
   linkifyText: jest.fn(text => text),
@@ -244,8 +244,8 @@ describe('scrollToBottom', () => {
 describe('createMessageElement', () => {
   beforeEach(() => {
     // Assicurati che linkifyText sia disponibile globalmente
-    global.linkifyText = require('../static/js/utils').linkifyText;
-    global.formatTime = require('../static/js/utils').formatTime;
+    global.linkifyText = require('../chat/static/js/utils').linkifyText;
+    global.formatTime = require('../chat/static/js/utils').formatTime;
   });
   
   test('crea un elemento messaggio con le proprietà corrette', () => {

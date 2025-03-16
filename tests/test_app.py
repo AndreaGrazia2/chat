@@ -8,7 +8,9 @@ from datetime import datetime
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Importa l'app Flask e le altre funzioni/variabili necessarie
-from app import app, users, channels, messages, get_llm_response
+from app import app
+from chat.models import users, channels, messages
+from common.utils import get_llm_response
 
 @pytest.fixture
 def client():
@@ -20,11 +22,12 @@ def client():
 def test_index_route(client):
     """Verifica che la route principale restituisca la pagina HTML"""
     response = client.get('/')
-    assert response.status_code == 200
+    assert response.status_code == 302  # Ora è un redirect a /chat/
+    assert response.location == '/chat/'
 
 def test_get_users(client):
-    """Verifica che l'API /api/users restituisca la lista degli utenti"""
-    response = client.get('/api/users')
+    """Verifica che l'API /chat/api/users restituisca la lista degli utenti"""
+    response = client.get('/chat/api/users')
     assert response.status_code == 200
     data = json.loads(response.data)
     assert isinstance(data, list)
@@ -32,8 +35,8 @@ def test_get_users(client):
     assert data[0]['name'] == 'You'  # Il primo utente dovrebbe essere "You"
 
 def test_get_channels(client):
-    """Verifica che l'API /api/channels restituisca la lista dei canali"""
-    response = client.get('/api/channels')
+    """Verifica che l'API /chat/api/channels restituisca la lista dei canali"""
+    response = client.get('/chat/api/channels')
     assert response.status_code == 200
     data = json.loads(response.data)
     assert isinstance(data, list)
@@ -42,23 +45,23 @@ def test_get_channels(client):
     assert any(channel['name'] == 'general' for channel in data)
 
 def test_get_channel_messages(client):
-    """Verifica che l'API /api/messages/channel/<channel_name> funzioni"""
+    """Verifica che l'API /chat/api/messages/channel/<channel_name> funzioni"""
     # Test con un canale esistente
-    response = client.get('/api/messages/channel/general')
+    response = client.get('/chat/api/messages/channel/general')
     assert response.status_code == 200
     data = json.loads(response.data)
     assert isinstance(data, list)
     
     # Test con un canale inesistente
-    response = client.get('/api/messages/channel/nonexistent')
+    response = client.get('/chat/api/messages/channel/nonexistent')
     assert response.status_code == 200
     data = json.loads(response.data)
     assert data == []
 
 def test_get_dm_messages(client):
-    """Verifica che l'API /api/messages/dm/<user_id> funzioni"""
+    """Verifica che l'API /chat/api/messages/dm/<user_id> funzioni"""
     # Test con un utente esistente
-    response = client.get('/api/messages/dm/2')  # Assumiamo che l'utente con ID 2 esista
+    response = client.get('/chat/api/messages/dm/2')  # Assumiamo che l'utente con ID 2 esista
     assert response.status_code == 200
     data = json.loads(response.data)
     assert isinstance(data, list)

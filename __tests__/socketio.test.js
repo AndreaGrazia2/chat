@@ -7,7 +7,7 @@ const {
   reconnectSocket,
   joinChannel,
   leaveChannel
-} = require('../static/js/socketio');
+} = require('../chat/static/js/socketio');
 
 // Mock di Socket.IO
 jest.mock('socket.io-client', () => {
@@ -23,7 +23,7 @@ jest.mock('socket.io-client', () => {
 });
 
 // Mock delle funzioni di utils.js
-jest.mock('../static/js/utils', () => ({
+jest.mock('../chat/static/js/utils', () => ({
   debug: jest.fn(),
   showNotification: jest.fn(),
   formatTime: jest.fn(date => '12:00'),
@@ -32,7 +32,7 @@ jest.mock('../static/js/utils', () => ({
 }));
 
 // Mock delle funzioni di app.js
-jest.mock('../static/js/app', () => ({
+jest.mock('../chat/static/js/app', () => ({
   addMessage: jest.fn(),
   updateMessage: jest.fn(),
   removeMessage: jest.fn(),
