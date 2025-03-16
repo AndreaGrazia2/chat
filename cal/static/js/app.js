@@ -26,6 +26,28 @@ function initApp() {
     
     // Controlla se è attiva la modalità dark
     checkDarkMode();
+    
+    // Inizializza le funzionalità mobile se disponibili
+    if (typeof initMobile === 'function') {
+        initMobile();
+    }
+    
+    // Inizializza il drag and drop
+    if (typeof enableDragAndDrop === 'function') {
+        enableDragAndDrop();
+    }
+    
+    // Collega i gestori di click agli eventi
+    if (typeof attachEventClickHandlers === 'function') {
+        attachEventClickHandlers();
+    }
+    
+    // Inizializza l'indicatore dell'ora corrente
+    if (typeof updateCurrentTimeIndicator === 'function') {
+        updateCurrentTimeIndicator();
+        // Aggiorna l'indicatore ogni minuto
+        setInterval(updateCurrentTimeIndicator, 60000);
+    }
 }
 
 /**
@@ -64,6 +86,16 @@ function initEventListeners() {
             
             vistaAttuale = btn.dataset.view;
             aggiornaVista();
+            
+            // Dopo l'aggiornamento della vista, collega i gestori agli eventi
+            if (typeof attachEventClickHandlers === 'function') {
+                setTimeout(attachEventClickHandlers, 300);
+            }
+            
+            // Aggiorna l'indicatore dell'ora corrente
+            if (typeof updateCurrentTimeIndicator === 'function') {
+                setTimeout(updateCurrentTimeIndicator, 300);
+            }
         });
     });
     
@@ -87,6 +119,11 @@ function initEventListeners() {
                     break;
             }
             aggiornaViste();
+            
+            // Dopo l'aggiornamento delle viste, collega i gestori agli eventi
+            if (typeof attachEventClickHandlers === 'function') {
+                setTimeout(attachEventClickHandlers, 300);
+            }
         });
     }
     
@@ -105,6 +142,11 @@ function initEventListeners() {
                     break;
             }
             aggiornaViste();
+            
+            // Dopo l'aggiornamento delle viste, collega i gestori agli eventi
+            if (typeof attachEventClickHandlers === 'function') {
+                setTimeout(attachEventClickHandlers, 300);
+            }
         });
     }
     
@@ -112,6 +154,11 @@ function initEventListeners() {
         todayBtn.addEventListener('click', () => {
             dataAttuale = new Date();
             aggiornaViste();
+            
+            // Dopo l'aggiornamento delle viste, collega i gestori agli eventi
+            if (typeof attachEventClickHandlers === 'function') {
+                setTimeout(attachEventClickHandlers, 300);
+            }
         });
     }
     

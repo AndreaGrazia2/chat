@@ -57,7 +57,7 @@ function aggiungiEvento(evento) {
     salvaEventi();
     
     // Aggiorna la vista del calendario
-    aggiornaViste(); // MODIFICARE QUESTA LINEA
+    aggiornaViste();
     
     return id;
 }
@@ -275,62 +275,6 @@ function saveEventChanges(eventId, changes) {
 function initializeEventHandlers() {
     // Inizializza il drag and drop
     enableDragAndDrop();
-    
-    // Aggiungi altri gestori di eventi se necessario
-}
-
-// Assicurati che il drag and drop venga inizializzato quando la pagina è caricata
-document.addEventListener('DOMContentLoaded', function() {
-    initializeEventHandlers();
-    
-    // Reinizializza quando cambia la vista
-    const viewButtons = document.querySelectorAll('.view-btn');
-    viewButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            // Attendi che la nuova vista sia caricata
-            setTimeout(initializeEventHandlers, 100);
-        });
-    });
-});
-
-/**
- * Funzione per inizializzare i gestori degli eventi
- */
-function initEventHandlers() {
-    console.log('Initializing event handlers');
-    
-    // Gestione click sul pulsante "Nuovo Evento"
-    const addEventBtn = document.getElementById('addEventBtn');
-    if (addEventBtn) {
-        console.log('Add Event button found');
-        addEventBtn.addEventListener('click', function() {
-            console.log('Add Event button clicked');
-            openEventModal();
-        });
-    } else {
-        console.error('Add Event button not found');
-    }
-
-    // Gestione click sul pulsante "Chiudi" del modal
-    const closeModalBtn = document.getElementById('closeModal');
-    if (closeModalBtn) {
-        closeModalBtn.addEventListener('click', function() {
-            console.log('Close modal button clicked');
-            closeEventModal();
-        });
-    }
-
-    // Gestione click sul pulsante "Annulla" del modal
-    const cancelEventBtn = document.getElementById('cancelEvent');
-    if (cancelEventBtn) {
-        cancelEventBtn.addEventListener('click', function() {
-            console.log('Cancel event button clicked');
-            closeEventModal();
-        });
-    }
-
-    // Gestione click sugli eventi del calendario
-    attachEventClickHandlers();
 }
 
 // Funzione per collegare i gestori di click agli eventi del calendario
@@ -409,76 +353,7 @@ function handleEventClick(e) {
     });
     
     // Apri il modal con i dati dell'evento
-    openEventModal(eventId, eventTitle, eventDate, eventTime, eventEndDate, eventEndTime, eventDescription, eventCategory);
-}
-
-// Funzione per aprire il modal degli eventi
-function openEventModal(id = '', title = '', date = '', time = '', endDate = '', endTime = '', description = '', category = 'work') {
-    console.log('Opening event modal with:', id, title, date, time, endDate, endTime);
-    
-    // Imposta il titolo del modal
-    document.getElementById('modalTitle').textContent = id ? 'Modifica Evento' : 'Nuovo Evento';
-    
-    // Estrai il titolo se contiene informazioni sull'orario
-    const titleParts = title.split(/\s+\d{1,2}:\d{2}/);
-    const cleanTitle = titleParts[0].trim();
-    
-    // Compila i campi del form
-    document.getElementById('eventTitle').value = cleanTitle;
-    document.getElementById('eventDate').value = date || getCurrentDate();
-    document.getElementById('eventTime').value = time || '';
-    document.getElementById('eventEndDate').value = endDate || date || getCurrentDate();
-    document.getElementById('eventEndTime').value = endTime || '';
-    document.getElementById('eventDescription').value = description;
-    document.getElementById('eventCategory').value = category;
-    
-    // Memorizza l'ID dell'evento nel form (per l'aggiornamento)
-    document.getElementById('eventForm').setAttribute('data-event-id', id);
-    
-    // Aggiungi la classe della categoria all'header del modal
-    const modalHeader = document.querySelector('.modal-header');
-    modalHeader.className = 'modal-header'; // Rimuovi classi precedenti
-    if (category) {
-        modalHeader.classList.add(category);
-    }
-    
-    // Mostra il modal
-    document.getElementById('eventModal').style.display = 'block';
-}
-
-// Funzione per chiudere il modal degli eventi
-function closeEventModal() {
-    document.getElementById('eventModal').style.display = 'none';
-}
-
-// Funzione per salvare un evento
-function saveEvent() {
-    // Ottieni i valori dal form
-    const eventId = document.getElementById('eventForm').getAttribute('data-event-id');
-    const title = document.getElementById('eventTitle').value;
-    const date = document.getElementById('eventDate').value;
-    const time = document.getElementById('eventTime').value;
-    const endDate = document.getElementById('eventEndDate').value;
-    const endTime = document.getElementById('eventEndTime').value;
-    const description = document.getElementById('eventDescription').value;
-    const category = document.getElementById('eventCategory').value;
-    
-    if (!title || !date) {
-        apriModalAvviso('Titolo e data sono obbligatori!');
-        return;
-    }
-    
-    // Qui dovresti implementare la logica per salvare l'evento
-    // Per ora, simuliamo un aggiornamento della UI
-    
-    // Chiudi il modal
-    closeEventModal();
-    
-    // Aggiorna la vista del calendario
-    aggiornaViste();
-    
-    // Riattacca i gestori di click agli eventi
-    setTimeout(attachEventClickHandlers, 100);
+    apriModalEvento(eventId);
 }
 
 // Funzione per ottenere la data corrente in formato YYYY-MM-DD
@@ -488,74 +363,6 @@ function getCurrentDate() {
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
-}
-
-// Inizializza i gestori degli eventi quando il DOM è caricato
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM fully loaded');
-    initEventHandlers();
-    
-    // Riattacca i gestori di click quando cambia la vista
-    document.querySelectorAll('.view-btn').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            console.log('View changed to:', this.getAttribute('data-view'));
-            // Attendi che la vista sia aggiornata
-            setTimeout(attachEventClickHandlers, 200);
-            // Aggiorna l'indicatore dell'ora corrente
-            setTimeout(updateCurrentTimeIndicator, 200);
-        });
-    });
-    
-    // Verifica periodicamente se ci sono nuovi eventi senza handler
-    setInterval(function() {
-        const eventsWithoutHandlers = document.querySelectorAll('.event:not([data-has-click-handler]), .time-event:not([data-has-click-handler]), .list-event:not([data-has-click-handler])');
-        if (eventsWithoutHandlers.length > 0) {
-            console.log('Found ' + eventsWithoutHandlers.length + ' events without handlers, reattaching...');
-            attachEventClickHandlers();
-        }
-    }, 2000);
-    
-    // Inizializza l'indicatore dell'ora corrente
-    updateCurrentTimeIndicator();
-    // Aggiorna l'indicatore ogni minuto
-    setInterval(updateCurrentTimeIndicator, 60000);
-});
-
-// Funzione per aggiornare l'indicatore dell'ora corrente
-function updateCurrentTimeIndicator() {
-    console.log('Updating current time indicator');
-    
-    // Rimuovi eventuali indicatori esistenti
-    document.querySelectorAll('.current-time-indicator').forEach(el => el.remove());
-    
-    // Ottieni l'ora corrente
-    const now = new Date();
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-    
-    // Calcola la posizione verticale in base all'ora corrente
-    const hourHeight = 60; // Altezza di ogni slot orario in pixel
-    const topPosition = (hours * hourHeight) + (minutes / 60 * hourHeight) + 50; // +50 per l'header
-    
-    // Crea l'indicatore per la vista giornaliera
-    const dayGrid = document.querySelector('.day-grid');
-    if (dayGrid) {
-        const indicator = document.createElement('div');
-        indicator.className = 'current-time-indicator';
-        indicator.style.top = `${topPosition}px`;
-        dayGrid.appendChild(indicator);
-        console.log('Added time indicator to day view at position:', topPosition);
-    }
-    
-    // Crea l'indicatore per la vista settimanale
-    const weekGrid = document.querySelector('.week-grid');
-    if (weekGrid) {
-        const indicator = document.createElement('div');
-        indicator.className = 'current-time-indicator';
-        indicator.style.top = `${topPosition}px`;
-        weekGrid.appendChild(indicator);
-        console.log('Added time indicator to week view at position:', topPosition);
-    }
 }
 
 // Funzione per aggiornare l'indicatore dell'ora corrente
@@ -612,7 +419,7 @@ function handleDayClick(e) {
     const defaultEndTime = '09:00';
     
     // Open the modal
-    openModal();
+    apriModal('eventModal');
     
     // Set the values in the form
     document.getElementById('eventTitle').value = '';
@@ -634,4 +441,3 @@ function handleDayClick(e) {
         deleteButton.style.display = 'none';
     }
 }
-
