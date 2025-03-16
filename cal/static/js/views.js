@@ -32,6 +32,11 @@ function aggiornaVista() {
     // Mostra la vista attuale
     document.getElementById(`${vistaAttuale}View`).classList.add('active');
     
+    // Disattiva il drag and drop precedente, se esiste
+    if (window.dragDrop && typeof window.dragDrop.cleanup === 'function') {
+        window.dragDrop.cleanup();
+    }
+    
     // Aggiorna la vista in base al tipo
     switch (vistaAttuale) {
         case 'month':
@@ -47,6 +52,13 @@ function aggiornaVista() {
             renderizzaVistaLista();
             break;
     }
+    
+    // Inizializza il drag and drop dopo aver renderizzato la vista
+    setTimeout(() => {
+        if (window.dragDrop && typeof window.dragDrop.init === 'function') {
+            window.dragDrop.init(vistaAttuale);
+        }
+    }, 100);
     
     // Aggiorna l'intestazione
     aggiornaIntestazione();

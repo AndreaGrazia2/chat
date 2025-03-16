@@ -76,7 +76,7 @@ function renderizzaVistaSettimanale() {
         
         // Crea l'elemento dell'evento
         const eventoElement = document.createElement('div');
-        eventoElement.className = `time-event ${evento.categoria} draggable`;
+        eventoElement.className = `time-event ${evento.categoria}`;
         eventoElement.dataset.id = evento.id;
         eventoElement.style.top = `${top}px`;
         eventoElement.style.height = `${height}px`;
@@ -98,35 +98,21 @@ function renderizzaVistaSettimanale() {
             e.stopPropagation();
             apriModalEvento(evento.id);
         });
-        
-        // Aggiungi funzionalità di drag and drop
-        eventoElement.setAttribute('draggable', 'true');
-        eventoElement.addEventListener('dragstart', (e) => {
-            e.dataTransfer.setData('text/plain', evento.id);
-            e.dataTransfer.effectAllowed = 'move';
-            eventoElement.classList.add('dragging');
-            
-            // Crea un'immagine fantasma per il trascinamento
-            const ghost = eventoElement.cloneNode(true);
-            ghost.classList.add('drag-ghost');
-            document.body.appendChild(ghost);
-            e.dataTransfer.setDragImage(ghost, 10, 10);
-            
-            setTimeout(() => {
-                ghost.remove();
-            }, 0);
-        });
-        
-        eventoElement.addEventListener('dragend', () => {
-            eventoElement.classList.remove('dragging');
-            document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
-        });
     });
     
     // Aggiungi l'indicatore dell'ora corrente
     const oggi = new Date();
-    if (isStessoGiorno(oggi, giorniSettimana[0]) || isStessoGiorno(oggi, giorniSettimana[6])) {
-        const giornoSettimana = oggi.getDay() === 0 ? 6 : oggi.getDay() - 1;
+    const giornoSettimanaOggi = oggi.getDay() === 0 ? 6 : oggi.getDay() - 1;
+    
+    // Verifica se il giorno corrente è nella settimana visualizzata
+    if (isStessoGiorno(oggi, giorniSettimana[0]) || 
+        isStessoGiorno(oggi, giorniSettimana[1]) || 
+        isStessoGiorno(oggi, giorniSettimana[2]) || 
+        isStessoGiorno(oggi, giorniSettimana[3]) || 
+        isStessoGiorno(oggi, giorniSettimana[4]) || 
+        isStessoGiorno(oggi, giorniSettimana[5]) || 
+        isStessoGiorno(oggi, giorniSettimana[6])) {
+        
         const ora = oggi.getHours();
         const minuti = oggi.getMinutes();
         
@@ -137,13 +123,13 @@ function renderizzaVistaSettimanale() {
         indicatore.style.top = `${top}px`;
         
         const timeSlots = weekGrid.querySelectorAll('.time-slot');
-        const index = giornoSettimana + (ora * 7);
+        const index = giornoSettimanaOggi + (ora * 7);
         if (timeSlots[index]) {
             timeSlots[index].appendChild(indicatore);
         }
     }
     
-    // Aggiungi gli event listener per aggiungere eventi e drag and drop
+    // Aggiungi gli event listener per aggiungere eventi
     weekGrid.querySelectorAll('.time-slot').forEach(slot => {
         slot.addEventListener('click', () => {
             const ora = parseInt(slot.dataset.ora);
@@ -154,43 +140,16 @@ function renderizzaVistaSettimanale() {
             
             apriModalNuovoEvento(data);
         });
-        
-        // Aggiungi funzionalità di drag and drop
-        slot.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            slot.classList.add('drag-over');
-        });
-        
-        slot.addEventListener('dragleave', () => {
-            slot.classList.remove('drag-over');
-        });
-        
-        slot.addEventListener('drop', (e) => {
-            e.preventDefault();
-            slot.classList.remove('drag-over');
-            
-            const id = e.dataTransfer.getData('text/plain');
-            const ora = parseInt(slot.dataset.ora);
-            const giorno = parseInt(slot.dataset.giorno);
-            
-            // Trova l'evento e aggiorna l'orario
-            const evento = eventi.find(e => e.id === id);
-            if (evento) {
-                const nuovaDataInizio = new Date(giorniSettimana[giorno]);
-                nuovaDataInizio.setHours(ora, 0, 0);
-                
-                const durata = (new Date(evento.dataFine) - new Date(evento.dataInizio)) / (1000 * 60); // durata in minuti
-                
-                const nuovaDataFine = new Date(nuovaDataInizio);
-                nuovaDataFine.setMinutes(nuovaDataFine.getMinutes() + durata);
-                
-                modificaEvento(id, {
-                    dataInizio: nuovaDataInizio,
-                    dataFine: nuovaDataFine
-                });
-                
-                renderizzaVistaSettimanale();
-            }
-        });
     });
+    
+    // Nota: la gestione drag and drop è stata spostata nel modulo centralizzato
+}
+
+// Funzione di supporto per la vista settimanale
+function renderWeekView(date = new Date()) {
+    // Assicurati che dataAttuale sia impostata correttamente
+    dataAttuale = date || dataAttuale;
+    
+    // Renderizza la vista
+    renderizzaVistaSettimanale();
 }
