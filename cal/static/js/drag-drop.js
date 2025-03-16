@@ -328,9 +328,6 @@ function createDragFeedback(clientX, clientY) {
     clone.style.zIndex = '9999';
     clone.style.opacity = '0.8';
     clone.style.pointerEvents = 'none';
-    clone.style.transform = 'scale(1.05)';
-    clone.style.transition = 'box-shadow 0.2s ease';
-    clone.style.boxShadow = '0 5px 15px rgba(0,0,0,0.2)';
     
     // Posiziona il clone
     const rect = originalElement.getBoundingClientRect();
@@ -484,48 +481,45 @@ function handleMonthViewDrop(dragged, target) {
     
     if (!eventId || !targetDate) return;
     
+    // Trova l'evento nel modello dati
+    const evento = eventi.find(ev => ev.id === eventId);
+    if (!evento) {
+        console.error(`Evento con ID ${eventId} non trovato`);
+        return;
+    }
+    
     // Converti la data nel formato corretto
     const [year, month, day] = targetDate.split('-').map(Number);
     const dropDate = new Date(year, month - 1, day);
     
-    // Trova l'evento e aggiorna la data
-    const evento = eventi.find(ev => ev.id === eventId);
-    if (evento) {
-        // Calcola la differenza di giorni
-        const oldDate = new Date(evento.dataInizio);
-        const diffDays = Math.floor((dropDate - oldDate) / (1000 * 60 * 60 * 24));
-        
-        // Aggiorna le date mantenendo l'ora originale
-        const newStartDate = new Date(evento.dataInizio);
-        newStartDate.setDate(newStartDate.getDate() + diffDays);
-        
-        const newEndDate = new Date(evento.dataFine);
-        newEndDate.setDate(newEndDate.getDate() + diffDays);
-        
-        // Aggiorna l'evento
-        if (typeof modificaEvento === 'function') {
-            modificaEvento(eventId, {
-                dataInizio: newStartDate,
-                dataFine: newEndDate
-            });
-            
-            // Aggiorna la vista
-            if (typeof aggiornaVista === 'function') {
-                aggiornaVista();
-            }
-            
-            // Mostra notifica
-            if (typeof mostraNotifica === 'function') {
-                mostraNotifica(`Evento "${evento.titolo}" spostato`, 'success');
-            }
-            
-            console.log(`Evento ${evento.titolo} spostato con successo alla data ${targetDate}`);
-        } else {
-            console.error('Funzione modificaEvento non disponibile');
-        }
-    } else {
-        console.error(`Evento con ID ${eventId} non trovato`);
-    }
+    // Calcola la differenza di giorni
+    const oldDate = new Date(evento.dataInizio);
+    const diffDays = Math.round((dropDate - new Date(oldDate.getFullYear(), oldDate.getMonth(), oldDate.getDate())) / (1000 * 60 * 60 * 24));
+    
+    // Aggiorna le date mantenendo l'ora originale
+    const newStartDate = new Date(evento.dataInizio);
+    newStartDate.setDate(newStartDate.getDate() + diffDays);
+    
+    const newEndDate = new Date(evento.dataFine);
+    newEndDate.setDate(newEndDate.getDate() + diffDays);
+    
+    // Aggiorna l'evento nel modello dati
+    evento.dataInizio = newStartDate;
+    evento.dataFine = newEndDate;
+    
+    // Aggiorna l'evento tramite la funzione globale
+    modificaEvento(eventId, {
+        dataInizio: newStartDate,
+        dataFine: newEndDate
+    });
+    
+    // Forza il salvataggio
+    salvaEventi();
+    
+    // Forza un aggiornamento completo della vista
+    setTimeout(() => {
+        aggiornaViste();
+    }, 10);
 }
 
 /**
@@ -540,46 +534,45 @@ function handleWeekViewDrop(dragged, target) {
     
     if (!eventId) return;
     
-    // Calcola la nuova data/ora
-    let targetDate = new Date();
-    if (typeof getPrimoGiornoSettimana === 'function' && typeof dataAttuale !== 'undefined') {
-        const weekStartDate = getPrimoGiornoSettimana(dataAttuale);
-        targetDate = new Date(weekStartDate);
-        targetDate.setDate(targetDate.getDate() + dayIndex);
-    }
-    targetDate.setHours(hour, 0, 0);
-    
-    // Trova l'evento e calcola la durata
+    // Trova l'evento nel modello dati
     const evento = eventi.find(ev => ev.id === eventId);
-    if (evento) {
-        // Calcola la durata dell'evento in minuti
-        const oldStart = new Date(evento.dataInizio);
-        const oldEnd = new Date(evento.dataFine);
-        const durationMs = oldEnd - oldStart;
-        
-        // Crea le nuove date
-        const newStartDate = new Date(targetDate);
-        const newEndDate = new Date(newStartDate.getTime() + durationMs);
-        
-        // Aggiorna l'evento
-        if (typeof modificaEvento === 'function') {
-            modificaEvento(eventId, {
-                dataInizio: newStartDate,
-                dataFine: newEndDate
-            });
-            
-            // Aggiorna la vista
-            if (typeof aggiornaVista === 'function') {
-                aggiornaVista();
-            }
-            
-            console.log(`Evento ${evento.titolo} spostato con successo a ${newStartDate.toLocaleString()}`);
-        } else {
-            console.error('Funzione modificaEvento non disponibile');
-        }
-    } else {
+    if (!evento) {
         console.error(`Evento con ID ${eventId} non trovato`);
+        return;
     }
+    
+    // Calcola la nuova data/ora
+    const weekStartDate = getPrimoGiornoSettimana(dataAttuale);
+    const targetDate = new Date(weekStartDate);
+    targetDate.setDate(targetDate.getDate() + dayIndex);
+    targetDate.setHours(hour, 0, 0, 0);
+    
+    // Conserva la durata dell'evento originale
+    const oldStart = new Date(evento.dataInizio);
+    const oldEnd = new Date(evento.dataFine);
+    const durationMs = oldEnd - oldStart;
+    
+    // Aggiorna le date
+    const newStartDate = new Date(targetDate);
+    const newEndDate = new Date(newStartDate.getTime() + durationMs);
+    
+    // Aggiorna l'evento nel modello dati
+    evento.dataInizio = newStartDate;
+    evento.dataFine = newEndDate;
+    
+    // Aggiorna l'evento tramite la funzione globale
+    modificaEvento(eventId, {
+        dataInizio: newStartDate,
+        dataFine: newEndDate
+    });
+    
+    // Forza il salvataggio
+    salvaEventi();
+    
+    // Forza un aggiornamento completo della vista
+    setTimeout(() => {
+        aggiornaViste();
+    }, 10);
 }
 
 /**
@@ -593,44 +586,43 @@ function handleDayViewDrop(dragged, target) {
     
     if (!eventId) return;
     
-    // Calcola la nuova data/ora
-    let targetDate = new Date();
-    if (typeof dataAttuale !== 'undefined') {
-        targetDate = new Date(dataAttuale);
-    }
-    targetDate.setHours(hour, 0, 0);
-    
-    // Trova l'evento e calcola la durata
+    // Trova l'evento nel modello dati
     const evento = eventi.find(ev => ev.id === eventId);
-    if (evento) {
-        // Calcola la durata dell'evento in minuti
-        const oldStart = new Date(evento.dataInizio);
-        const oldEnd = new Date(evento.dataFine);
-        const durationMs = oldEnd - oldStart;
-        
-        // Crea le nuove date
-        const newStartDate = new Date(targetDate);
-        const newEndDate = new Date(newStartDate.getTime() + durationMs);
-        
-        // Aggiorna l'evento
-        if (typeof modificaEvento === 'function') {
-            modificaEvento(eventId, {
-                dataInizio: newStartDate,
-                dataFine: newEndDate
-            });
-            
-            // Aggiorna la vista
-            if (typeof aggiornaVista === 'function') {
-                aggiornaVista();
-            }
-            
-            console.log(`Evento ${evento.titolo} spostato con successo a ${newStartDate.toLocaleString()}`);
-        } else {
-            console.error('Funzione modificaEvento non disponibile');
-        }
-    } else {
+    if (!evento) {
         console.error(`Evento con ID ${eventId} non trovato`);
+        return;
     }
+    
+    // Calcola la nuova data/ora
+    const targetDate = new Date(dataAttuale);
+    targetDate.setHours(hour, 0, 0, 0);
+    
+    // Conserva la durata dell'evento originale
+    const oldStart = new Date(evento.dataInizio);
+    const oldEnd = new Date(evento.dataFine);
+    const durationMs = oldEnd - oldStart;
+    
+    // Aggiorna le date
+    const newStartDate = new Date(targetDate);
+    const newEndDate = new Date(newStartDate.getTime() + durationMs);
+    
+    // Aggiorna l'evento nel modello dati
+    evento.dataInizio = newStartDate;
+    evento.dataFine = newEndDate;
+    
+    // Aggiorna l'evento tramite la funzione globale
+    modificaEvento(eventId, {
+        dataInizio: newStartDate,
+        dataFine: newEndDate
+    });
+    
+    // Forza il salvataggio
+    salvaEventi();
+    
+    // Forza un aggiornamento completo della vista
+    setTimeout(() => {
+        aggiornaViste();
+    }, 10);
 }
 
 /**
@@ -701,7 +693,6 @@ function addCustomStyles() {
     style.textContent = `
         #drag-feedback {
             cursor: grabbing !important;
-            transition: transform 0.1s ease, box-shadow 0.2s ease;
         }
         
         .dragging-in-progress {
@@ -722,17 +713,8 @@ function addCustomStyles() {
         
         .drag-over {
             background-color: rgba(26, 115, 232, 0.2) !important;
-            border: 2px dashed var(--primary) !important;
-        }
-        
-        @keyframes dropComplete {
-            0% { transform: scale(1.05); opacity: 0.8; }
-            50% { transform: scale(1.1); opacity: 1; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-        
-        .drop-complete {
-            animation: dropComplete 0.3s ease-out forwards;
+            border: none !important;
+            box-shadow: none !important;
         }
     `;
     
