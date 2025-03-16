@@ -196,9 +196,15 @@ function apriModalNuovoEvento(data) {
     // Resetta il form
     document.getElementById('eventForm').reset();
     
-    // Imposta la data e l'ora iniziale
-    const dataStr = data.toISOString().split('T')[0];
-    const oraStr = data.toTimeString().substring(0, 5);
+    // Imposta la data e l'ora iniziale usando il fuso orario locale
+    const anno = data.getFullYear();
+    const mese = (data.getMonth() + 1).toString().padStart(2, '0');
+    const giorno = data.getDate().toString().padStart(2, '0');
+    const dataStr = `${anno}-${mese}-${giorno}`;
+    
+    const ore = data.getHours().toString().padStart(2, '0');
+    const minuti = data.getMinutes().toString().padStart(2, '0');
+    const oraStr = `${ore}:${minuti}`;
     
     document.getElementById('eventDate').value = dataStr;
     document.getElementById('eventTime').value = oraStr;

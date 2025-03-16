@@ -73,6 +73,17 @@
 	--nav-active-text: #ffffff;
 }
 
+/* Modifica il colore delle icone nei campi input[type="date"] e input[type="time"] in dark mode */
+body.dark-theme input[type="date"]::-webkit-calendar-picker-indicator,
+body.dark-theme input[type="time"]::-webkit-calendar-picker-indicator {
+    filter: invert(1); /* Inverte i colori, rendendo le icone bianche */
+}
+
+/* Per Firefox e altri browser */
+body.dark-theme input[type="date"],
+body.dark-theme input[type="time"] {
+    color-scheme: light;
+}
 /* Definizione temi */
 .light-theme {
 	--bg-main: var(--bg-light);

@@ -151,16 +151,50 @@ function initEventListeners() {
     // When saving an event from the modal
     document.getElementById('saveEvent').addEventListener('click', function() {
         // Fix date handling when creating from form
+        const eventTitle = document.getElementById('eventTitle').value;
         const eventDate = document.getElementById('eventDate').value;
-        const eventTime = document.getElementById('eventTime').value || '00:00';
+        const eventTime = document.getElementById('eventTime').value || '08:00'; // Default to 8:00 AM instead of 00:00
         const eventEndDate = document.getElementById('eventEndDate').value || eventDate;
-        const eventEndTime = document.getElementById('eventEndTime').value || (eventTime ? addHour(eventTime) : '01:00');
+        const eventEndTime = document.getElementById('eventEndTime').value || (eventTime ? addHour(eventTime) : '09:00');
+        const eventDescription = document.getElementById('eventDescription').value;
+        const eventCategory = document.getElementById('eventCategory').value;
         
-        // Create date objects correctly
-        const dataInizio = new Date(`${eventDate}T${eventTime}`);
-        const dataFine = new Date(`${eventEndDate}T${eventEndTime}`);
+        // Parse date components manually to avoid timezone issues
+        const [year, month, day] = eventDate.split('-').map(Number);
+        const [hours, minutes] = eventTime.split(':').map(Number);
         
-        // ... rest of the event saving code ...
+        const [endYear, endMonth, endDay] = eventEndDate.split('-').map(Number);
+        const [endHours, endMinutes] = eventEndTime.split(':').map(Number);
+        
+        // Create date objects with explicit components to avoid timezone issues
+        const dataInizio = new Date(year, month - 1, day, hours, minutes);
+        const dataFine = new Date(endYear, endMonth - 1, endDay, endHours, endMinutes);
+        
+        // Verify if the event ID is present (edit) or not (new event)
+        const eventId = document.getElementById('eventForm').getAttribute('data-event-id');
+        
+        if (eventId) {
+            // Edit existing event
+            modificaEvento(eventId, {
+                titolo: eventTitle,
+                descrizione: eventDescription,
+                dataInizio: dataInizio,
+                dataFine: dataFine,
+                categoria: eventCategory
+            });
+        } else {
+            // Create new event
+            aggiungiEvento({
+                titolo: eventTitle,
+                descrizione: eventDescription,
+                dataInizio: dataInizio,
+                dataFine: dataFine,
+                categoria: eventCategory
+            });
+        }
+        
+        // Close the modal
+        chiudiModal('eventModal');
     });
 }
 

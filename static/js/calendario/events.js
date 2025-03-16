@@ -757,73 +757,34 @@ function generaId() {
 }
 
 function handleDayClick(e) {
-    // Ottieni la data dal giorno cliccato
+    // Get the date from the clicked day
     const clickedDay = this.getAttribute('data-date');
-    console.log("Data cliccata:", clickedDay);
     
-    // Ottieni l'ora corrente
-    const now = new Date();
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
+    // Set default times (8:00 AM and 9:00 AM)
+    const defaultStartTime = '08:00';
+    const defaultEndTime = '09:00';
     
-    // Formatta l'ora corrente
-    const currentTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-    
-    // Calcola l'ora di fine (un'ora dopo)
-    const endHour = hours + 1 > 23 ? 0 : hours + 1;
-    const endTime = `${endHour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-    
-    // Apri il modal
+    // Open the modal
     openModal();
     
-    // Imposta i valori nel form
+    // Set the values in the form
     document.getElementById('eventTitle').value = '';
     document.getElementById('eventDescription').value = '';
     document.getElementById('eventDate').value = clickedDay;
-    document.getElementById('eventTime').value = currentTime;
+    document.getElementById('eventTime').value = defaultStartTime;
     document.getElementById('eventEndDate').value = clickedDay;
-    document.getElementById('eventEndTime').value = endTime;
+    document.getElementById('eventEndTime').value = defaultEndTime;
     
-    // Imposta la categoria predefinita
+    // Set the default category
     document.getElementById('eventCategory').value = 'personal';
     
-    // Imposta il titolo del modal
+    // Set the modal title
     document.getElementById('modalTitle').textContent = 'Nuovo Evento';
     
-    // Nascondi il pulsante di eliminazione se presente
+    // Hide the delete button if present
     const deleteButton = document.getElementById('deleteEvent');
     if (deleteButton) {
         deleteButton.style.display = 'none';
     }
 }
 
-function aggiungiEvento(evento) {
-    // Genera un ID univoco
-    const id = generateUniqueId();
-    
-    // Assicurati che le date siano create correttamente senza problemi di timezone
-    let dataInizio = new Date(evento.dataInizio);
-    let dataFine = new Date(evento.dataFine);
-    
-    // Crea l'oggetto evento
-    const nuovoEvento = {
-        id,
-        titolo: evento.titolo,
-        descrizione: evento.descrizione || '',
-        dataInizio: dataInizio,
-        dataFine: dataFine,
-        categoria: evento.categoria || 'personal',
-        creato: new Date()
-    };
-    
-    // Aggiungi l'evento all'array
-    eventi.push(nuovoEvento);
-    
-    // Salva gli eventi
-    salvaEventi();
-    
-    // Aggiorna la vista del calendario
-    updateCalendarView();
-    
-    return id;
-}
