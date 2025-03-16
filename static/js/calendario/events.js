@@ -35,13 +35,17 @@ function aggiungiEvento(evento) {
     // Genera un ID univoco
     const id = generateUniqueId();
     
+    // Assicurati che le date siano create correttamente senza problemi di timezone
+    let dataInizio = new Date(evento.dataInizio);
+    let dataFine = new Date(evento.dataFine);
+    
     // Crea l'oggetto evento
     const nuovoEvento = {
         id,
         titolo: evento.titolo,
         descrizione: evento.descrizione || '',
-        dataInizio: new Date(evento.dataInizio),
-        dataFine: new Date(evento.dataFine),
+        dataInizio: dataInizio,
+        dataFine: dataFine,
         categoria: evento.categoria || 'personal',
         creato: new Date()
     };
@@ -49,13 +53,13 @@ function aggiungiEvento(evento) {
     // Aggiungi l'evento all'array
     eventi.push(nuovoEvento);
     
-    // Salva gli eventi (in un'implementazione reale, qui si chiamerebbe l'API)
+    // Salva gli eventi
     salvaEventi();
     
-    // Aggiorna le viste
-    aggiornaViste();
+    // Aggiorna la vista del calendario
+    updateCalendarView();
     
-    return nuovoEvento;
+    return id;
 }
 
 /**
@@ -89,7 +93,7 @@ function modificaEvento(id, datiAggiornati) {
     // Aggiorna le viste
     aggiornaViste();
     
-    return eventoAggiornato;
+    return nuovoEvento;
 }
 
 /**
@@ -750,4 +754,76 @@ function updateCurrentTimeIndicator() {
  */
 function generaId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+}
+
+function handleDayClick(e) {
+    // Ottieni la data dal giorno cliccato
+    const clickedDay = this.getAttribute('data-date');
+    console.log("Data cliccata:", clickedDay);
+    
+    // Ottieni l'ora corrente
+    const now = new Date();
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    
+    // Formatta l'ora corrente
+    const currentTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    
+    // Calcola l'ora di fine (un'ora dopo)
+    const endHour = hours + 1 > 23 ? 0 : hours + 1;
+    const endTime = `${endHour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    
+    // Apri il modal
+    openModal();
+    
+    // Imposta i valori nel form
+    document.getElementById('eventTitle').value = '';
+    document.getElementById('eventDescription').value = '';
+    document.getElementById('eventDate').value = clickedDay;
+    document.getElementById('eventTime').value = currentTime;
+    document.getElementById('eventEndDate').value = clickedDay;
+    document.getElementById('eventEndTime').value = endTime;
+    
+    // Imposta la categoria predefinita
+    document.getElementById('eventCategory').value = 'personal';
+    
+    // Imposta il titolo del modal
+    document.getElementById('modalTitle').textContent = 'Nuovo Evento';
+    
+    // Nascondi il pulsante di eliminazione se presente
+    const deleteButton = document.getElementById('deleteEvent');
+    if (deleteButton) {
+        deleteButton.style.display = 'none';
+    }
+}
+
+function aggiungiEvento(evento) {
+    // Genera un ID univoco
+    const id = generateUniqueId();
+    
+    // Assicurati che le date siano create correttamente senza problemi di timezone
+    let dataInizio = new Date(evento.dataInizio);
+    let dataFine = new Date(evento.dataFine);
+    
+    // Crea l'oggetto evento
+    const nuovoEvento = {
+        id,
+        titolo: evento.titolo,
+        descrizione: evento.descrizione || '',
+        dataInizio: dataInizio,
+        dataFine: dataFine,
+        categoria: evento.categoria || 'personal',
+        creato: new Date()
+    };
+    
+    // Aggiungi l'evento all'array
+    eventi.push(nuovoEvento);
+    
+    // Salva gli eventi
+    salvaEventi();
+    
+    // Aggiorna la vista del calendario
+    updateCalendarView();
+    
+    return id;
 }

@@ -147,6 +147,21 @@ function initEventListeners() {
             chiudiModal('eventsListModal');
         });
     }
+    
+    // When saving an event from the modal
+    document.getElementById('saveEvent').addEventListener('click', function() {
+        // Fix date handling when creating from form
+        const eventDate = document.getElementById('eventDate').value;
+        const eventTime = document.getElementById('eventTime').value || '00:00';
+        const eventEndDate = document.getElementById('eventEndDate').value || eventDate;
+        const eventEndTime = document.getElementById('eventEndTime').value || (eventTime ? addHour(eventTime) : '01:00');
+        
+        // Create date objects correctly
+        const dataInizio = new Date(`${eventDate}T${eventTime}`);
+        const dataFine = new Date(`${eventEndDate}T${eventEndTime}`);
+        
+        // ... rest of the event saving code ...
+    });
 }
 
 /**
