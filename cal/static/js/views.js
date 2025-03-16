@@ -56,25 +56,23 @@ function aggiornaVista() {
     }
     
     // Inizializza il drag and drop dopo aver renderizzato la vista
-    // Aumentiamo il timeout da 100ms a 300ms per assicurarci che tutti gli elementi siano stati renderizzati
     setTimeout(() => {
         if (window.dragDrop && typeof window.dragDrop.init === 'function') {
             window.dragDrop.init(vistaAttuale);
+        }
+        
+        // Attacca i gestori di eventi agli elementi dopo il caricamento completo
+        if (typeof attachEventClickHandlers === 'function') {
+            attachEventClickHandlers();
+        }
+        
+        if (typeof updateCurrentTimeIndicator === 'function') {
+            updateCurrentTimeIndicator();
         }
     }, 300);
     
     // Aggiorna l'intestazione
     aggiornaIntestazione();
-    
-    // Forza il re-attacco degli event handler dopo il caricamento completo della vista
-    setTimeout(() => {
-        if (typeof attachEventClickHandlers === 'function') {
-            attachEventClickHandlers();
-        }
-        if (typeof updateCurrentTimeIndicator === 'function') {
-            updateCurrentTimeIndicator();
-        }
-    }, 350);
 }
 
 /**
@@ -82,6 +80,7 @@ function aggiornaVista() {
  */
 function aggiornaIntestazione() {
     const currentDateElement = document.querySelector('.current-date');
+    if (!currentDateElement) return;
     
     switch (vistaAttuale) {
         case 'month':
@@ -218,8 +217,10 @@ function apriModalNuovoEvento(data) {
     // Aggiorna il titolo del modal
     document.getElementById('modalTitle').textContent = 'Nuovo Evento';
     
-    // Resetta il form
-    document.getElementById('eventForm').reset();
+    // Resetta il form e rimuovi eventuali ID evento precedenti
+    const eventForm = document.getElementById('eventForm');
+    eventForm.reset();
+    eventForm.removeAttribute('data-event-id');
     
     // Imposta la data e l'ora iniziale usando il fuso orario locale
     const anno = data.getFullYear();
@@ -238,8 +239,17 @@ function apriModalNuovoEvento(data) {
     const dataFine = new Date(data);
     dataFine.setHours(dataFine.getHours() + 1);
     
-    document.getElementById('eventEndDate').value = dataFine.toISOString().split('T')[0];
-    document.getElementById('eventEndTime').value = dataFine.toTimeString().substring(0, 5);
+    const annoFine = dataFine.getFullYear();
+    const meseFine = (dataFine.getMonth() + 1).toString().padStart(2, '0');
+    const giornoFine = dataFine.getDate().toString().padStart(2, '0');
+    const dataFineStr = `${annoFine}-${meseFine}-${giornoFine}`;
+    
+    const oreFine = dataFine.getHours().toString().padStart(2, '0');
+    const minutiFine = dataFine.getMinutes().toString().padStart(2, '0');
+    const oraFineStr = `${oreFine}:${minutiFine}`;
+    
+    document.getElementById('eventEndDate').value = dataFineStr;
+    document.getElementById('eventEndTime').value = oraFineStr;
     
     // Rimuovi il pulsante elimina se presente
     const deleteButton = document.getElementById('deleteEvent');
@@ -261,19 +271,24 @@ function apriModalNuovoEvento(data) {
         
         // Verifica che il titolo sia stato inserito
         if (!titolo.trim()) {
-            apriModalAvviso('Inserisci un titolo per l\'evento');
+            mostraNotifica('Inserisci un titolo per l\'evento', 'warning');
             return;
         }
         
         // Verifica che la descrizione sia stata inserita
         if (!descrizione.trim()) {
-            apriModalAvviso('Inserisci una descrizione per l\'evento');
+            mostraNotifica('Inserisci una descrizione per l\'evento', 'warning');
             return;
         }
         
-        // Crea le date
-        const dataInizio = new Date(`${data}T${ora}`);
-        const dataFinale = new Date(`${dataFine}T${oraFine}`);
+        // Crea le date con componenti espliciti per evitare problemi di fuso orario
+        const [annoInizio, meseInizio, giornoInizio] = data.split('-').map(Number);
+        const [oreInizio, minutiInizio] = ora.split(':').map(Number);
+        const [annoFine, meseFine, giornoFine] = dataFine.split('-').map(Number);
+        const [oreFine, minutiFine] = oraFine.split(':').map(Number);
+        
+        const dataInizio = new Date(annoInizio, meseInizio - 1, giornoInizio, oreInizio, minutiInizio);
+        const dataFinale = new Date(annoFine, meseFine - 1, giornoFine, oreFine, minutiFine);
         
         // Crea l'evento
         aggiungiEvento({
@@ -286,6 +301,9 @@ function apriModalNuovoEvento(data) {
         
         // Chiudi il modal
         chiudiModal('eventModal');
+        
+        // Mostra conferma
+        mostraNotifica('Evento creato con successo', 'success');
     };
     
     // Apri il modal
@@ -323,6 +341,11 @@ function apriModalListaEventi(data) {
         `;
     });
     
+    // Se non ci sono eventi, mostra un messaggio
+    if (eventiGiorno.length === 0) {
+        html = '<div class="empty-message">Nessun evento in questa data</div>';
+    }
+    
     // Aggiorna la lista
     document.getElementById('eventsListModalContent').innerHTML = html;
     
@@ -337,38 +360,6 @@ function apriModalListaEventi(data) {
     
     // Apri il modal
     apriModal('eventsListModal');
-}
-
-/**
- * Apre un modal
- * @param {string} modalId - ID del modal da aprire
- */
-function apriModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        // Cambiamo questo per usare display invece di classi
-        modal.style.display = 'block';
-    }
-}
-
-/**
- * Chiude un modal
- * @param {string} modalId - ID del modal da chiudere
- */
-function chiudiModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        // Cambiamo questo per usare display invece di classi
-        modal.style.display = 'none';
-    }
-}
-
-/**
- * Aggiorna tutte le viste del calendario
- */
-function aggiornaViste() {
-    renderizzaMiniCalendario();
-    aggiornaVista();
 }
 
 /**
@@ -390,11 +381,27 @@ function apriModalEvento(id) {
     const dataInizio = new Date(evento.dataInizio);
     const dataFine = new Date(evento.dataFine);
     
-    document.getElementById('eventDate').value = dataInizio.toISOString().split('T')[0];
-    document.getElementById('eventTime').value = dataInizio.toTimeString().substring(0, 5);
-    document.getElementById('eventEndDate').value = dataFine.toISOString().split('T')[0];
-    document.getElementById('eventEndTime').value = dataFine.toTimeString().substring(0, 5);
+    // Formatta le date con padding zero
+    const annoInizio = dataInizio.getFullYear();
+    const meseInizio = (dataInizio.getMonth() + 1).toString().padStart(2, '0');
+    const giornoInizio = dataInizio.getDate().toString().padStart(2, '0');
+    const oreInizio = dataInizio.getHours().toString().padStart(2, '0');
+    const minutiInizio = dataInizio.getMinutes().toString().padStart(2, '0');
+    
+    const annoFine = dataFine.getFullYear();
+    const meseFine = (dataFine.getMonth() + 1).toString().padStart(2, '0');
+    const giornoFine = dataFine.getDate().toString().padStart(2, '0');
+    const oreFine = dataFine.getHours().toString().padStart(2, '0');
+    const minutiFine = dataFine.getMinutes().toString().padStart(2, '0');
+    
+    document.getElementById('eventDate').value = `${annoInizio}-${meseInizio}-${giornoInizio}`;
+    document.getElementById('eventTime').value = `${oreInizio}:${minutiInizio}`;
+    document.getElementById('eventEndDate').value = `${annoFine}-${meseFine}-${giornoFine}`;
+    document.getElementById('eventEndTime').value = `${oreFine}:${minutiFine}`;
     document.getElementById('eventCategory').value = evento.categoria;
+    
+    // IMPORTANTE: Imposta l'ID dell'evento nel form per l'aggiornamento
+    document.getElementById('eventForm').setAttribute('data-event-id', id);
     
     // Aggiungi il pulsante elimina se non esiste già
     let deleteButton = document.getElementById('deleteEvent');
@@ -429,19 +436,24 @@ function apriModalEvento(id) {
         
         // Verifica che il titolo sia stato inserito
         if (!titolo.trim()) {
-            apriModalAvviso('Inserisci un titolo per l\'evento');
+            mostraNotifica('Inserisci un titolo per l\'evento', 'warning');
             return;
         }
         
         // Verifica che la descrizione sia stata inserita
         if (!descrizione.trim()) {
-            apriModalAvviso('Inserisci una descrizione per l\'evento');
+            mostraNotifica('Inserisci una descrizione per l\'evento', 'warning');
             return;
         }
         
-        // Crea le date
-        const dataInizio = new Date(`${data}T${ora}`);
-        const dataFinale = new Date(`${dataFine}T${oraFine}`);
+        // Crea le date con componenti espliciti per evitare problemi di fuso orario
+        const [annoInizio, meseInizio, giornoInizio] = data.split('-').map(Number);
+        const [oreInizio, minutiInizio] = ora.split(':').map(Number);
+        const [annoFine, meseFine, giornoFine] = dataFine.split('-').map(Number);
+        const [oreFine, minutiFine] = oraFine.split(':').map(Number);
+        
+        const dataInizio = new Date(annoInizio, meseInizio - 1, giornoInizio, oreInizio, minutiInizio);
+        const dataFinale = new Date(annoFine, meseFine - 1, giornoFine, oreFine, minutiFine);
         
         // Modifica l'evento
         modificaEvento(id, {
@@ -454,6 +466,9 @@ function apriModalEvento(id) {
         
         // Chiudi il modal
         chiudiModal('eventModal');
+        
+        // Mostra conferma
+        mostraNotifica('Evento aggiornato con successo', 'success');
     };
     
     // Apri il modal
@@ -510,6 +525,9 @@ function apriModalConfermaEliminazione(id) {
         // Chiudi entrambi i modal
         chiudiModal('confirmDeleteModal');
         chiudiModal('eventModal');
+        
+        // Mostra conferma
+        mostraNotifica('Evento eliminato con successo', 'success');
     };
     
     // Apri il modal
@@ -517,49 +535,31 @@ function apriModalConfermaEliminazione(id) {
 }
 
 /**
- * Apre un modal di avviso
- * @param {string} messaggio - Messaggio da mostrare
+ * Apre un modal
+ * @param {string} modalId - ID del modal da aprire
  */
-function apriModalAvviso(messaggio) {
-    // Crea il modal se non esiste
-    let modal = document.getElementById('alertModal');
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'alertModal';
-        modal.className = 'modal';
-        
-        modal.innerHTML = `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Avviso</h3>
-                    <button class="close-modal" id="closeAlertModal">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <p id="alertMessage"></p>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-primary" id="confirmAlert">OK</button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        
-        // Aggiungi gli event listener
-        document.getElementById('closeAlertModal').addEventListener('click', () => {
-            chiudiModal('alertModal');
-        });
-        
-        document.getElementById('confirmAlert').addEventListener('click', () => {
-            chiudiModal('alertModal');
-        });
+function apriModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'block';
     }
-    
-    // Aggiorna il messaggio
-    document.getElementById('alertMessage').textContent = messaggio;
-    
-    // Apri il modal
-    apriModal('alertModal');
+}
+
+/**
+ * Chiude un modal
+ * @param {string} modalId - ID del modal da chiudere
+ */
+function chiudiModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+/**
+ * Aggiorna tutte le viste del calendario
+ */
+function aggiornaViste() {
+    renderizzaMiniCalendario();
+    aggiornaVista();
 }

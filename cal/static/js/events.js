@@ -241,7 +241,7 @@ function generaEventiTest(numEventi = 15) {
         
         // Aggiungi l'evento
         eventi.push({
-            id: generaId(), // Ora questa funzione esiste
+            id: generateUniqueId(), // Ora questa funzione esiste
             titolo,
             descrizione,
             dataInizio,
@@ -400,14 +400,6 @@ function updateCurrentTimeIndicator() {
         weekGrid.appendChild(indicator);
         console.log('Added time indicator to week view at position:', topPosition);
     }
-}
-
-/**
- * Genera un ID univoco per gli eventi
- * @returns {string} - ID univoco
- */
-function generaId() {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
 }
 
 function handleDayClick(e) {
