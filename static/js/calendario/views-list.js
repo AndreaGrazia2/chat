@@ -16,8 +16,8 @@ function renderizzaVistaLista() {
     if (eventiGiorno.length === 0) {
         eventsList.innerHTML = `
             <div class="list-empty">
-                <p>Nessun evento per ${formatDateItalian(dataAttuale)}.</p>
-                <button class="btn btn-primary" id="addEventListBtn">
+                <p class="empty-message">Nessun evento per ${formatDateItalian(dataAttuale)}.</p>
+                <button class="btn btn-primary add-event-btn" id="addEventListBtn">
                     <i class="fas fa-plus"></i>
                     Aggiungi evento
                 </button>
