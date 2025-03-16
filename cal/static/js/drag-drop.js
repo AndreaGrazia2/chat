@@ -1,17 +1,26 @@
 /**
- * drag-only.js - Rende gli elementi trascinabili e nient'altro
+ * drag-only-fixed.js - Solo trascinamento, corretto per tutte le viste
  */
 
 // Inizializza il drag
 function initDragAndDrop(viewName) {
-    console.log('Inizializzazione solo trascinamento per:', viewName);
+    console.log('Inizializzazione solo trascinamento per vista:', viewName);
     
-    // Selettori per gli elementi eventi nelle diverse viste
-    let selectors = [
-        '#monthGrid .event', 
-        '#weekGrid .time-event', 
-        '#dayGrid .time-event'
-    ];
+    // Selettori specifici per le diverse viste
+    let selectors = [];
+    
+    if (viewName === 'month' || !viewName) {
+        selectors.push('#monthGrid .event');
+    }
+    if (viewName === 'week' || !viewName) {
+        selectors.push('#weekGrid .time-event');
+    }
+    if (viewName === 'day' || !viewName) {
+        // Per la vista giorno, usiamo un selettore più specifico
+        selectors.push('#dayGrid .time-event');
+        // Debug: stampa gli elementi trovati
+        console.log('Elementi nella vista giorno:', document.querySelectorAll('#dayGrid .time-event').length);
+    }
     
     // Trova tutti gli elementi eventi
     const events = document.querySelectorAll(selectors.join(', '));
@@ -27,20 +36,27 @@ function initDragAndDrop(viewName) {
         
         console.log('Elemento reso trascinabile:', event);
     });
+    
+    // Debug: stampa gli elementi nella vista giorno dopo aver impostato draggable
+    if (viewName === 'day' || !viewName) {
+        document.querySelectorAll('#dayGrid .time-event[draggable="true"]').forEach(el => {
+            console.log('Elemento in vista giorno reso trascinabile:', el);
+        });
+    }
 }
 
 // Necessario per iniziare il trascinamento
 window.dragFunction = function(event) {
     // Imposta il data transfer (fondamentale per il drag)
     event.dataTransfer.setData('text/plain', 'dragging');
-    //event.target.classList.add('dragging');
+    // Non aggiungiamo la classe dragging per evitare errori
     
-    console.log('Iniziato trascinamento elemento');
+    console.log('Iniziato trascinamento elemento:', event.target);
 };
 
 // Funzione per il codice esistente
 function enableDragAndDrop() {
-    initDragAndDrop();
+    initDragAndDrop(vistaAttuale || 'month');
 }
 
 // Esponi le funzioni
