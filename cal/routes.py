@@ -5,7 +5,7 @@ from common.config import SECRET_KEY
 calendar_bp = Blueprint('calendar', __name__, 
                       template_folder='templates',
                       static_folder='static',
-                      static_url_path='/calendar/static')
+                      static_url_path='/cal/static')
 
 @calendar_bp.route('/')
 def index():
@@ -15,7 +15,7 @@ def index():
 @calendar_bp.route('/static/<path:filename>')
 def serve_static(filename):
     """Serve i file statici del calendario"""
-    return send_from_directory('calendar/static', filename)
+    return send_from_directory('cal/static', filename)
 
 # API routes per il calendario
 @calendar_bp.route('/api/events')
