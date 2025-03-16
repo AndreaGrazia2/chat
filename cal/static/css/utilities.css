@@ -76,26 +76,6 @@
 	margin-bottom: 16px !important;
 }
 
-/* ===== DRAG AND DROP ===== */
-.draggable {
-	cursor: grab;
-	user-select: none;
-}
-
-.draggable:active {
-	cursor: grabbing;
-}
-
-.dragging {
-	opacity: 0.5;
-	z-index: 1000;
-	pointer-events: none;
-}
-
-.drag-over {
-	background-color: rgba(29, 116, 245, 0.1);
-}
-
 /* ===== TOOLTIP ===== */
 .tooltip {
 	position: relative;

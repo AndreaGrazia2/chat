@@ -43,13 +43,44 @@ function initDragAndDrop(viewName) {
             console.log('Elemento in vista giorno reso trascinabile:', el);
         });
     }
+    
+    // AGGIUNTO: Evidenziazione delle celle durante il trascinamento
+    // Selettori per i drop target
+    let dropTargets = [];
+    if (viewName === 'month' || !viewName) {
+        dropTargets.push('#monthGrid .calendar-day');
+    }
+    if (viewName === 'week' || !viewName) {
+        dropTargets.push('#weekGrid .time-slot');
+    }
+    if (viewName === 'day' || !viewName) {
+        dropTargets.push('#dayGrid .time-slot');
+    }
+    
+    // Aggiungi event listeners per evidenziazione
+    document.querySelectorAll(dropTargets.join(', ')).forEach(target => {
+        // Aggiungi l'evidenziazione durante il dragover
+        target.addEventListener('dragover', function(e) {
+            e.preventDefault(); // Necessario per permettere il drop
+            this.classList.add('drag-over');
+        });
+        
+        // Rimuovi l'evidenziazione durante il dragleave
+        target.addEventListener('dragleave', function() {
+            this.classList.remove('drag-over');
+        });
+        
+        // Rimuovi l'evidenziazione dopo il drop
+        target.addEventListener('drop', function() {
+            this.classList.remove('drag-over');
+        });
+    });
 }
 
 // Necessario per iniziare il trascinamento
 window.dragFunction = function(event) {
-    // Imposta il data transfer (fondamentale per il drag)
-    event.dataTransfer.setData('text/plain', 'dragging');
-    // Non aggiungiamo la classe dragging per evitare errori
+    // MODIFICA CRUCIALE: Passa l'ID dell'evento invece di 'dragging'
+    event.dataTransfer.setData('text/plain', event.target.dataset.id || 'dragging');
     
     console.log('Iniziato trascinamento elemento:', event.target);
 };
@@ -62,5 +93,10 @@ function enableDragAndDrop() {
 // Esponi le funzioni
 window.dragDrop = {
     init: initDragAndDrop,
-    cleanup: function() {}
+    cleanup: function() {
+        // Rimuovi eventuali evidenziazioni residue
+        document.querySelectorAll('.drag-over').forEach(el => {
+            el.classList.remove('drag-over');
+        });
+    }
 };

@@ -24,6 +24,8 @@ function inizializzaViste() {
  * Aggiorna la vista attuale
  */
 function aggiornaVista() {
+    console.log('Aggiornamento vista:', vistaAttuale);
+    
     // Nascondi tutte le viste
     document.querySelectorAll('.calendar-view').forEach(view => {
         view.classList.remove('active');
@@ -54,14 +56,25 @@ function aggiornaVista() {
     }
     
     // Inizializza il drag and drop dopo aver renderizzato la vista
+    // Aumentiamo il timeout da 100ms a 300ms per assicurarci che tutti gli elementi siano stati renderizzati
     setTimeout(() => {
         if (window.dragDrop && typeof window.dragDrop.init === 'function') {
             window.dragDrop.init(vistaAttuale);
         }
-    }, 100);
+    }, 300);
     
     // Aggiorna l'intestazione
     aggiornaIntestazione();
+    
+    // Forza il re-attacco degli event handler dopo il caricamento completo della vista
+    setTimeout(() => {
+        if (typeof attachEventClickHandlers === 'function') {
+            attachEventClickHandlers();
+        }
+        if (typeof updateCurrentTimeIndicator === 'function') {
+            updateCurrentTimeIndicator();
+        }
+    }, 350);
 }
 
 /**
