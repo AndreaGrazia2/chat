@@ -116,6 +116,148 @@ function renderizzaVistaMensile() {
             apriModalNuovoEvento(data);
         });
     });
+    
+    // Dopo aver aggiunto gli eventi alla griglia, aggiungi la funzionalità di drag & drop
+    document.querySelectorAll('.event').forEach(eventoElement => {
+        // Rimuovi eventuali listener precedenti per evitare duplicati
+        eventoElement.removeEventListener('click', eventoElement.clickHandler);
+        
+        // Rendi l'evento trascinabile
+        eventoElement.setAttribute('draggable', 'true');
+        
+        // Variabile per tenere traccia se stiamo trascinando o cliccando
+        let isDragging = false;
+        
+        eventoElement.addEventListener('dragstart', (e) => {
+            isDragging = true;
+            e.stopPropagation(); // Impedisce che l'evento si propaghi al calendario
+            e.dataTransfer.setData('text/plain', eventoElement.dataset.id);
+            e.dataTransfer.effectAllowed = 'move';
+            eventoElement.classList.add('dragging');
+            
+            // Aggiungi un ritardo per evitare conflitti con il click
+            setTimeout(() => {
+                document.querySelectorAll('.calendar-day').forEach(day => {
+                    day.classList.add('droppable');
+                });
+            }, 0);
+        });
+        
+        eventoElement.addEventListener('dragend', (e) => {
+            e.stopPropagation();
+            eventoElement.classList.remove('dragging');
+            document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+            document.querySelectorAll('.droppable').forEach(el => el.classList.remove('droppable'));
+            
+            // Resettiamo isDragging dopo un breve ritardo
+            setTimeout(() => {
+                isDragging = false;
+            }, 100);
+        });
+        
+        // Salva il gestore di click come proprietà dell'elemento per poterlo rimuovere in seguito
+        eventoElement.clickHandler = (e) => {
+            e.stopPropagation();
+            if (!isDragging) {
+                const id = eventoElement.dataset.id;
+                apriModalEvento(id);
+            }
+        };
+        
+        eventoElement.addEventListener('click', eventoElement.clickHandler);
+    });
+    
+    // Aggiungi gli event listener per il drop sulle celle del calendario
+    document.querySelectorAll('.calendar-day').forEach(day => {
+        // Rimuovi eventuali listener precedenti
+        day.removeEventListener('dragover', day.dragoverHandler);
+        day.removeEventListener('dragleave', day.dragleaveHandler);
+        day.removeEventListener('drop', day.dropHandler);
+        
+        day.dragoverHandler = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.dataTransfer.dropEffect = 'move';
+            day.classList.add('drag-over');
+        };
+        
+        day.dragleaveHandler = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            day.classList.remove('drag-over');
+        };
+        
+        day.dropHandler = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            day.classList.remove('drag-over');
+            
+            const id = e.dataTransfer.getData('text/plain');
+            if (!id) return; // Assicuriamoci che ci sia un ID
+            
+            // Ottieni la data del giorno di destinazione
+            const dataStr = day.dataset.date;
+            if (!dataStr) return;
+            
+            const [anno, mese, giorno] = dataStr.split('-').map(Number);
+            const dataGiorno = new Date(anno, mese - 1, giorno);
+            
+            if (!dataGiorno || isNaN(dataGiorno.getTime())) return; // Verifica che la data sia valida
+            
+            // Trova l'evento e aggiorna la data
+            const evento = eventi.find(e => e.id === id);
+            if (evento) {
+                // Calcola la differenza di giorni
+                const vecchiaData = new Date(evento.dataInizio);
+                const differenzaGiorni = Math.floor((dataGiorno - vecchiaData) / (1000 * 60 * 60 * 24));
+                
+                // Aggiorna le date mantenendo l'ora originale
+                const nuovaDataInizio = new Date(evento.dataInizio);
+                nuovaDataInizio.setDate(nuovaDataInizio.getDate() + differenzaGiorni);
+                
+                const nuovaDataFine = new Date(evento.dataFine);
+                nuovaDataFine.setDate(nuovaDataFine.getDate() + differenzaGiorni);
+                
+                // Modifica l'evento
+                modificaEvento(id, {
+                    dataInizio: nuovaDataInizio,
+                    dataFine: nuovaDataFine
+                });
+                
+                // Aggiorna la vista
+                renderizzaVistaMensile();
+                
+                // Feedback visivo
+                console.log(`Evento spostato: ${evento.titolo} -> ${formatDateItalian(nuovaDataInizio)}`);
+            }
+        };
+        
+        day.addEventListener('dragover', day.dragoverHandler);
+        day.addEventListener('dragleave', day.dragleaveHandler);
+        day.addEventListener('drop', day.dropHandler);
+    });
+    
+    // Aggiungi gli event listener per "più eventi"
+    document.querySelectorAll('.more-events').forEach(moreElement => {
+        moreElement.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const dataStr = moreElement.closest('.calendar-day').dataset.date;
+            const [anno, mese, giorno] = dataStr.split('-').map(Number);
+            const data = new Date(anno, mese - 1, giorno);
+            console.log('Cliccato su più eventi:', data);
+            apriModalListaEventi(data);
+        });
+    });
+    
+    // Aggiungi gli event listener per i giorni (per aggiungere eventi)
+    document.querySelectorAll('.calendar-day').forEach(dayElement => {
+        dayElement.addEventListener('click', () => {
+            const dataStr = dayElement.dataset.date;
+            const [anno, mese, giorno] = dataStr.split('-').map(Number);
+            const data = new Date(anno, mese - 1, giorno);
+            apriModalNuovoEvento(data);
+        });
+    });
 }
 
 /**
