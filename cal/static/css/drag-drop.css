@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Drag-drop.css - Stili specifici per il drag and drop nel calendario
+   Drag-drop.css - Stili minimali per il drag and drop del calendario
    ========================================================================== */
 
 /* Stili per elementi trascinabili */
@@ -8,56 +8,35 @@
     user-select: none;
 }
 
-.draggable:active {
-    cursor: grabbing;
-}
-
-/* Stili per elementi durante il trascinamento */
+/* Stile durante il trascinamento attivo */
 .dragging {
-    opacity: 0.6 !important;
+    opacity: 0.4 !important;
     pointer-events: none;
 }
 
-/* Stili per destinazioni drag and drop */
-.calendar-day.droppable:hover,
-.time-slot.droppable:hover {
-    background-color: var(--hover-bg);
-    transition: background-color 0.2s ease;
-}
-
-/* Stile durante il passaggio sopra la destinazione - ridotto al minimo */
-.calendar-day.drag-over, .time-slot.drag-over {
-    background-color: rgba(26, 115, 232, 0.2) !important;
-    border: none !important;
-    box-shadow: none !important;
-}
-
-/* Stili per eventi nella vista mese durante drag */
-.event.draggable:hover {
-    cursor: grab;
-}
-
-/* Stili per eventi nelle viste giornaliera e settimanale durante drag */
-.time-event.draggable:hover {
-    cursor: grab;
-}
-
-/* Elemento di feedback durante il drag */
-#drag-feedback {
+/* Elemento ghost durante il trascinamento */
+#drag-ghost {
     position: fixed;
     z-index: 9999;
     pointer-events: none;
     opacity: 0.8;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
-/* Corpo durante il trascinamento */
-body.dragging-in-progress {
+/* Stile per la cella di destinazione evidenziata */
+.drop-highlight {
+    background-color: rgba(66, 133, 244, 0.3) !important;
+    box-shadow: inset 0 0 0 2px rgba(66, 133, 244, 0.8) !important;
+}
+
+/* Stile del body durante il trascinamento */
+.drag-in-progress {
     cursor: grabbing !important;
 }
 
-/* Miglioramenti per l'interazione touch su dispositivi mobili */
+/* Miglioramenti per dispositivi touch */
 @media (max-width: 768px) {
     .draggable {
-        touch-action: none; /* Previene lo scroll mentre si trascina su touch device */
+        touch-action: none; /* Previene lo scroll durante il trascinamento */
     }
 }

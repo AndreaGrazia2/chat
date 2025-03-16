@@ -1,674 +1,732 @@
 /**
- * drag-drop.js - Sistema centralizzato per la gestione del drag and drop nel calendario
- * Implementazione personalizzata basata su eventi mouse/touch anziché API HTML5 Drag and Drop
+ * drag-drop.js - Sistema di drag and drop per il calendario
+ * Versione finale ottimizzata per eliminare flickering, correggere il posizionamento
+ * e assicurare la corretta visualizzazione degli eventi in tutte le viste
  */
 
-// Variabili globali per il tracciamento
+// Variabili globali essenziali
 let draggedElement = null;
-let originalElement = null;
-let offsetX = 0;
-let offsetY = 0;
-let startX = 0;
-let startY = 0;
-let isDragging = false;
-let dragThreshold = 5; // Pixels di movimento prima di attivare il drag
-let currentDropTarget = null;
-let eventOriginalData = null;
+let activeDropTarget = null;
+let draggingInProgress = false;
 let draggedEventId = null;
+let currentView = 'month';
+let dragInitialized = false;
 
 /**
- * Inizializza il drag and drop per tutti gli elementi evento nella vista corrente
- * @param {string} viewType - Tipo di vista ('month', 'week', 'day')
+ * Inizializza il sistema drag and drop
+ * @param {string} viewName - Nome della vista ('month', 'week', 'day')
  */
-function initDragAndDrop(viewType) {
-    console.log(`Inizializzazione drag and drop per la vista: ${viewType}`);
+function initDragAndDrop(viewName) {
+    console.log('Inizializzazione drag and drop per:', viewName);
     
-    // Rimuovi eventuali listener precedenti
-    cleanupDragListeners();
+    // Prima pulisci eventuali residui di dragging precedenti
+    cleanupDragAndDrop();
     
-    // Rileva il tipo di vista e imposta i selettori corretti
-    let itemSelector, dropTargetSelector;
+    // Salva la vista corrente
+    currentView = viewName;
     
-    switch (viewType) {
-        case 'month':
-            itemSelector = '#monthGrid .event';
-            dropTargetSelector = '#monthGrid .calendar-day';
-            break;
-        case 'week':
-            itemSelector = '#weekGrid .time-event';
-            dropTargetSelector = '#weekGrid .time-slot';
-            break;
-        case 'day':
-            itemSelector = '#dayGrid .time-event';
-            dropTargetSelector = '#dayGrid .time-slot';
-            break;
-        default:
-            console.log(`Drag and drop non supportato per la vista: ${viewType}`);
-            return;
-    }
-    
-    // Seleziona tutti gli elementi trascinabili
-    document.querySelectorAll(itemSelector).forEach(item => {
-        // Rimuovi l'attributo draggable e gli event listener standard
-        item.setAttribute('draggable', 'false');
+    // Attendi un momento per assicurarsi che le viste siano renderizzate
+    setTimeout(() => {
+        // Configura i selettori in base alla vista
+        const eventSelector = getEventSelector(viewName);
+        const dropTargetSelector = getDropTargetSelector(viewName);
         
-        // Rimuovi eventuali listener precedenti per evitare duplicati
-        item.removeEventListener('mousedown', handleMouseDown);
-        item.removeEventListener('touchstart', handleTouchStart);
+        // Debug info
+        console.log('Selettore eventi:', eventSelector);
+        console.log('Selettore target:', dropTargetSelector);
         
-        // Aggiungi lo stile per indicare che è trascinabile
-        item.classList.add('draggable');
+        // Aggiungi i listener agli eventi
+        const events = document.querySelectorAll(eventSelector);
+        events.forEach(eventElement => {
+            if (!eventElement.getAttribute('data-id')) {
+                console.warn('Elemento evento senza data-id:', eventElement.textContent);
+                return;
+            }
+            
+            // Rimuovi listener esistenti
+            eventElement.removeEventListener('mousedown', handleDragStart);
+            eventElement.removeEventListener('touchstart', handleDragStart);
+            
+            // Aggiungi nuovi listener
+            eventElement.addEventListener('mousedown', handleDragStart);
+            eventElement.addEventListener('touchstart', handleDragStart, { passive: false });
+            
+            // Aggiungi classe per stile
+            eventElement.classList.add('draggable');
+        });
         
-        // Aggiungi event listener per il mouse e touch
-        item.addEventListener('mousedown', handleMouseDown);
-        item.addEventListener('touchstart', handleTouchStart, { passive: false });
-    });
-    
-    // Configura tutte le destinazioni di drop
-    document.querySelectorAll(dropTargetSelector).forEach(target => {
-        target.classList.add('droppable');
-    });
-    
-    // Gestisci i click sugli eventi (per l'apertura dei dettagli)
-    initEventClicks(itemSelector);
+        // Configura i target di drop
+        const dropTargets = document.querySelectorAll(dropTargetSelector);
+        dropTargets.forEach(target => {
+            // Aggiungi classe per stile
+            target.classList.add('drop-target');
+        });
+        
+        console.log(`Configurati ${events.length} eventi e ${dropTargets.length} destinazioni di drop`);
+        
+        // Aggiungi gli stili CSS
+        addDragDropStyles();
+        
+        // Segna come inizializzato
+        dragInitialized = true;
+    }, 300);
 }
 
 /**
- * Rimuove tutti i listener di drag and drop precedenti
+ * Ottiene il selettore per gli eventi in base alla vista
  */
-function cleanupDragListeners() {
-    console.log('Pulizia dei listener di drag and drop precedenti');
-    
-    // Rimuovi listener globali
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', handleMouseUp);
-    document.removeEventListener('touchmove', handleTouchMove);
-    document.removeEventListener('touchend', handleTouchEnd);
-    
-    // Rimuovi gli handler dagli elementi
-    document.querySelectorAll('.draggable').forEach(item => {
-        item.removeEventListener('mousedown', handleMouseDown);
-        item.removeEventListener('touchstart', handleTouchStart);
-        item.removeAttribute('draggable');
+function getEventSelector(viewName) {
+    switch (viewName) {
+        case 'month': return '#monthGrid .event';
+        case 'week': return '#weekGrid .time-event';
+        case 'day': return '#dayGrid .time-event';
+        default: return '.event';
+    }
+}
+
+/**
+ * Ottiene il selettore per i target di drop in base alla vista
+ */
+function getDropTargetSelector(viewName) {
+    switch (viewName) {
+        case 'month': return '#monthGrid .calendar-day';
+        case 'week': return '#weekGrid .time-slot';
+        case 'day': return '#dayGrid .time-slot';
+        default: return '.calendar-day';
+    }
+}
+
+/**
+ * Pulisce gli stati e i listener del drag and drop
+ */
+function cleanupDragAndDrop() {
+    // Rimuovi stile dalle celle
+    document.querySelectorAll('.drop-highlight').forEach(el => {
+        el.classList.remove('drop-highlight');
     });
     
-    // Rimuovi le classi dalle destinazioni
-    document.querySelectorAll('.droppable').forEach(target => {
-        target.classList.remove('droppable', 'drag-over');
-    });
+    // Rimuovi il ghost element se esiste
+    const ghost = document.getElementById('drag-ghost');
+    if (ghost) ghost.remove();
     
-    // Rimuovi eventuali elementi di feedback
-    removeDragFeedback();
+    // Rimuovi i listener globali
+    document.removeEventListener('mousemove', handleDragMove);
+    document.removeEventListener('touchmove', handleDragMove);
+    document.removeEventListener('mouseup', handleDragEnd);
+    document.removeEventListener('touchend', handleDragEnd);
     
-    // Reset delle variabili
+    // Rimuovi classe dal body
+    document.body.classList.remove('drag-in-progress');
+    
+    // Reset variabili
     draggedElement = null;
-    originalElement = null;
-    isDragging = false;
-    currentDropTarget = null;
+    activeDropTarget = null;
+    draggingInProgress = false;
     draggedEventId = null;
-    eventOriginalData = null;
-    window.eventDataForDrag = null;
 }
 
 /**
- * Avvia il trascinamento con mouse
- * @param {MouseEvent} e - Evento mouse
+ * Gestisce l'inizio del trascinamento
+ * @param {Event} e - Evento di mouse o touch
  */
-function handleMouseDown(e) {
-    // Verifica se l'elemento è effettivamente trascinabile
-    if (!e.target.closest('.draggable') && !this.classList.contains('draggable')) {
+function handleDragStart(e) {
+    // Ignora se non siamo completamente inizializzati
+    if (!dragInitialized) return;
+    
+    // Controlla se siamo su un dispositivo touch
+    const isTouch = e.type === 'touchstart';
+    
+    // Ottieni l'evento dell'elemento
+    const eventElement = this;
+    const eventId = eventElement.getAttribute('data-id');
+    
+    // Se non abbiamo un ID evento, esci
+    if (!eventId) {
+        console.warn('Elemento senza data-id');
         return;
     }
     
-    // Impedisci selezione di testo e comportamento predefinito
+    // Previeni comportamenti predefiniti
     e.preventDefault();
     e.stopPropagation();
     
-    // Salva l'elemento originale
-    originalElement = this;
+    // Salva riferimenti
+    draggedElement = eventElement;
+    draggedEventId = eventId;
     
-    // Salva la posizione iniziale del mouse
-    startX = e.clientX;
-    startY = e.clientY;
+    console.log('Inizio trascinamento evento:', eventId);
     
-    // Registra l'offset del clic all'interno dell'elemento
-    const rect = originalElement.getBoundingClientRect();
-    offsetX = e.clientX - rect.left;
-    offsetY = e.clientY - rect.top;
+    // Crea il ghost element
+    createDragGhost(eventElement, isTouch ? e.touches[0].clientX : e.clientX, 
+                               isTouch ? e.touches[0].clientY : e.clientY);
     
-    // Aggiungi gli event listeners globali
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    // Aggiungi stile all'elemento trascinato
+    eventElement.classList.add('dragging');
+    document.body.classList.add('drag-in-progress');
+    
+    // Aggiungi i listener globali
+    document.addEventListener(isTouch ? 'touchmove' : 'mousemove', handleDragMove, 
+                            { passive: false });
+    document.addEventListener(isTouch ? 'touchend' : 'mouseup', handleDragEnd);
+    
+    // Imposta il flag di trascinamento
+    draggingInProgress = true;
 }
 
 /**
- * Avvia il trascinamento con touch
- * @param {TouchEvent} e - Evento touch
+ * Crea l'elemento ghost per il trascinamento
  */
-function handleTouchStart(e) {
-    // Verifica se l'elemento è effettivamente trascinabile
-    if (!e.target.closest('.draggable') && !this.classList.contains('draggable')) {
-        return;
+function createDragGhost(sourceElement, clientX, clientY) {
+    // Rimuovi eventuali ghost precedenti
+    const existingGhost = document.getElementById('drag-ghost');
+    if (existingGhost) existingGhost.remove();
+    
+    // Clona l'elemento
+    const ghost = sourceElement.cloneNode(true);
+    ghost.id = 'drag-ghost';
+    
+    // Imposta stile di base
+    ghost.style.position = 'fixed';
+    ghost.style.zIndex = '9999';
+    ghost.style.pointerEvents = 'none';
+    ghost.style.opacity = '0.8';
+    ghost.style.width = sourceElement.offsetWidth + 'px';
+    ghost.style.willChange = 'transform'; // Ottimizzazione renderizzazione
+    
+    // Per vista giorno/settimana, conserva altezza
+    if (currentView !== 'month') {
+        ghost.style.height = sourceElement.offsetHeight + 'px';
     }
     
-    // Impedisci scroll e zoom durante il trascinamento
+    // Calcola posizione in base al tipo di vista
+    let offsetX, offsetY;
+    
+    // In mese vuoi cliccare dove sta il mouse
+    if (currentView === 'month') {
+        const rect = sourceElement.getBoundingClientRect();
+        offsetX = clientX - rect.left;
+        offsetY = clientY - rect.top;
+    }
+    // In vista settimana/giorno, vuoi afferrare dalla maniglia in alto
+    else {
+        offsetX = ghost.offsetWidth / 2;
+        offsetY = 10; // Alta nell'elemento
+    }
+    
+    // Posiziona il ghost con transform invece di left/top (più efficiente)
+    ghost.style.transform = `translate(${clientX - offsetX}px, ${clientY - offsetY}px)`;
+    
+    // Salva gli offset come attributi per i movimenti successivi
+    ghost.setAttribute('data-offset-x', offsetX);
+    ghost.setAttribute('data-offset-y', offsetY);
+    
+    // Aggiungi al documento
+    document.body.appendChild(ghost);
+}
+
+/**
+ * Usa requestAnimationFrame per aggiornare la posizione del ghost
+ */
+let animationFrameId = null;
+
+/**
+ * Gestisce il movimento durante il trascinamento
+ */
+function handleDragMove(e) {
+    if (!draggingInProgress) return;
+    
+    // Previeni comportamenti predefiniti (come lo scroll)
     e.preventDefault();
-    e.stopPropagation();
     
-    // Salva l'elemento originale
-    originalElement = this;
+    // Ottieni posizione corrente
+    const isTouch = e.type === 'touchmove';
+    const clientX = isTouch ? e.touches[0].clientX : e.clientX;
+    const clientY = isTouch ? e.touches[0].clientY : e.clientY;
     
-    // Salva la posizione iniziale del touch
-    const touch = e.touches[0];
-    startX = touch.clientX;
-    startY = touch.clientY;
+    // Cancella qualsiasi richiesta di animazione frame precedente
+    if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+    }
     
-    // Registra l'offset del touch all'interno dell'elemento
-    const rect = originalElement.getBoundingClientRect();
-    offsetX = touch.clientX - rect.left;
-    offsetY = touch.clientY - rect.top;
-    
-    // Aggiungi gli event listeners globali
-    document.addEventListener('touchmove', handleTouchMove, { passive: false });
-    document.addEventListener('touchend', handleTouchEnd);
+    // Usa requestAnimationFrame per aggiornare l'UI in modo efficiente
+    animationFrameId = requestAnimationFrame(() => {
+        // Aggiorna posizione ghost con transform (nessun reflow)
+        updateGhostPosition(clientX, clientY);
+        
+        // Trova e aggiorna target di drop
+        findAndHighlightDropTarget(clientX, clientY);
+    });
 }
 
 /**
- * Durante il trascinamento con mouse
- * @param {MouseEvent} e - Evento mouse
+ * Aggiorna la posizione dell'elemento ghost
  */
-function handleMouseMove(e) {
-    if (!originalElement) return;
+function updateGhostPosition(clientX, clientY) {
+    const ghost = document.getElementById('drag-ghost');
+    if (!ghost) return;
     
-    // Calcola la distanza percorsa
-    const deltaX = Math.abs(e.clientX - startX);
-    const deltaY = Math.abs(e.clientY - startY);
+    // Recupera offset salvati
+    const offsetX = parseInt(ghost.getAttribute('data-offset-x') || 0);
+    const offsetY = parseInt(ghost.getAttribute('data-offset-y') || 0);
     
-    // Controlla se il movimento supera la soglia per considerarlo un drag
-    if (!isDragging && (deltaX > dragThreshold || deltaY > dragThreshold)) {
-        startDragging(e.clientX, e.clientY);
-        isDragging = true;
+    // Aggiorna posizione con transform (più efficiente di left/top)
+    ghost.style.transform = `translate(${clientX - offsetX}px, ${clientY - offsetY}px)`;
+}
+
+/**
+ * Trova e evidenzia il target di drop sotto il puntatore
+ */
+function findAndHighlightDropTarget(clientX, clientY) {
+    // Nascondi temporaneamente il ghost
+    const ghost = document.getElementById('drag-ghost');
+    let originalDisplay = '';
+    if (ghost) {
+        originalDisplay = ghost.style.display;
+        ghost.style.display = 'none';
     }
     
-    if (isDragging) {
-        // Aggiorna la posizione dell'elemento di feedback
-        const feedbackElement = document.getElementById('drag-feedback');
-        if (feedbackElement) {
-            feedbackElement.style.left = (e.clientX - offsetX) + 'px';
-            feedbackElement.style.top = (e.clientY - offsetY) + 'px';
+    // Trova elemento sotto il puntatore
+    let elementUnder = document.elementFromPoint(clientX, clientY);
+    
+    // Se non troviamo nulla, prova punti vicini
+    if (!elementUnder || elementUnder.tagName === 'HTML' || elementUnder.tagName === 'BODY') {
+        // Prova punti vicini per i dispositivi touch
+        const points = [
+            { x: clientX - 5, y: clientY - 5 },
+            { x: clientX + 5, y: clientY - 5 },
+            { x: clientX - 5, y: clientY + 5 },
+            { x: clientX + 5, y: clientY + 5 }
+        ];
+        
+        for (const point of points) {
+            const tempElement = document.elementFromPoint(point.x, point.y);
+            if (tempElement && tempElement.tagName !== 'HTML' && tempElement.tagName !== 'BODY') {
+                elementUnder = tempElement;
+                break;
+            }
+        }
+    }
+    
+    // Ripristina ghost
+    if (ghost) {
+        ghost.style.display = originalDisplay;
+    }
+    
+    // Trova il target di drop o il suo antenato
+    const newDropTarget = findClosestDropTarget(elementUnder);
+    
+    // Se il target è cambiato, aggiorna evidenziazione
+    if (newDropTarget !== activeDropTarget) {
+        // Rimuovi highlight dal precedente
+        if (activeDropTarget) {
+            activeDropTarget.classList.remove('drop-highlight');
         }
         
-        // Trova e evidenzia il target di drop
-        updateDropTarget(e.clientX, e.clientY);
-    }
-}
-
-/**
- * Durante il trascinamento con touch
- * @param {TouchEvent} e - Evento touch
- */
-function handleTouchMove(e) {
-    if (!originalElement) return;
-    
-    // Impedisci scrolling durante il drag
-    e.preventDefault();
-    
-    const touch = e.touches[0];
-    
-    // Calcola la distanza percorsa
-    const deltaX = Math.abs(touch.clientX - startX);
-    const deltaY = Math.abs(touch.clientY - startY);
-    
-    // Controlla se il movimento supera la soglia per considerarlo un drag
-    if (!isDragging && (deltaX > dragThreshold || deltaY > dragThreshold)) {
-        startDragging(touch.clientX, touch.clientY);
-        isDragging = true;
-    }
-    
-    if (isDragging) {
-        // Aggiorna la posizione dell'elemento di feedback
-        const feedbackElement = document.getElementById('drag-feedback');
-        if (feedbackElement) {
-            feedbackElement.style.left = (touch.clientX - offsetX) + 'px';
-            feedbackElement.style.top = (touch.clientY - offsetY) + 'px';
+        // Evidenzia il nuovo
+        if (newDropTarget) {
+            newDropTarget.classList.add('drop-highlight');
         }
         
-        // Trova e evidenzia il target di drop
-        updateDropTarget(touch.clientX, touch.clientY);
+        // Aggiorna riferimento
+        activeDropTarget = newDropTarget;
     }
 }
 
 /**
- * Fine del trascinamento con mouse
- * @param {MouseEvent} e - Evento mouse
- */
-function handleMouseUp(e) {
-    if (isDragging) {
-        // Completa il trascinamento
-        finishDragging(e.clientX, e.clientY);
-    } else if (originalElement) {
-        // Se non era un drag, potrebbe essere un click
-        // Il click sull'evento è gestito separatamente
-    }
-    
-    // Rimuovi gli event listener
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', handleMouseUp);
-    
-    // Reset
-    resetDragState();
-}
-
-/**
- * Fine del trascinamento con touch
- * @param {TouchEvent} e - Evento touch
- */
-function handleTouchEnd(e) {
-    if (isDragging) {
-        // Per il touch, usiamo l'ultima posizione conosciuta
-        // perché touchend non ha coordinate
-        finishDragging();
-    } else if (originalElement) {
-        // Se non era un drag, potrebbe essere un tap
-        // Il tap sull'evento è gestito separatamente
-    }
-    
-    // Rimuovi gli event listener
-    document.removeEventListener('touchmove', handleTouchMove);
-    document.removeEventListener('touchend', handleTouchEnd);
-    
-    // Reset
-    resetDragState();
-}
-
-/**
- * Avvia il processo di trascinamento
- * @param {number} clientX - Coordinata X
- * @param {number} clientY - Coordinata Y
- */
-function startDragging(clientX, clientY) {
-    // Salva l'ID dell'evento trascinato
-    draggedEventId = originalElement.getAttribute('data-id');
-    
-    console.log('Inizio trascinamento', draggedEventId);
-    
-    // Crea l'elemento di feedback per il trascinamento
-    createDragFeedback(clientX, clientY);
-    
-    // Memorizza l'elemento che viene trascinato
-    draggedElement = originalElement;
-    
-    // Memorizza i dati originali dell'evento
-    eventOriginalData = {
-        id: draggedEventId,
-        element: draggedElement,
-        parent: draggedElement.parentNode
-    };
-    
-    // Aggiungi la classe dragging all'elemento originale per evidenziarlo
-    originalElement.classList.add('dragging');
-    
-    // Aggiungi la classe al body per gestire CSS specifico durante drag
-    document.body.classList.add('dragging-in-progress');
-}
-
-/**
- * Crea l'elemento visivo di feedback
- * @param {number} clientX - Coordinata X
- * @param {number} clientY - Coordinata Y
- */
-function createDragFeedback(clientX, clientY) {
-    // Rimuovi eventuali feedback precedenti
-    removeDragFeedback();
-    
-    // Crea un clone dell'elemento per il feedback visivo
-    const clone = originalElement.cloneNode(true);
-    clone.id = 'drag-feedback';
-    clone.style.position = 'fixed';
-    clone.style.zIndex = '9999';
-    clone.style.opacity = '0.8';
-    clone.style.pointerEvents = 'none';
-    
-    // Posiziona il clone
-    const rect = originalElement.getBoundingClientRect();
-    clone.style.width = rect.width + 'px';
-    clone.style.height = rect.height + 'px';
-    clone.style.left = (clientX - offsetX) + 'px';
-    clone.style.top = (clientY - offsetY) + 'px';
-    
-    document.body.appendChild(clone);
-}
-
-/**
- * Rimuovi l'elemento di feedback
- */
-function removeDragFeedback() {
-    const feedback = document.getElementById('drag-feedback');
-    if (feedback) {
-        feedback.parentNode.removeChild(feedback);
-    }
-}
-
-/**
- * Trova il bersaglio di drop sotto le coordinate
- * @param {number} clientX - Coordinata X
- * @param {number} clientY - Coordinata Y
- */
-function updateDropTarget(clientX, clientY) {
-    // Nascondi temporaneamente il feedback per trovare l'elemento sottostante
-    const feedback = document.getElementById('drag-feedback');
-    if (feedback) feedback.style.display = 'none';
-    
-    // Trova l'elemento sotto il cursore/touch
-    const elementUnder = document.elementFromPoint(clientX, clientY);
-    
-    // Ripristina la visualizzazione del feedback
-    if (feedback) feedback.style.display = '';
-    
-    // Trova il contenitore droppable più vicino
-    const target = findClosestDropTarget(elementUnder);
-    
-    // Se abbiamo cambiato target, aggiorna le classi CSS
-    if (target !== currentDropTarget) {
-        // Rimuovi la classe drag-over dal target precedente
-        if (currentDropTarget) {
-            currentDropTarget.classList.remove('drag-over');
-        }
-        
-        // Aggiungi la classe al nuovo target
-        if (target) {
-            target.classList.add('drag-over');
-        }
-        
-        currentDropTarget = target;
-    }
-}
-
-/**
- * Trova il contenitore droppable più vicino
- * @param {HTMLElement} element - Elemento di partenza
- * @returns {HTMLElement|null} - Elemento droppable più vicino
+ * Trova il target di drop valido più vicino
  */
 function findClosestDropTarget(element) {
     if (!element) return null;
     
-    // Cerca il genitore più vicino che sia un elemento droppable
-    let current = element;
-    while (current && !current.classList.contains('droppable')) {
-        current = current.parentElement;
+    // Verifica subito se è un target valido
+    if (element.classList.contains('drop-target')) {
+        return element;
     }
     
-    return current;
+    // Cerca nei genitori
+    let current = element.parentElement;
+    let iterations = 0;
+    const maxIterations = 5; // Per evitare loop infiniti
+    
+    while (current && iterations < maxIterations) {
+        if (current.classList.contains('drop-target')) {
+            return current;
+        }
+        current = current.parentElement;
+        iterations++;
+    }
+    
+    // Se non troviamo un target, usiamo altro metodo
+    // Trova tutti i target di drop
+    const allDropTargets = document.querySelectorAll('.drop-target');
+    
+    // Nessun target disponibile
+    if (allDropTargets.length === 0) return null;
+    
+    // Per vista giorno/settimana, facciamo gestione speciale per gli slot orari
+    // verifichiamo se siamo dentro una vista time-grid
+    const timeGrid = element.closest('.time-grid-container, .week-grid, .day-grid');
+    if (timeGrid && (currentView === 'day' || currentView === 'week')) {
+        // Troviamo l'elemento time-slot più vicino
+        const elementRect = element.getBoundingClientRect();
+        const centerX = elementRect.left + elementRect.width / 2;
+        const centerY = elementRect.top + elementRect.height / 2;
+        
+        // In viste time, troviamo lo slot al centro dell'elemento
+        const slots = currentView === 'week' ? 
+            document.querySelectorAll('#weekGrid .time-slot') :
+            document.querySelectorAll('#dayGrid .time-slot');
+        
+        // Converti in array e filtra
+        const slotsArray = Array.from(slots);
+        
+        // Troviamo lo slot più vicino
+        let closestSlot = null;
+        let minDistance = Infinity;
+        
+        slotsArray.forEach(slot => {
+            const slotRect = slot.getBoundingClientRect();
+            const slotCenterX = slotRect.left + slotRect.width / 2;
+            const slotCenterY = slotRect.top + slotRect.height / 2;
+            
+            const distance = Math.sqrt(
+                Math.pow(centerX - slotCenterX, 2) + 
+                Math.pow(centerY - slotCenterY, 2)
+            );
+            
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestSlot = slot;
+            }
+        });
+        
+        return closestSlot;
+    }
+    
+    return null;
 }
 
 /**
- * Completa il trascinamento
- * @param {number} clientX - Coordinata X
- * @param {number} clientY - Coordinata Y
+ * Gestisce la fine del trascinamento
  */
-function finishDragging(clientX, clientY) {
+function handleDragEnd(e) {
+    // Cancella qualsiasi frame di animazione in corso
+    if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+    }
+    
+    // Se non stavamo trascinando, esci
+    if (!draggingInProgress || !draggedElement) {
+        cleanupDragAndDrop();
+        return;
+    }
+    
     console.log('Fine trascinamento');
     
-    // Rimuovi la classe dragging
-    if (originalElement) {
-        originalElement.classList.remove('dragging');
+    // Se abbiamo un target valido, esegui il drop
+    if (activeDropTarget) {
+        console.log('Drop su target:', activeDropTarget);
+        performDrop();
     }
     
-    // Rimuovi la classe dal body
-    document.body.classList.remove('dragging-in-progress');
-    
-    // Se non abbiamo le coordinate (touch), usa il currentDropTarget attuale
-    if (typeof clientX !== 'undefined' && typeof clientY !== 'undefined') {
-        // Aggiorna il target finale in base alla posizione corrente
-        updateDropTarget(clientX, clientY);
+    // Pulisci lo stato del drag
+    if (draggedElement) {
+        draggedElement.classList.remove('dragging');
     }
     
-    // Esegui il drop se c'è un target valido
-    if (currentDropTarget && draggedElement) {
-        performDrop(draggedElement, currentDropTarget);
+    document.body.classList.remove('drag-in-progress');
+    
+    // Rimuovi il ghost
+    const ghost = document.getElementById('drag-ghost');
+    if (ghost) ghost.remove();
+    
+    // Rimuovi highlight
+    if (activeDropTarget) {
+        activeDropTarget.classList.remove('drop-highlight');
     }
     
-    // Rimuovi il feedback visivo
-    removeDragFeedback();
+    // Rimuovi i listener globali
+    document.removeEventListener('mousemove', handleDragMove);
+    document.removeEventListener('touchmove', handleDragMove);
+    document.removeEventListener('mouseup', handleDragEnd);
+    document.removeEventListener('touchend', handleDragEnd);
     
-    // Rimuovi le evidenziazioni dai target
-    document.querySelectorAll('.drag-over').forEach(el => {
-        el.classList.remove('drag-over');
-    });
+    // Reset variabili
+    draggingInProgress = false;
 }
 
 /**
- * Resetta lo stato del drag
+ * Esegue il drop dell'evento
  */
-function resetDragState() {
-    draggedElement = null;
-    originalElement = null;
-    isDragging = false;
-    currentDropTarget = null;
-}
-
-/**
- * Esegue il drop dell'elemento
- * @param {HTMLElement} dragged - Elemento trascinato
- * @param {HTMLElement} target - Elemento di destinazione
- */
-function performDrop(dragged, target) {
-    if (!dragged || !target) return;
-    
-    const eventId = dragged.getAttribute('data-id');
-    console.log('Drop eseguito', eventId, 'su', target.getAttribute('data-date') || target.getAttribute('data-ora'));
-    
-    // Esegui l'azione appropriata in base al tipo di target
-    if (target.classList.contains('calendar-day')) {
-        handleMonthViewDrop(dragged, target);
-    } else if (target.classList.contains('time-slot')) {
-        if (target.hasAttribute('data-giorno')) {
-            handleWeekViewDrop(dragged, target);
-        } else {
-            handleDayViewDrop(dragged, target);
-        }
-    }
-}
-
-/**
- * Gestisci il drop in vista mensile
- * @param {HTMLElement} dragged - Elemento trascinato
- * @param {HTMLElement} target - Elemento di destinazione
- */
-function handleMonthViewDrop(dragged, target) {
-    const eventId = dragged.getAttribute('data-id');
-    const targetDate = target.getAttribute('data-date');
-    
-    if (!eventId || !targetDate) return;
-    
-    // Trova l'evento nel modello dati
-    const evento = eventi.find(ev => ev.id === eventId);
-    if (!evento) {
-        console.error(`Evento con ID ${eventId} non trovato`);
+function performDrop() {
+    if (!draggedEventId || !activeDropTarget) {
+        console.error('Dati insufficienti per eseguire il drop');
         return;
     }
     
-    // Converti la data nel formato corretto
-    const [year, month, day] = targetDate.split('-').map(Number);
-    const dropDate = new Date(year, month - 1, day);
+    console.log('Esecuzione drop:', draggedEventId, 'su target:', activeDropTarget);
     
-    // Calcola la differenza di giorni
-    const oldDate = new Date(evento.dataInizio);
-    const diffDays = Math.round((dropDate - new Date(oldDate.getFullYear(), oldDate.getMonth(), oldDate.getDate())) / (1000 * 60 * 60 * 24));
-    
-    // Aggiorna le date mantenendo l'ora originale
-    const newStartDate = new Date(evento.dataInizio);
-    newStartDate.setDate(newStartDate.getDate() + diffDays);
-    
-    const newEndDate = new Date(evento.dataFine);
-    newEndDate.setDate(newEndDate.getDate() + diffDays);
-    
-    // Aggiorna l'evento nel modello dati
-    evento.dataInizio = newStartDate;
-    evento.dataFine = newEndDate;
-    
-    // Aggiorna l'evento tramite la funzione globale
-    modificaEvento(eventId, {
-        dataInizio: newStartDate,
-        dataFine: newEndDate
-    });
-    
-    // Forza il salvataggio
-    salvaEventi();
-    
-    // Forza un aggiornamento completo della vista
-    setTimeout(() => {
-        aggiornaViste();
-    }, 10);
-}
-
-/**
- * Gestisci il drop in vista settimanale
- * @param {HTMLElement} dragged - Elemento trascinato
- * @param {HTMLElement} target - Elemento di destinazione
- */
-function handleWeekViewDrop(dragged, target) {
-    const eventId = dragged.getAttribute('data-id');
-    const hour = parseInt(target.getAttribute('data-ora') || '0');
-    const dayIndex = parseInt(target.getAttribute('data-giorno') || '0');
-    
-    if (!eventId) return;
-    
-    // Trova l'evento nel modello dati
-    const evento = eventi.find(ev => ev.id === eventId);
-    if (!evento) {
-        console.error(`Evento con ID ${eventId} non trovato`);
+    // Trova evento originale nel modello dati
+    const origEvent = eventi.find(e => e.id === draggedEventId);
+    if (!origEvent) {
+        console.error('Evento non trovato:', draggedEventId);
         return;
     }
     
-    // Calcola la nuova data/ora
-    const weekStartDate = getPrimoGiornoSettimana(dataAttuale);
-    const targetDate = new Date(weekStartDate);
-    targetDate.setDate(targetDate.getDate() + dayIndex);
-    targetDate.setHours(hour, 0, 0, 0);
+    console.log('Evento originale:', JSON.parse(JSON.stringify(origEvent)));
     
-    // Conserva la durata dell'evento originale
-    const oldStart = new Date(evento.dataInizio);
-    const oldEnd = new Date(evento.dataFine);
-    const durationMs = oldEnd - oldStart;
-    
-    // Aggiorna le date
-    const newStartDate = new Date(targetDate);
-    const newEndDate = new Date(newStartDate.getTime() + durationMs);
-    
-    // Aggiorna l'evento nel modello dati
-    evento.dataInizio = newStartDate;
-    evento.dataFine = newEndDate;
-    
-    // Aggiorna l'evento tramite la funzione globale
-    modificaEvento(eventId, {
-        dataInizio: newStartDate,
-        dataFine: newEndDate
-    });
-    
-    // Forza il salvataggio
-    salvaEventi();
-    
-    // Forza un aggiornamento completo della vista
-    setTimeout(() => {
-        aggiornaViste();
-    }, 10);
-}
-
-/**
- * Gestisci il drop in vista giornaliera
- * @param {HTMLElement} dragged - Elemento trascinato
- * @param {HTMLElement} target - Elemento di destinazione
- */
-function handleDayViewDrop(dragged, target) {
-    const eventId = dragged.getAttribute('data-id');
-    const hour = parseInt(target.getAttribute('data-ora') || '0');
-    
-    if (!eventId) return;
-    
-    // Trova l'evento nel modello dati
-    const evento = eventi.find(ev => ev.id === eventId);
-    if (!evento) {
-        console.error(`Evento con ID ${eventId} non trovato`);
+    // Determina la nuova data e ora in base alla vista
+    const newDates = calculateNewDates(activeDropTarget, origEvent);
+    if (!newDates) {
+        console.error('Impossibile calcolare nuove date');
         return;
     }
     
-    // Calcola la nuova data/ora
-    const targetDate = new Date(dataAttuale);
-    targetDate.setHours(hour, 0, 0, 0);
-    
-    // Conserva la durata dell'evento originale
-    const oldStart = new Date(evento.dataInizio);
-    const oldEnd = new Date(evento.dataFine);
-    const durationMs = oldEnd - oldStart;
-    
-    // Aggiorna le date
-    const newStartDate = new Date(targetDate);
-    const newEndDate = new Date(newStartDate.getTime() + durationMs);
-    
-    // Aggiorna l'evento nel modello dati
-    evento.dataInizio = newStartDate;
-    evento.dataFine = newEndDate;
-    
-    // Aggiorna l'evento tramite la funzione globale
-    modificaEvento(eventId, {
-        dataInizio: newStartDate,
-        dataFine: newEndDate
+    console.log('Nuove date:', {
+        'start': newDates.start.toLocaleString(),
+        'end': newDates.end.toLocaleString()
     });
     
-    // Forza il salvataggio
-    salvaEventi();
+    // Aggiorna l'evento
+    const updated = updateEventData(draggedEventId, newDates.start, newDates.end);
     
-    // Forza un aggiornamento completo della vista
-    setTimeout(() => {
-        aggiornaViste();
-    }, 10);
-}
-
-/**
- * Gestisce i click sugli eventi (per l'apertura dei dettagli)
- * @param {string} selector - Selettore degli elementi da gestire
- */
-function initEventClicks(selector) {
-    // Rimuovi eventuali handler precedenti per evitare duplicati
-    document.querySelectorAll(selector).forEach(item => {
-        const oldHandler = item._clickHandler;
-        if (oldHandler) {
-            item.removeEventListener('click', oldHandler);
-        }
-    });
-    
-    // Aggiungi nuovi handler di click
-    document.querySelectorAll(selector).forEach(item => {
-        const clickHandler = function(e) {
-            // Se stiamo trascinando, non aprire il modal
-            if (isDragging) return;
-            
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const eventId = this.getAttribute('data-id');
-            if (!eventId) return;
-            
-            console.log('Click su evento', eventId);
-            
-            // Chiama la funzione esistente per aprire il modal dell'evento
-            if (typeof apriModalEvento === 'function') {
-                apriModalEvento(eventId);
-            } else {
-                console.log('Funzione apriModalEvento non disponibile');
-                // Fallback: prova a chiamare handleEventClick se esiste
-                if (typeof handleEventClick === 'function') {
-                    handleEventClick.call(this, e);
+    // Forza l'aggiornamento delle viste, con maggiore attesa
+    if (updated) {
+        setTimeout(() => {
+            try {
+                if (typeof aggiornaViste === 'function') {
+                    aggiornaViste();
+                } else {
+                    console.warn('Funzione aggiornaViste non disponibile');
+                    // Fallback a renderizzare la vista specifica
+                    renderViewByName(currentView);
                 }
+            } catch (error) {
+                console.error('Errore nell\'aggiornamento vista:', error);
             }
+        }, 200);
+    }
+}
+
+/**
+ * Renderizza una specifica vista come fallback
+ */
+function renderViewByName(viewName) {
+    switch(viewName) {
+        case 'month':
+            if (typeof renderizzaVistaMensile === 'function') renderizzaVistaMensile();
+            break;
+        case 'week':
+            if (typeof renderizzaVistaSettimanale === 'function') renderizzaVistaSettimanale();
+            break;
+        case 'day':
+            if (typeof renderizzaVistaGiornaliera === 'function') renderizzaVistaGiornaliera();
+            break;
+        case 'list':
+            if (typeof renderizzaVistaLista === 'function') renderizzaVistaLista();
+            break;
+    }
+}
+
+/**
+ * Calcola le nuove date dell'evento in base al target di drop
+ */
+function calculateNewDates(target, originalEvent) {
+    // Debug info
+    console.log('Target:', target);
+    console.log('Target data-date:', target.getAttribute('data-date'));
+    console.log('Target data-ora:', target.getAttribute('data-ora'));
+    console.log('Target data-giorno:', target.getAttribute('data-giorno'));
+    
+    // Estrai informazioni dal target in base alla vista
+    if (currentView === 'month') {
+        return calculateMonthViewDates(target, originalEvent);
+    } else if (currentView === 'week') {
+        return calculateWeekViewDates(target, originalEvent);
+    } else if (currentView === 'day') {
+        return calculateDayViewDates(target, originalEvent);
+    }
+    
+    return null;
+}
+
+/**
+ * Calcola le nuove date per vista mensile
+ */
+function calculateMonthViewDates(target, originalEvent) {
+    // Ottieni la data dal target
+    const dateStr = target.getAttribute('data-date');
+    if (!dateStr) {
+        console.error('Target senza attributo data-date:', target);
+        return null;
+    }
+    
+    try {
+        // Parse delle date
+        const [year, month, day] = dateStr.split('-').map(Number);
+        
+        // Date originali
+        const origStart = new Date(originalEvent.dataInizio);
+        const origEnd = new Date(originalEvent.dataFine);
+        
+        // Durata originale in ms
+        const duration = origEnd.getTime() - origStart.getTime();
+        
+        // Crea nuova data di inizio mantenendo ora e minuti originali
+        const newStartDate = new Date(year, month - 1, day, 
+                                    origStart.getHours(), 
+                                    origStart.getMinutes(), 
+                                    origStart.getSeconds());
+        
+        // Calcola la nuova data di fine aggiungendo la durata originale
+        const newEndDate = new Date(newStartDate.getTime() + duration);
+        
+        return {
+            start: newStartDate,
+            end: newEndDate
         };
+    } catch (error) {
+        console.error('Errore nel calcolo date per vista mensile:', error);
+        return null;
+    }
+}
+
+/**
+ * Calcola le nuove date per vista settimanale
+ */
+function calculateWeekViewDates(target, originalEvent) {
+    try {
+        // Estrai ora e giorno
+        const hour = parseInt(target.getAttribute('data-ora') || '0');
+        const dayIndex = parseInt(target.getAttribute('data-giorno') || '0');
         
-        // Salva un riferimento all'handler per poterlo rimuovere in seguito
-        item._clickHandler = clickHandler;
+        if (isNaN(hour) || isNaN(dayIndex)) {
+            console.error('Attributi data-ora o data-giorno mancanti o non validi:', target);
+            return null;
+        }
         
-        item.addEventListener('click', clickHandler);
-    });
+        // Ottieni il primo giorno della settimana corrente
+        const weekStart = getPrimoGiornoSettimana(dataAttuale);
+        
+        // Date originali
+        const origStart = new Date(originalEvent.dataInizio);
+        const origEnd = new Date(originalEvent.dataFine);
+        
+        // Durata originale in ms
+        const duration = origEnd.getTime() - origStart.getTime();
+        
+        // Crea la nuova data di inizio
+        const newStartDate = new Date(weekStart);
+        newStartDate.setDate(weekStart.getDate() + dayIndex);
+        newStartDate.setHours(hour, origStart.getMinutes(), 0, 0);
+        
+        // Calcola la nuova data di fine
+        const newEndDate = new Date(newStartDate.getTime() + duration);
+        
+        return {
+            start: newStartDate,
+            end: newEndDate
+        };
+    } catch (error) {
+        console.error('Errore nel calcolo date per vista settimanale:', error);
+        return null;
+    }
+}
+
+/**
+ * Calcola le nuove date per vista giornaliera
+ */
+function calculateDayViewDates(target, originalEvent) {
+    try {
+        // Estrai ora
+        const hour = parseInt(target.getAttribute('data-ora') || '0');
+        
+        if (isNaN(hour)) {
+            console.error('Attributo data-ora mancante o non valido:', target);
+            return null;
+        }
+        
+        // Date originali
+        const origStart = new Date(originalEvent.dataInizio);
+        const origEnd = new Date(originalEvent.dataFine);
+        
+        // Durata originale in ms
+        const duration = origEnd.getTime() - origStart.getTime();
+        
+        // Crea la nuova data di inizio
+        const newStartDate = new Date(dataAttuale);
+        newStartDate.setHours(hour, origStart.getMinutes(), 0, 0);
+        
+        // Calcola la nuova data di fine
+        const newEndDate = new Date(newStartDate.getTime() + duration);
+        
+        return {
+            start: newStartDate,
+            end: newEndDate
+        };
+    } catch (error) {
+        console.error('Errore nel calcolo date per vista giornaliera:', error);
+        return null;
+    }
+}
+
+/**
+ * Aggiorna i dati dell'evento con le nuove date
+ */
+function updateEventData(eventId, newStartDate, newEndDate) {
+    try {
+        console.log('Aggiornamento evento:', eventId);
+        console.log('Nuova data inizio:', newStartDate);
+        console.log('Nuova data fine:', newEndDate);
+        
+        // Trova l'evento nel modello dati
+        const eventoIndex = eventi.findIndex(e => e.id === eventId);
+        if (eventoIndex === -1) {
+            console.error('Evento non trovato nel modello dati');
+            return false;
+        }
+        
+        // Debug: salva stato precedente
+        const eventoBefore = JSON.parse(JSON.stringify(eventi[eventoIndex]));
+        console.log('Evento prima dell\'aggiornamento:', eventoBefore);
+        
+        // Aggiorna l'evento direttamente nel modello dati come backup
+        eventi[eventoIndex].dataInizio = newStartDate;
+        eventi[eventoIndex].dataFine = newEndDate;
+        
+        // Aggiorna l'evento usando la funzione globale
+        const result = modificaEvento(eventId, {
+            dataInizio: newStartDate,
+            dataFine: newEndDate
+        });
+        
+        // Forza il salvataggio
+        if (typeof salvaEventi === 'function') {
+            salvaEventi();
+        } else {
+            console.error('Funzione salvaEventi non disponibile');
+            // Salvataggio diretto in localStorage
+            localStorage.setItem('eventi', JSON.stringify(eventi));
+        }
+        
+        // Debug: verifica l'aggiornamento
+        const eventoAfter = JSON.parse(JSON.stringify(eventi.find(e => e.id === eventId)));
+        console.log('Evento dopo l\'aggiornamento:', eventoAfter);
+        
+        // Verifica che le date siano state effettivamente aggiornate
+        const updatedStart = new Date(eventoAfter.dataInizio);
+        const updatedEnd = new Date(eventoAfter.dataFine);
+        
+        console.log('Date aggiornate:',
+                   'Inizio:', updatedStart.toLocaleString(),
+                   'Fine:', updatedEnd.toLocaleString());
+        
+        return result !== null;
+    } catch (error) {
+        console.error('Errore nell\'aggiornamento dell\'evento:', error);
+        return false;
+    }
 }
 
 /**
@@ -683,53 +741,46 @@ function enableDragAndDrop() {
     }
 }
 
-// Aggiungi stili personalizzati per il drag and drop
-function addCustomStyles() {
-    // Controlla se lo stile è già stato aggiunto
-    if (document.getElementById('custom-drag-drop-styles')) return;
+/**
+ * Aggiungi stili CSS minimali per il drag and drop
+ */
+function addDragDropStyles() {
+    if (document.getElementById('drag-drop-styles')) return;
     
-    const style = document.createElement('style');
-    style.id = 'custom-drag-drop-styles';
-    style.textContent = `
-        #drag-feedback {
-            cursor: grabbing !important;
-        }
-        
-        .dragging-in-progress {
-            cursor: grabbing !important;
-        }
-        
+    const styleElement = document.createElement('style');
+    styleElement.id = 'drag-drop-styles';
+    styleElement.textContent = `
+        /* Stili minimali per il drag and drop */
         .draggable {
             cursor: grab;
         }
-        
-        .draggable:active {
-            cursor: grabbing;
-        }
-        
         .dragging {
-            opacity: 0.5 !important;
+            opacity: 0.4 !important;
+            pointer-events: none;
         }
-        
-        .drag-over {
-            background-color: rgba(26, 115, 232, 0.2) !important;
-            border: none !important;
-            box-shadow: none !important;
+        #drag-ghost {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            transition: none !important;
+            will-change: transform;
+        }
+        .drop-highlight {
+            background-color: rgba(66, 133, 244, 0.3) !important;
+            box-shadow: inset 0 0 0 2px rgba(66, 133, 244, 0.8) !important;
+        }
+        .drag-in-progress {
+            cursor: grabbing !important;
         }
     `;
     
-    document.head.appendChild(style);
+    document.head.appendChild(styleElement);
 }
-
-// Aggiungi gli stili personalizzati quando il documento è pronto
-document.addEventListener('DOMContentLoaded', addCustomStyles);
 
 // Esporta le funzioni
 window.dragDrop = {
     init: initDragAndDrop,
-    cleanup: cleanupDragListeners,
+    cleanup: cleanupDragAndDrop,
     enable: enableDragAndDrop
 };
 
-// Fornisci una funzione globale per la compatibilità con il codice esistente
+// Funzione globale per compatibilità
 window.enableDragAndDrop = enableDragAndDrop;
