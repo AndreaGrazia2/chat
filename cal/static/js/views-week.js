@@ -42,6 +42,24 @@ function renderizzaVistaSettimanale() {
     
     const eventiSettimana = getEventiSettimana(inizioSettimana, fineSettimana);
     
+    // Organizza gli eventi per ora e giorno
+    const eventiPerCella = Array(24 * 7).fill().map(() => []);
+    
+    eventiSettimana.forEach(evento => {
+        const dataInizio = new Date(evento.dataInizio);
+        // Calcola il giorno della settimana (0-6, dove 0 è lunedì)
+        const giornoSettimana = dataInizio.getDay() === 0 ? 6 : dataInizio.getDay() - 1;
+        // Usa l'ora come indice
+        const oraInizio = dataInizio.getHours();
+        // Calcola l'indice della cella (ora * 7 + giorno)
+        const indiceCella = oraInizio * 7 + giornoSettimana;
+        
+        // Aggiungi l'evento all'array della cella corrispondente
+        if (indiceCella >= 0 && indiceCella < 24 * 7) {
+            eventiPerCella[indiceCella].push(evento);
+        }
+    });
+    
     // Crea le celle orarie per ogni ora e giorno
     for (let ora = 0; ora < 24; ora++) {
         for (let giorno = 0; giorno < 7; giorno++) {
@@ -49,56 +67,36 @@ function renderizzaVistaSettimanale() {
             dataOra.setHours(ora, 0, 0);
             
             const isOraCorrente = new Date().getHours() === ora && isStessoGiorno(dataOra, new Date());
+            const indiceCella = ora * 7 + giorno;
             
-            gridHtml += `<div class="time-slot ${isOraCorrente ? 'current-time' : ''}" data-ora="${ora}" data-giorno="${giorno}"></div>`;
+            // Ottieni gli eventi per questa cella
+            const eventiCella = eventiPerCella[indiceCella];
+            
+            // Crea l'HTML per gli eventi in questa cella
+            let eventiHtml = '';
+            eventiCella.forEach(evento => {
+                const dataInizio = new Date(evento.dataInizio);
+                const dataFine = new Date(evento.dataFine);
+                
+                eventiHtml += `
+                    <div class="time-event ${evento.categoria}" data-id="${evento.id}">
+                        <div class="time-event-title">${evento.titolo}</div>
+                        <div class="time-event-time">${formatTimeItalian(dataInizio)} - ${formatTimeItalian(dataFine)}</div>
+                    </div>
+                `;
+            });
+            
+            // Crea la cella con gli eventi
+            gridHtml += `
+                <div class="time-slot ${isOraCorrente ? 'current-time' : ''}" data-ora="${ora}" data-giorno="${giorno}">
+                    ${eventiHtml}
+                </div>
+            `;
         }
     }
     
     // Aggiorna la griglia
     weekGrid.innerHTML = gridHtml;
-    
-    // Aggiungi gli eventi alla griglia
-    eventiSettimana.forEach(evento => {
-        const dataInizio = new Date(evento.dataInizio);
-        const dataFine = new Date(evento.dataFine);
-        
-        // Calcola il giorno della settimana (0-6, dove 0 è lunedì)
-        const giornoSettimana = dataInizio.getDay() === 0 ? 6 : dataInizio.getDay() - 1;
-        
-        // Calcola la posizione e l'altezza dell'evento
-        const oraInizio = dataInizio.getHours();
-        const minInizio = dataInizio.getMinutes();
-        const oraFine = dataFine.getHours();
-        const minFine = dataFine.getMinutes();
-        
-        const top = (oraInizio + minInizio / 60) * 60; // 60px per ora
-        const height = ((oraFine - oraInizio) + (minFine - minInizio) / 60) * 60;
-        
-        // Crea l'elemento dell'evento
-        const eventoElement = document.createElement('div');
-        eventoElement.className = `time-event ${evento.categoria}`;
-        eventoElement.dataset.id = evento.id;
-        eventoElement.style.top = `${top}px`;
-        eventoElement.style.height = `${height}px`;
-        eventoElement.innerHTML = `
-            <div class="time-event-title">${evento.titolo}</div>
-            <div class="time-event-time">${formatTimeItalian(dataInizio)} - ${formatTimeItalian(dataFine)}</div>
-            <div class="time-event-description">${evento.descrizione || ''}</div>
-        `;
-        
-        // Aggiungi l'evento alla cella corrispondente
-        const timeSlots = weekGrid.querySelectorAll('.time-slot');
-        const index = giornoSettimana + (oraInizio * 7);
-        if (timeSlots[index]) {
-            timeSlots[index].appendChild(eventoElement);
-        }
-        
-        // Aggiungi l'event listener per aprire il modal dell'evento
-        eventoElement.addEventListener('click', (e) => {
-            e.stopPropagation();
-            apriModalEvento(evento.id);
-        });
-    });
     
     // Aggiungi l'indicatore dell'ora corrente
     const oggi = new Date();
@@ -131,7 +129,10 @@ function renderizzaVistaSettimanale() {
     
     // Aggiungi gli event listener per aggiungere eventi
     weekGrid.querySelectorAll('.time-slot').forEach(slot => {
-        slot.addEventListener('click', () => {
+        slot.addEventListener('click', (e) => {
+            // Evita di aprire il modal se si è cliccato su un evento
+            if (e.target.closest('.time-event')) return;
+            
             const ora = parseInt(slot.dataset.ora);
             const giorno = parseInt(slot.dataset.giorno);
             
@@ -142,7 +143,19 @@ function renderizzaVistaSettimanale() {
         });
     });
     
-    // Nota: la gestione drag and drop è stata spostata nel modulo centralizzato
+    // Aggiungi gli event listener agli eventi
+    weekGrid.querySelectorAll('.time-event').forEach(eventElement => {
+        eventElement.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = eventElement.dataset.id;
+            apriModalEvento(id);
+        });
+    });
+    
+    // Inizializza il drag and drop
+    if (typeof enableDragAndDrop === 'function') {
+        setTimeout(enableDragAndDrop, 100);
+    }
 }
 
 // Funzione di supporto per la vista settimanale

@@ -1,10 +1,10 @@
 /**
- * drag-only-fixed.js - Solo trascinamento, corretto per tutte le viste
+ * drag-drop.js - Gestione del drag and drop per gli eventi del calendario
  */
 
-// Inizializza il drag
+// Inizializza il drag and drop
 function initDragAndDrop(viewName) {
-    console.log('Inizializzazione solo trascinamento per vista:', viewName);
+    console.log('Inizializzazione drag and drop per vista:', viewName);
     
     // Selettori specifici per le diverse viste
     let selectors = [];
@@ -16,10 +16,7 @@ function initDragAndDrop(viewName) {
         selectors.push('#weekGrid .time-event');
     }
     if (viewName === 'day' || !viewName) {
-        // Per la vista giorno, usiamo un selettore più specifico
         selectors.push('#dayGrid .time-event');
-        // Debug: stampa gli elementi trovati
-        console.log('Elementi nella vista giorno:', document.querySelectorAll('#dayGrid .time-event').length);
     }
     
     // Trova tutti gli elementi eventi
@@ -31,20 +28,12 @@ function initDragAndDrop(viewName) {
         // Imposta l'attributo draggable=true
         event.setAttribute('draggable', 'true');
         
-        // Assegna il gestore ondragstart essenziale
+        // Assegna il gestore ondragstart
         event.setAttribute('ondragstart', 'dragFunction(event)');
         
         console.log('Elemento reso trascinabile:', event);
     });
     
-    // Debug: stampa gli elementi nella vista giorno dopo aver impostato draggable
-    if (viewName === 'day' || !viewName) {
-        document.querySelectorAll('#dayGrid .time-event[draggable="true"]').forEach(el => {
-            console.log('Elemento in vista giorno reso trascinabile:', el);
-        });
-    }
-    
-    // AGGIUNTO: Evidenziazione delle celle durante il trascinamento
     // Selettori per i drop target
     let dropTargets = [];
     if (viewName === 'month' || !viewName) {
@@ -71,19 +60,92 @@ function initDragAndDrop(viewName) {
         });
         
         // Rimuovi l'evidenziazione dopo il drop
-        target.addEventListener('drop', function() {
+        target.addEventListener('drop', function(e) {
+            e.preventDefault();
             this.classList.remove('drag-over');
+            
+            // Ottieni l'ID dell'evento trascinato
+            const eventId = e.dataTransfer.getData('text/plain');
+            console.log(`Evento ${eventId} rilasciato in:`, this);
+            
+            // Qui implementare la logica per spostare effettivamente l'evento
+            // Ad esempio, se nella vista giornaliera:
+            if (viewName === 'day') {
+                const ora = parseInt(this.dataset.ora);
+                const nuovaData = new Date(dataAttuale);
+                nuovaData.setHours(ora, 0, 0);
+                
+                // Aggiorna l'evento nel database
+                console.log(`Aggiornamento evento ${eventId} alla data:`, nuovaData);
+            }
+            
+            // Se nella vista settimanale:
+            if (viewName === 'week') {
+                const ora = parseInt(this.dataset.ora);
+                const giorno = parseInt(this.dataset.giorno);
+                
+                // Calcola la nuova data
+                const inizioSettimana = getPrimoGiornoSettimana(dataAttuale);
+                const nuovaData = new Date(inizioSettimana);
+                nuovaData.setDate(nuovaData.getDate() + giorno);
+                nuovaData.setHours(ora, 0, 0);
+                
+                // Aggiorna l'evento nel database
+                console.log(`Aggiornamento evento ${eventId} alla data:`, nuovaData);
+            }
+            
+            // Se nella vista mensile:
+            if (viewName === 'month') {
+                const dataStr = this.dataset.date;
+                const [anno, mese, giorno] = dataStr.split('-').map(Number);
+                
+                // Trova l'evento originale
+                const evento = eventi.find(e => e.id === eventId);
+                
+                if (evento) {
+                    // Mantieni l'ora originale, cambia solo la data
+                    const nuovaData = new Date(anno, mese - 1, giorno);
+                    nuovaData.setHours(
+                        evento.dataInizio.getHours(),
+                        evento.dataInizio.getMinutes()
+                    );
+                    
+                    // Aggiorna l'evento nel database
+                    console.log(`Aggiornamento evento ${eventId} alla data:`, nuovaData);
+                }
+            }
+            
+            // In una vera implementazione, qui chiameresti la funzione per aggiornare l'evento
+            // modificaEvento(eventId, { dataInizio: nuovaData });
+            // Poi rigenereresti la vista
+            // aggiornaViste();
         });
     });
 }
 
-// Necessario per iniziare il trascinamento
+// Funzione richiamata all'inizio del trascinamento
 window.dragFunction = function(event) {
-    // MODIFICA CRUCIALE: Passa l'ID dell'evento invece di 'dragging'
+    // Passa l'ID dell'evento
     event.dataTransfer.setData('text/plain', event.target.dataset.id || 'dragging');
+    
+    // Aggiungi una classe all'elemento durante il trascinamento
+    event.target.classList.add('dragging');
     
     console.log('Iniziato trascinamento elemento:', event.target);
 };
+
+// Listener globale per la fine del trascinamento
+document.addEventListener('dragend', function(e) {
+    // Rimuovi la classe dragging dall'elemento
+    if (e.target.classList.contains('dragging')) {
+        e.target.classList.remove('dragging');
+    }
+    
+    // Rimuovi tutte le evidenziazioni
+    document.querySelectorAll('.drag-over').forEach(el => {
+        el.classList.remove('drag-over');
+    });
+});
 
 // Funzione per il codice esistente
 function enableDragAndDrop() {

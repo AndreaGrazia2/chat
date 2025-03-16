@@ -18,11 +18,24 @@ function renderizzaVistaGiornaliera() {
         </div>
     `;
     
-    // Crea la griglia oraria
-    let gridHtml = headerHtml;
-    
     // Ottieni tutti gli eventi del giorno
     const eventiGiorno = getEventiGiorno(dataAttuale);
+    
+    // Organizza gli eventi per ora
+    const eventiPerOra = Array(25).fill().map(() => []);
+    
+    eventiGiorno.forEach(evento => {
+        const dataInizio = new Date(evento.dataInizio);
+        const oraInizio = dataInizio.getHours();
+        
+        // Aggiungi l'evento all'array dell'ora corrispondente
+        if (oraInizio >= 0 && oraInizio < 25) {
+            eventiPerOra[oraInizio].push(evento);
+        }
+    });
+    
+    // Crea la griglia oraria
+    let gridHtml = headerHtml;
     
     // Crea le celle orarie per ogni ora
     for (let ora = 0; ora < 25; ora++) {
@@ -31,77 +44,34 @@ function renderizzaVistaGiornaliera() {
         
         const isOraCorrente = new Date().getHours() === ora && isStessoGiorno(dataOra, new Date());
         
-        gridHtml += `<div class="time-slot ${isOraCorrente ? 'current-time' : ''}" data-ora="${ora}"></div>`;
+        // Ottieni gli eventi per questa ora
+        const eventiOra = eventiPerOra[ora];
+        
+        // Crea l'HTML per gli eventi in questa ora
+        let eventiHtml = '';
+        eventiOra.forEach(evento => {
+            const dataInizio = new Date(evento.dataInizio);
+            const dataFine = new Date(evento.dataFine);
+            
+            eventiHtml += `
+                <div class="time-event ${evento.categoria}" data-id="${evento.id}">
+                    <div class="time-event-title">${evento.titolo}</div>
+                    <div class="time-event-time">${formatTimeItalian(dataInizio)} - ${formatTimeItalian(dataFine)}</div>
+                    <div class="time-event-description">${evento.descrizione || ''}</div>
+                </div>
+            `;
+        });
+        
+        // Crea la cella con gli eventi
+        gridHtml += `
+            <div class="time-slot ${isOraCorrente ? 'current-time' : ''}" data-ora="${ora}">
+                ${eventiHtml}
+            </div>
+        `;
     }
     
     // Aggiorna la griglia
     dayGrid.innerHTML = gridHtml;
-    
-    // Aggiungi gli eventi alla griglia
-    eventiGiorno.forEach(evento => {
-        const dataInizio = new Date(evento.dataInizio);
-        const dataFine = new Date(evento.dataFine);
-        
-        // Calcola la posizione e l'altezza dell'evento
-        const oraInizio = dataInizio.getHours();
-        const minInizio = dataInizio.getMinutes();
-        const oraFine = dataFine.getHours();
-        const minFine = dataFine.getMinutes();
-        
-        const top = (oraInizio + minInizio / 60) * 60; // 60px per ora
-        const height = ((oraFine - oraInizio) + (minFine - minInizio) / 60) * 60;
-        
-        // Crea l'elemento dell'evento
-        const eventoElement = document.createElement('div');
-        eventoElement.className = `time-event ${evento.categoria} draggable`;
-        eventoElement.dataset.id = evento.id;
-        eventoElement.style.top = `${top}px`;
-        eventoElement.style.height = `${height}px`;
-        eventoElement.innerHTML = `
-            <div class="time-event-title">${evento.titolo}</div>
-            <div class="time-event-time">${formatTimeItalian(dataInizio)} - ${formatTimeItalian(dataFine)}</div>
-            <div class="time-event-description">${evento.descrizione || ''}</div>
-        `;
-        
-        // Aggiungi l'evento alla cella corrispondente
-        const timeSlots = dayGrid.querySelectorAll('.time-slot');
-        if (timeSlots[oraInizio]) {
-            timeSlots[oraInizio].appendChild(eventoElement);
-            
-            // Gestisci la sovrapposizione di eventi
-            const eventiSovrapposti = Array.from(timeSlots[oraInizio].querySelectorAll('.time-event')).filter(el => {
-                if (el === eventoElement) return false;
-                const elTop = parseInt(el.style.top.replace('px', ''));
-                const elHeight = parseInt(el.style.height.replace('px', ''));
-                const elBottom = elTop + elHeight;
-                
-                const thisTop = top;
-                const thisBottom = top + height;
-                
-                return (thisTop < elBottom && thisBottom > elTop);
-            });
-            
-            if (eventiSovrapposti.length > 0) {
-                const width = 100 / (eventiSovrapposti.length + 1);
-                let leftOffset = 0;
-                
-                eventiSovrapposti.forEach((el, index) => {
-                    el.style.width = `${width}%`;
-                    el.style.left = `${leftOffset}%`;
-                    leftOffset += width;
-                });
-                
-                eventoElement.style.width = `${width}%`;
-                eventoElement.style.left = `${leftOffset}%`;
-            }
-        }
-        
-        // Aggiungi l'event listener per aprire il modal dell'evento
-        eventoElement.addEventListener('click', (e) => {
-            e.stopPropagation();
-            apriModalEvento(evento.id);
-        });
-    });
     
     // Aggiungi l'indicatore dell'ora corrente
     const oggi = new Date();
@@ -121,9 +91,12 @@ function renderizzaVistaGiornaliera() {
         }
     }
     
-    // Aggiungi gli event listener per aggiungere eventi (solo click)
+    // Aggiungi gli event listener per aggiungere eventi
     dayGrid.querySelectorAll('.time-slot').forEach(slot => {
-        slot.addEventListener('click', () => {
+        slot.addEventListener('click', (e) => {
+            // Evita di aprire il modal se si è cliccato su un evento
+            if (e.target.closest('.time-event')) return;
+            
             const ora = parseInt(slot.dataset.ora);
             
             const data = new Date(dataAttuale);
@@ -131,8 +104,19 @@ function renderizzaVistaGiornaliera() {
             
             apriModalNuovoEvento(data);
         });
-        
-        // RIMOSSO: Tutta la logica di drag and drop (dragover, dragleave, drop)
-        // Questa viene gestita centralmente in drag-drop.js
     });
+    
+    // Aggiungi gli event listener agli eventi
+    dayGrid.querySelectorAll('.time-event').forEach(eventElement => {
+        eventElement.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = eventElement.dataset.id;
+            apriModalEvento(id);
+        });
+    });
+    
+    // Inizializza il drag and drop
+    if (typeof enableDragAndDrop === 'function') {
+        setTimeout(enableDragAndDrop, 100);
+    }
 }
