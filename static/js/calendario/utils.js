@@ -167,3 +167,15 @@ function calcolaPosizioneEvento(evento, inizioGiornata) {
         height: `${height}%`
     };
 }
+
+/**
+ * Aggiunge ore a una data
+ * @param {Date} date - Data di partenza
+ * @param {number} hours - Numero di ore da aggiungere
+ * @returns {Date} - Nuova data
+ */
+function addHour(date, hours) {
+    const newDate = new Date(date);
+    newDate.setHours(newDate.getHours() + hours);
+    return newDate;
+}

@@ -68,9 +68,9 @@ function aggiungiEvento(evento) {
  * @param {Object} datiAggiornati - Nuovi dati dell'evento
  * @returns {Object|null} - Evento modificato o null se non trovato
  */
-function modificaEvento(id, datiAggiornati) {
+function modificaEvento(eventoId, datiAggiornati) {
     // Trova l'indice dell'evento
-    const indice = eventi.findIndex(e => e.id === id);
+    const indice = eventi.findIndex(e => e.id === eventoId);
     
     // Se l'evento non esiste, restituisci null
     if (indice === -1) return null;
@@ -93,7 +93,7 @@ function modificaEvento(id, datiAggiornati) {
     // Aggiorna le viste
     aggiornaViste();
     
-    return nuovoEvento;
+    return eventoAggiornato;
 }
 
 /**
@@ -596,7 +596,7 @@ function saveEvent() {
     const category = document.getElementById('eventCategory').value;
     
     if (!title || !date) {
-        alert('Titolo e data sono obbligatori!');
+        apriModalAvviso('Titolo e data sono obbligatori!');
         return;
     }
     
@@ -626,19 +626,21 @@ function getCurrentDate() {
 function updateCalendarView() {
     // Questa funzione dovrebbe essere implementata nel file calendar.js
     // Per ora, ricarica semplicemente la vista corrente
-    const activeView = document.querySelector('.view-btn.active').getAttribute('data-view');
+    const activeView = document.querySelector('.view-btn.active')?.getAttribute('data-view') || 'month';
+    const currentDate = new Date(); // Use current date as default
+    
     switch (activeView) {
         case 'month':
-            if (typeof renderMonthView === 'function') renderMonthView();
+            if (typeof renderMonthView === 'function') renderMonthView(currentDate);
             break;
         case 'week':
-            if (typeof renderWeekView === 'function') renderWeekView();
+            if (typeof renderWeekView === 'function') renderWeekView(currentDate);
             break;
         case 'day':
-            if (typeof renderDayView === 'function') renderDayView();
+            if (typeof renderDayView === 'function') renderDayView(currentDate);
             break;
         case 'list':
-            if (typeof renderListView === 'function') renderListView();
+            if (typeof renderListView === 'function') renderListView(currentDate);
             break;
     }
 }

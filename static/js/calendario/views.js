@@ -404,7 +404,7 @@ function apriModalEvento(id) {
         
         // Verifica che il titolo sia stato inserito
         if (!titolo.trim()) {
-            alert('Inserisci un titolo per l\'evento');
+            apriModalAvviso('Inserisci un titolo per l\'evento');
             return;
         }
         

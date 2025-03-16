@@ -293,7 +293,8 @@ function renderizzaEventiGiorno(eventi, maxEventi = 3) {
     return html;
 }
 
-function renderMonthView() {
+function renderMonthView(date = new Date()) {
+    const currentDate = date || new Date();
     const monthGrid = document.getElementById('monthGrid');
     if (!monthGrid) return;
     

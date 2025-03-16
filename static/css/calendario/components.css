@@ -719,3 +719,54 @@
     padding: 4px 0;
     color: var(--text-color-secondary);
 }
+
+/* Miglioramenti per la lista eventi nel modal */
+.events-list {
+    max-height: 60vh;
+    overflow-y: auto;
+    margin-top: 10px;
+}
+
+.events-list-item {
+    display: flex;
+    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    background-color: var(--secondary-bg);
+    border-left: 4px solid transparent;
+    transition: background-color 0.2s;
+}
+
+.events-list-item:hover {
+    background-color: var(--hover-bg);
+}
+
+.events-list-item-category {
+    width: 4px;
+    border-radius: 2px;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.events-list-item-content {
+    flex: 1;
+}
+
+.events-list-item-title {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 4px;
+    color: var(--text-color);
+}
+
+.events-list-item-time {
+    font-size: 12px;
+    color: var(--text-color-secondary);
+    margin-bottom: 4px;
+}
+
+.events-list-item-description {
+    font-size: 12px;
+    color: var(--text-color);
+    opacity: 0.9;
+}
