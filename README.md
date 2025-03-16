@@ -1,4 +1,4 @@
-# Modern Chat & Calendat Application
+# Modern Chat & Calendar Application
 
 A responsive chat application with a modern UI inspired by popular messaging platforms.
 
