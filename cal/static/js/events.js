@@ -57,7 +57,7 @@ function aggiungiEvento(evento) {
     salvaEventi();
     
     // Aggiorna la vista del calendario
-    updateCalendarView();
+    aggiornaViste(); // MODIFICARE QUESTA LINEA
     
     return id;
 }
@@ -329,15 +329,6 @@ function initEventHandlers() {
         });
     }
 
-    // Gestione click sul pulsante "Salva" del modal
-    const saveEventBtn = document.getElementById('saveEvent');
-    if (saveEventBtn) {
-        saveEventBtn.addEventListener('click', function() {
-            console.log('Save event button clicked');
-            saveEvent();
-        });
-    }
-
     // Gestione click sugli eventi del calendario
     attachEventClickHandlers();
 }
@@ -484,7 +475,7 @@ function saveEvent() {
     closeEventModal();
     
     // Aggiorna la vista del calendario
-    updateCalendarView();
+    aggiornaViste();
     
     // Riattacca i gestori di click agli eventi
     setTimeout(attachEventClickHandlers, 100);
@@ -497,29 +488,6 @@ function getCurrentDate() {
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
-}
-
-// Funzione per aggiornare la vista del calendario
-function updateCalendarView() {
-    // Questa funzione dovrebbe essere implementata nel file calendar.js
-    // Per ora, ricarica semplicemente la vista corrente
-    const activeView = document.querySelector('.view-btn.active')?.getAttribute('data-view') || 'month';
-    const currentDate = new Date(); // Use current date as default
-    
-    switch (activeView) {
-        case 'month':
-            if (typeof renderMonthView === 'function') renderMonthView(currentDate);
-            break;
-        case 'week':
-            if (typeof renderWeekView === 'function') renderWeekView(currentDate);
-            break;
-        case 'day':
-            if (typeof renderDayView === 'function') renderDayView(currentDate);
-            break;
-        case 'list':
-            if (typeof renderListView === 'function') renderListView(currentDate);
-            break;
-    }
 }
 
 // Inizializza i gestori degli eventi quando il DOM è caricato
