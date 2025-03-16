@@ -2,11 +2,13 @@
  * drag-drop.js - Sistema centralizzato per la gestione del drag and drop nel calendario
  */
 
-// Variabili per tenere traccia dello stato del drag and drop
+// Variabili globali per tenere traccia dello stato del drag and drop
 let draggedEventId = null;
 let draggedElement = null;
 let dragOffsetY = 0;
 let eventOriginalData = null;
+// Oggetto per memorizzare i dati dell'evento durante il trascinamento
+window.eventDataForDrag = null;
 
 /**
  * Inizializza il drag and drop per tutti gli elementi evento nella vista corrente
@@ -42,17 +44,41 @@ function cleanupDragListeners() {
     
     // Rimuovi la classe draggable e gli attributi di tutti gli eventi
     document.querySelectorAll('.event, .time-event').forEach(event => {
+        // Rimuovi i listener di eventi specifici per prevenire duplicati
+        event.removeEventListener('dragstart', handleEventDragStart);
+        event.removeEventListener('dragstart', handleTimeEventDragStart);
+        event.removeEventListener('dragend', handleEventDragEnd);
+        
+        // Rimuovi attributi di drag
         event.removeAttribute('draggable');
-        event.classList.remove('draggable');
+        event.classList.remove('draggable', 'dragging');
         
         // Rimuovi i data attributes specifici del drag and drop
         event.removeAttribute('data-drag-initialized');
     });
     
-    // Rimuovi classi specifiche del drag and drop dalle celle
-    document.querySelectorAll('.calendar-day, .time-slot').forEach(cell => {
+    // Rimuovi classi e listener specifici del drag and drop dalle celle
+    document.querySelectorAll('.calendar-day').forEach(cell => {
         cell.classList.remove('drag-over', 'droppable');
+        cell.removeEventListener('dragover', handleDayDragOver);
+        cell.removeEventListener('dragleave', handleDayDragLeave);
+        cell.removeEventListener('drop', handleMonthViewDrop);
     });
+    
+    document.querySelectorAll('.time-slot').forEach(cell => {
+        cell.classList.remove('drag-over', 'droppable');
+        cell.removeEventListener('dragover', handleSlotDragOver);
+        cell.removeEventListener('dragleave', handleSlotDragLeave);
+        cell.removeEventListener('drop', handleWeekViewDrop);
+        cell.removeEventListener('drop', handleDayViewDrop);
+    });
+    
+    // Reset delle variabili globali
+    draggedEventId = null;
+    draggedElement = null;
+    dragOffsetY = 0;
+    eventOriginalData = null;
+    window.eventDataForDrag = null;
 }
 
 /**
@@ -69,13 +95,13 @@ function initMonthViewDragDrop() {
     
     // Rendi gli eventi trascinabili
     monthEvents.forEach(event => {
-        // Evita di inizializzare più volte lo stesso elemento
-        if (event.getAttribute('data-drag-initialized') === 'true') return;
+        // Rimuovi eventuali event listener precedenti
+        event.removeEventListener('dragstart', handleEventDragStart);
+        event.removeEventListener('dragend', handleEventDragEnd);
         
         // Imposta l'attributo draggable
         event.setAttribute('draggable', 'true');
         event.classList.add('draggable');
-        event.setAttribute('data-drag-initialized', 'true');
         
         // Gestori eventi per il drag
         event.addEventListener('dragstart', handleEventDragStart);
@@ -89,6 +115,12 @@ function initMonthViewDragDrop() {
     
     // Configura le celle del calendario come destinazioni di drop
     calendarDays.forEach(day => {
+        // Rimuovi eventuali event listener precedenti
+        day.removeEventListener('dragover', handleDayDragOver);
+        day.removeEventListener('dragleave', handleDayDragLeave);
+        day.removeEventListener('drop', handleMonthViewDrop);
+        
+        // Aggiungi i nuovi listener
         day.addEventListener('dragover', handleDayDragOver);
         day.addEventListener('dragleave', handleDayDragLeave);
         day.addEventListener('drop', handleMonthViewDrop);
@@ -109,13 +141,13 @@ function initWeekViewDragDrop() {
     
     // Rendi gli eventi trascinabili
     weekEvents.forEach(event => {
-        // Evita di inizializzare più volte lo stesso elemento
-        if (event.getAttribute('data-drag-initialized') === 'true') return;
+        // Rimuovi eventuali event listener precedenti
+        event.removeEventListener('dragstart', handleTimeEventDragStart);
+        event.removeEventListener('dragend', handleEventDragEnd);
         
         // Imposta l'attributo draggable
         event.setAttribute('draggable', 'true');
         event.classList.add('draggable');
-        event.setAttribute('data-drag-initialized', 'true');
         
         // Gestori eventi per il drag
         event.addEventListener('dragstart', handleTimeEventDragStart);
@@ -129,6 +161,12 @@ function initWeekViewDragDrop() {
     
     // Configura gli slot temporali come destinazioni di drop
     timeSlots.forEach(slot => {
+        // Rimuovi eventuali event listener precedenti
+        slot.removeEventListener('dragover', handleSlotDragOver);
+        slot.removeEventListener('dragleave', handleSlotDragLeave);
+        slot.removeEventListener('drop', handleWeekViewDrop);
+        
+        // Aggiungi i nuovi listener
         slot.addEventListener('dragover', handleSlotDragOver);
         slot.addEventListener('dragleave', handleSlotDragLeave);
         slot.addEventListener('drop', handleWeekViewDrop);
@@ -149,13 +187,13 @@ function initDayViewDragDrop() {
     
     // Rendi gli eventi trascinabili
     dayEvents.forEach(event => {
-        // Evita di inizializzare più volte lo stesso elemento
-        if (event.getAttribute('data-drag-initialized') === 'true') return;
+        // Rimuovi eventuali event listener precedenti
+        event.removeEventListener('dragstart', handleTimeEventDragStart);
+        event.removeEventListener('dragend', handleEventDragEnd);
         
         // Imposta l'attributo draggable
         event.setAttribute('draggable', 'true');
         event.classList.add('draggable');
-        event.setAttribute('data-drag-initialized', 'true');
         
         // Gestori eventi per il drag
         event.addEventListener('dragstart', handleTimeEventDragStart);
@@ -169,6 +207,12 @@ function initDayViewDragDrop() {
     
     // Configura gli slot temporali come destinazioni di drop
     timeSlots.forEach(slot => {
+        // Rimuovi eventuali event listener precedenti
+        slot.removeEventListener('dragover', handleSlotDragOver);
+        slot.removeEventListener('dragleave', handleSlotDragLeave);
+        slot.removeEventListener('drop', handleDayViewDrop);
+        
+        // Aggiungi i nuovi listener
         slot.addEventListener('dragover', handleSlotDragOver);
         slot.addEventListener('dragleave', handleSlotDragLeave);
         slot.addEventListener('drop', handleDayViewDrop);
@@ -180,6 +224,8 @@ function initDayViewDragDrop() {
  * @param {DragEvent} e - Evento di drag
  */
 function handleEventDragStart(e) {
+    e.stopPropagation(); // Previeni la propagazione dell'evento
+    
     console.log('Inizio trascinamento evento');
     
     // Salva l'ID dell'evento trascinato e l'elemento
@@ -193,7 +239,7 @@ function handleEventDragStart(e) {
         parent: draggedElement.parentNode
     };
     
-    // Imposta i dati di trasferimento
+    // Imposta i dati di trasferimento (solo l'ID è necessario)
     e.dataTransfer.setData('text/plain', draggedEventId);
     e.dataTransfer.effectAllowed = 'move';
     
@@ -204,6 +250,8 @@ function handleEventDragStart(e) {
     document.querySelectorAll('.calendar-day').forEach(day => {
         day.classList.add('droppable');
     });
+    
+    console.log('Drag mensile iniziato con successo:', draggedEventId);
 }
 
 /**
@@ -211,6 +259,8 @@ function handleEventDragStart(e) {
  * @param {DragEvent} e - Evento di drag
  */
 function handleTimeEventDragStart(e) {
+    e.stopPropagation(); // Previeni la propagazione dell'evento
+    
     console.log('Inizio trascinamento evento temporale');
     
     // Salva l'ID dell'evento trascinato e l'elemento
@@ -221,6 +271,14 @@ function handleTimeEventDragStart(e) {
     const rect = this.getBoundingClientRect();
     dragOffsetY = e.clientY - rect.top;
     
+    // Salva i dati aggiuntivi in una variabile globale (più affidabile di dataTransfer per dati complessi)
+    window.eventDataForDrag = {
+        id: draggedEventId,
+        offsetY: dragOffsetY,
+        height: rect.height,
+        top: rect.top
+    };
+    
     // Memorizza i dati originali dell'evento
     eventOriginalData = {
         id: draggedEventId,
@@ -230,18 +288,9 @@ function handleTimeEventDragStart(e) {
         height: draggedElement.style.height
     };
     
-    // Imposta i dati di trasferimento
+    // Imposta i dati di trasferimento (solo l'ID è necessario)
     e.dataTransfer.setData('text/plain', draggedEventId);
     e.dataTransfer.effectAllowed = 'move';
-    
-    // Salva anche l'offset Y e altri dati utili
-    const eventData = {
-        id: draggedEventId,
-        offsetY: dragOffsetY,
-        height: rect.height,
-        top: rect.top
-    };
-    e.dataTransfer.setData('application/json', JSON.stringify(eventData));
     
     // Aggiungi una classe per lo stile durante il trascinamento
     this.classList.add('dragging');
@@ -250,6 +299,8 @@ function handleTimeEventDragStart(e) {
     document.querySelectorAll('.time-slot').forEach(slot => {
         slot.classList.add('droppable');
     });
+    
+    console.log('Drag temporale iniziato con successo:', draggedEventId);
 }
 
 /**
@@ -257,6 +308,8 @@ function handleTimeEventDragStart(e) {
  * @param {DragEvent} e - Evento di drag
  */
 function handleEventDragEnd(e) {
+    e.stopPropagation(); // Previeni la propagazione dell'evento
+    
     console.log('Fine trascinamento evento');
     
     // Rimuovi la classe di trascinamento
@@ -270,10 +323,13 @@ function handleEventDragEnd(e) {
     });
     
     // Resetta le variabili di stato
-    draggedEventId = null;
-    draggedElement = null;
-    dragOffsetY = 0;
-    eventOriginalData = null;
+    setTimeout(() => {
+        draggedEventId = null;
+        draggedElement = null;
+        dragOffsetY = 0;
+        eventOriginalData = null;
+        window.eventDataForDrag = null;
+    }, 100); // Piccolo ritardo per assicurarsi che il drop sia già stato gestito
 }
 
 /**
@@ -343,11 +399,17 @@ function handleMonthViewDrop(e) {
     
     // Ottieni l'ID dell'evento trascinato
     const eventId = e.dataTransfer.getData('text/plain');
-    if (!eventId) return;
+    if (!eventId) {
+        console.error('Nessun ID evento trovato nei dati trasferiti');
+        return;
+    }
     
     // Ottieni la data di destinazione
     const targetDate = this.getAttribute('data-date');
-    if (!targetDate) return;
+    if (!targetDate) {
+        console.error('Nessuna data trovata nella cella di destinazione');
+        return;
+    }
     
     console.log(`Drop evento ${eventId} sulla data ${targetDate}`);
     
@@ -378,7 +440,12 @@ function handleMonthViewDrop(e) {
         // Aggiorna la vista
         aggiornaVista();
         
+        // Mostra una notifica di conferma
+        mostraNotifica(`Evento "${evento.titolo}" spostato al ${formatDateItalian(newStartDate, false)}`, 'success');
+        
         console.log(`Evento ${evento.titolo} spostato con successo alla data ${targetDate}`);
+    } else {
+        console.error(`Evento con ID ${eventId} non trovato`);
     }
 }
 
@@ -395,11 +462,18 @@ function handleWeekViewDrop(e) {
     
     // Ottieni l'ID dell'evento trascinato
     const eventId = e.dataTransfer.getData('text/plain');
-    if (!eventId) return;
+    if (!eventId) {
+        console.error('Nessun ID evento trovato nei dati trasferiti');
+        return;
+    }
     
     try {
-        // Ottieni i dati dell'evento trascinato
-        const eventData = JSON.parse(e.dataTransfer.getData('application/json'));
+        // Ottieni i dati dell'evento trascinato dalla variabile globale
+        const eventData = window.eventDataForDrag;
+        if (!eventData) {
+            console.error('Dati evento non trovati');
+            return;
+        }
         
         // Ottieni l'ora e il giorno dello slot di destinazione
         const hour = parseInt(this.getAttribute('data-ora') || '0');
@@ -434,7 +508,12 @@ function handleWeekViewDrop(e) {
             // Aggiorna la vista
             aggiornaVista();
             
+            // Mostra una notifica di conferma
+            mostraNotifica(`Evento "${evento.titolo}" spostato alle ${formatTimeItalian(newStartDate)}`, 'success');
+            
             console.log(`Evento ${evento.titolo} spostato con successo a ${newStartDate.toLocaleString()}`);
+        } else {
+            console.error(`Evento con ID ${eventId} non trovato`);
         }
     } catch (error) {
         console.error('Errore durante il drop in vista settimanale:', error);
@@ -454,11 +533,18 @@ function handleDayViewDrop(e) {
     
     // Ottieni l'ID dell'evento trascinato
     const eventId = e.dataTransfer.getData('text/plain');
-    if (!eventId) return;
+    if (!eventId) {
+        console.error('Nessun ID evento trovato nei dati trasferiti');
+        return;
+    }
     
     try {
-        // Ottieni i dati dell'evento trascinato
-        const eventData = JSON.parse(e.dataTransfer.getData('application/json'));
+        // Ottieni i dati dell'evento trascinato dalla variabile globale
+        const eventData = window.eventDataForDrag;
+        if (!eventData) {
+            console.error('Dati evento non trovati');
+            return;
+        }
         
         // Ottieni l'ora dello slot di destinazione
         const hour = parseInt(this.getAttribute('data-ora') || '0');
@@ -490,7 +576,12 @@ function handleDayViewDrop(e) {
             // Aggiorna la vista
             aggiornaVista();
             
+            // Mostra una notifica di conferma
+            mostraNotifica(`Evento "${evento.titolo}" spostato alle ${formatTimeItalian(newStartDate)}`, 'success');
+            
             console.log(`Evento ${evento.titolo} spostato con successo a ${newStartDate.toLocaleString()}`);
+        } else {
+            console.error(`Evento con ID ${eventId} non trovato`);
         }
     } catch (error) {
         console.error('Errore durante il drop in vista giornaliera:', error);
