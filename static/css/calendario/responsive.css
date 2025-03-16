@@ -6,7 +6,7 @@
 /* Gli stili di default sono già ottimizzati per desktop */
 
 /* Nascondi elementi mobile in desktop */
-#menuToggle, #closeSidebar {
+#menuToggle, #closeSidebar, .mobile-view-selector, .mobile-navigation-controls {
 	display: none;
 }
 
@@ -90,42 +90,106 @@
 		display: none;
 	}
 
-	/* View selector (mobile) - Assicuriamoci che sia sempre visibile su tablet */
-	.mobile-view-selector {
+	/* Stili per la navigazione mobile */
+	.mobile-navigation-controls {
 		display: flex;
-		position: fixed;
-		bottom: 0;
-		left: 0;
-		right: 0;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 10px;
+		padding: 8px;
 		background-color: var(--bg-main);
-		border-top: 1px solid var(--border-color);
-		z-index: 10;
-		height: 60px; /* Altezza fissa per la barra mobile */
+		border-radius: 8px;
+		width: 100%;
 	}
 
-	.mobile-view-btn {
-		flex: 1;
-		padding: 12px 8px;
-		text-align: center;
-		border: none;
-		background: none;
-		color: var(--text-color);
-		cursor: pointer;
+	.calendar-title {
+		display: flex;
+		align-items: center;
 	}
 
-	.mobile-view-btn.active {
-		color: var(--primary);
-		border-top: 2px solid var(--primary);
-	}
-
-	.mobile-view-btn i {
-		display: block;
-		margin-bottom: 4px;
+	.mobile-current-date {
 		font-size: 16px;
+		font-weight: 600;
+		color: var(--text-color);
+		margin: 0 8px;
 	}
 
-	.mobile-view-btn span {
-		font-size: 12px;
+	/* Inside the @media (max-width: 992px) section, update these styles */
+	
+	.mobile-view-selector {
+	    display: flex;
+	    position: fixed;
+	    bottom: 0;
+	    left: 0;
+	    right: 0;
+	    background-color: var(--bg-main);
+	    border-top: 1px solid var(--border-color);
+	    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+	    z-index: 10;
+	    flex-direction: column;
+	    padding: 0;
+	}
+	
+	.mobile-navigation-controls {
+	    display: flex;
+	    align-items: center;
+	    justify-content: space-between;
+	    padding: 8px 12px;
+	    border-bottom: 1px solid var(--border-color);
+	    width: 100%;
+	}
+	
+	.calendar-title {
+	    display: flex;
+	    align-items: center;
+	}
+	
+	.mobile-current-date {
+	    font-size: 14px;
+	    font-weight: 600;
+	    color: var(--text-color);
+	    margin: 0 8px;
+	}
+	
+	.today-btn {
+	    padding: 6px 12px;
+	    background-color: var(--primary);
+	    color: white;
+	    border: none;
+	    border-radius: 4px;
+	    cursor: pointer;
+	    font-size: 12px;
+	}
+	
+	.mobile-view-buttons {
+	    display: flex;
+	    justify-content: space-between;
+	    width: 100%;
+	    height: 60px;
+	}
+	
+	.mobile-view-btn {
+	    display: flex;
+	    flex-direction: column;
+	    align-items: center;
+	    justify-content: center;
+	    padding: 8px;
+	    border: none;
+	    background: none;
+	    color: var(--text-color);
+	    font-size: 12px;
+	    flex: 1;
+	    cursor: pointer;
+	}
+	
+	.mobile-view-btn i {
+	    font-size: 18px;
+	    margin-bottom: 4px;
+	}
+	
+	.mobile-view-btn.active {
+	    color: var(--primary);
+	    font-weight: 500;
 	}
 }
 
@@ -229,6 +293,22 @@
 
 	.list-event-description {
 		font-size: 11px;
+	}
+	
+	/* Adjust main content to account for mobile navigation bar */
+	.calendar-area {
+		padding-bottom: 100px; /* Add space for the mobile navigation */
+	}
+	
+	.today-btn {
+		padding: 6px 12px;
+		font-size: 12px;
+		margin: 0 5px;
+	}
+	
+	.nav-btn {
+		width: 28px;
+		height: 28px;
 	}
 }
 
