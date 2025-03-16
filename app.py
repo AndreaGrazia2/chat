@@ -22,7 +22,7 @@ load_dotenv()
 
 # Importa i blueprint
 from chat.routes import chat_bp
-from calendar.routes import calendar_bp
+from cal.routes import calendar_bp
 from workflow.routes import workflow_bp
 from dashboard.routes import dashboard_bp
 
@@ -39,7 +39,7 @@ socketio = SocketIO(app, cors_allowed_origins="*",
 
 # Registra i blueprint
 app.register_blueprint(chat_bp, url_prefix='/chat')
-app.register_blueprint(calendar_bp, url_prefix='/calendar')
+app.register_blueprint(calendar_bp, url_prefix='/cal')
 app.register_blueprint(workflow_bp, url_prefix='/workflow')
 app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
 
