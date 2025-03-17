@@ -103,23 +103,39 @@ function handleDrop(e) {
             return;
         }
         
-        const nuovaData = createDate(dataAttuale);
-        nuovaData.setHours(ora, 0, 0);
+        // Ottieni l'evento originale
+        const eventoOriginale = eventi.find(e => e.id === eventId);
+        if (!eventoOriginale) {
+            console.error('Evento originale non trovato');
+            return;
+        }
         
-        // Calcola la durata dell'evento originale in minuti
-        const durataOriginale = (createDate(eventoOriginale.dataFine) - createDate(eventoOriginale.dataInizio)) / (1000 * 60);
+        // Salva i minuti originali dell'evento
+        const dataInizioOriginale = createDate(eventoOriginale.dataInizio);
+        const minuti = dataInizioOriginale.getMinutes();
+        
+        // Crea la nuova data mantenendo anno, mese, giorno e minuti, cambiando solo l'ora
+        const nuovaData = createDate(dataAttuale); // Usa dataAttuale corrente per giorno/mese/anno
+        nuovaData.setHours(ora, minuti, 0); // Mantieni i minuti originali
+        
+        // Calcola la durata dell'evento originale in millisecondi
+        const durataOriginale = createDate(eventoOriginale.dataFine) - createDate(eventoOriginale.dataInizio);
         
         // Crea la nuova data di fine basata sulla durata originale
-        const nuovaDataFine = createDate(nuovaData);
-        nuovaDataFine.setTime(nuovaDataFine.getTime() + durataOriginale * 60 * 1000);
+        const nuovaDataFine = new Date(nuovaData.getTime() + durataOriginale);
+        
+        // Converti le date utilizzando createDate per evitare problemi di timezone
+        const dataInizioNormalizzata = createDate(nuovaData);
+        const dataFineNormalizzata = createDate(nuovaDataFine);
         
         // Aggiorna l'evento nel database
-        console.log(`Aggiornamento evento ${eventId} alla data:`, nuovaData);
+        console.log(`Aggiornamento evento ${eventId} alla data:`, dataInizioNormalizzata);
         modificaEvento(eventId, {
-            dataInizio: nuovaData,
-            dataFine: nuovaDataFine
+            dataInizio: dataInizioNormalizzata,
+            dataFine: dataFineNormalizzata
         });
-    } 
+    }
+
     // Se nella vista settimanale:
     else if (vistaAttuale === 'week') {
         const ora = parseInt(this.dataset.ora, 10);
@@ -164,21 +180,19 @@ function handleDrop(e) {
         const evento = eventi.find(e => e.id === eventId);
         
         if (evento) {
+            // Crea date di riferimento
+            const vecchiaData = createDate(evento.dataInizio);
+            const vecchiaDataFine = createDate(evento.dataFine);
+            
             // Mantieni l'ora originale, cambia solo la data
-            const nuovaData = createDate({
-                anno: anno,
-                mese: mese,
-                giorno: giorno,
-                ore: createDate(evento.dataInizio).getHours(),
-                minuti: createDate(evento.dataInizio).getMinutes()
-            });
+            const nuovaData = createDate(new Date(anno, mese-1, giorno, 
+                vecchiaData.getHours(), vecchiaData.getMinutes(), 0));
             
-            // Calcola la durata dell'evento originale in minuti
-            const durataOriginale = (createDate(evento.dataFine) - createDate(evento.dataInizio)) / (1000 * 60);
+            // Calcola la durata dell'evento originale in millisecondi
+            const durataEvento = vecchiaDataFine.getTime() - vecchiaData.getTime();
             
-            // Crea la nuova data di fine basata sulla durata originale
-            const nuovaDataFine = createDate(nuovaData);
-            nuovaDataFine.setTime(nuovaDataFine.getTime() + durataOriginale * 60 * 1000);
+            // Crea la nuova data di fine aggiungendo la stessa durata
+            const nuovaDataFine = new Date(nuovaData.getTime() + durataEvento);
             
             // Aggiorna l'evento nel database
             console.log(`Aggiornamento evento ${eventId} alla data:`, nuovaData);

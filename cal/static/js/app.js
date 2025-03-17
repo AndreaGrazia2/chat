@@ -56,11 +56,6 @@ function initApp() {
     // Carica gli eventi salvati
     caricaEventi();
     
-    // Crea eventi di esempio se non ce ne sono
-    if (eventi.length === 0) {
-        generaEventiTest(15); // Modificato da creaEventiDemo a generaEventiTest
-    }
-    
     // Inizializza le viste del calendario
     inizializzaViste();
     
@@ -105,6 +100,35 @@ function initApp() {
             // Dopo il primo allineamento, aggiorna ogni minuto esatto
             currentTimeIndicatorInterval = setInterval(updateCurrentTimeIndicator, 60000);
         }, millisecondsToNextMinute);
+    }
+
+    initTimeIndicator();
+}
+
+
+// In app.js, migliora la gestione dell'intervallo di aggiornamento dell'ora
+function initTimeIndicator() {
+    // Pulisci eventuali timer esistenti
+    if (currentTimeIndicatorInterval) {
+        clearInterval(currentTimeIndicatorInterval);
+        currentTimeIndicatorInterval = null;
+    }
+    
+    // Prima esecuzione immediata
+    if (typeof updateCurrentTimeIndicator === 'function') {
+        updateCurrentTimeIndicator();
+        
+        // Calcola millisecondi fino al prossimo minuto esatto
+        const now = new Date();
+        const secondsToNextMinute = 60 - now.getSeconds();
+        const msToNextMinute = secondsToNextMinute * 1000 - now.getMilliseconds();
+        
+        // Imposta un timeout per allinearsi con il prossimo minuto esatto
+        setTimeout(() => {
+            updateCurrentTimeIndicator();
+            // Dopo il primo allineamento, aggiorna ogni minuto esatto
+            currentTimeIndicatorInterval = setInterval(updateCurrentTimeIndicator, 60000);
+        }, msToNextMinute);
     }
 }
 
@@ -183,6 +207,14 @@ function initEventListeners() {
                     dataAttuale.setDate(dataAttuale.getDate() - 7);
                     break;
                 case 'day':
+                    dataAttuale.setDate(dataAttuale.getDate() - 1);
+                    // Aggiorna dataSelezionata SOLO in vista giornaliera
+                    if (dataSelezionata) {
+                        // Crea una nuova data basata su dataSelezionata e decrementa di un giorno
+                        const nuovaDataSelezionata = createDate(dataSelezionata);
+                        nuovaDataSelezionata.setDate(nuovaDataSelezionata.getDate() - 1);
+                        dataSelezionata = nuovaDataSelezionata;
+                    }
                 case 'list':
                     dataAttuale.setDate(dataAttuale.getDate() - 1);
                     break;
@@ -206,6 +238,13 @@ function initEventListeners() {
                     dataAttuale.setDate(dataAttuale.getDate() + 7);
                     break;
                 case 'day':
+                    dataAttuale.setDate(dataAttuale.getDate() + 1);
+                    if (dataSelezionata) {
+                        // Crea una nuova data basata su dataSelezionata e incrementa di un giorno
+                        const nuovaDataSelezionata = createDate(dataSelezionata);
+                        nuovaDataSelezionata.setDate(nuovaDataSelezionata.getDate() + 1);
+                        dataSelezionata = nuovaDataSelezionata;
+                    }
                 case 'list':
                     dataAttuale.setDate(dataAttuale.getDate() + 1);
                     break;
@@ -222,6 +261,11 @@ function initEventListeners() {
     if (todayBtn) {
         todayBtn.addEventListener('click', () => {
             dataAttuale = new Date();
+
+            if (vistaAttuale === 'day') {
+                dataSelezionata = createDate(dataAttuale);
+            }
+
             aggiornaViste();
             
             // Dopo l'aggiornamento delle viste, collega i gestori agli eventi

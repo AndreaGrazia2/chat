@@ -207,20 +207,34 @@ function caricaEventi() {
     }
 }
 
-// Genera eventi casuali per testare il calendario
+/**
+ * events.js - Miglioramento della funzione generaEventiTest
+ * Genera eventi di test più realistici e meglio distribuiti
+ */
 function generaEventiTest(numEventi = 15) {
     const categorie = ['work', 'personal', 'family', 'health'];
-    const titoli = [
-        'Riunione', 'Appuntamento', 'Compleanno', 'Visita medica', 
-        'Conferenza', 'Cena', 'Pranzo', 'Lezione', 'Allenamento',
-        'Scadenza progetto', 'Viaggio', 'Vacanza', 'Anniversario'
-    ];
-    const descrizioni = [
-        'Importante non mancare', 'Ricordati di portare i documenti',
-        'Confermare presenza', 'Preparare presentazione',
-        'Chiamare prima per confermare', 'Portare un regalo',
-        'Prenotare in anticipo', 'Rivedere appunti'
-    ];
+    
+    // Titoli più realistici per gli eventi
+    const titoli = {
+        work: ['Riunione di team', 'Call con cliente', 'Planning sprint', 'Presentazione progetto', 
+               'Revisione codice', 'Workshop', 'Formazione', 'Colloquio candidato'],
+        personal: ['Appuntamento', 'Palestra', 'Cinema', 'Shopping', 'Hobby', 'Visita amici', 'Evento sociale'],
+        family: ['Compleanno', 'Cena famiglia', 'Anniversario', 'Visita parenti', 'Vacanza famiglia', 
+                'Attività con bambini', 'Riunione scuola'],
+        health: ['Visita medica', 'Dentista', 'Terapia', 'Allenamento', 'Controllo annuale', 'Analisi sangue']
+    };
+    
+    // Descrizioni più realistiche
+    const descrizioni = {
+        work: ['Preparare presentazione', 'Portare documenti', 'Agenda: revisione obiettivi trimestrali',
+              'Discutere nuova strategia', 'Completare report', 'Riunione online - controllare link'],
+        personal: ['Portare regalo', 'Prenotare tavolo', 'Orario flessibile', 'Non dimenticare attrezzatura',
+                  'Incontrare davanti all\'ingresso', 'Portare abbigliamento adeguato'],
+        family: ['Comprare torta', 'Organizzare sorpresa', 'Chiamare per confermare', 'Prenotare ristorante',
+                'Preparare regalo', 'Portare foto', 'Organizzare trasporto'],
+        health: ['Portare documentazione', 'A digiuno', 'Portare impegnativa', 'Ricordare ultima visita',
+                'Chiedere ricetta', 'Parlare dei sintomi', 'Controllo di routine']
+    };
     
     // Data di inizio: un mese indietro
     const dataInizioRange = createDate(new Date());
@@ -230,29 +244,80 @@ function generaEventiTest(numEventi = 15) {
     const dataFineRange = createDate(new Date());
     dataFineRange.setMonth(dataFineRange.getMonth() + 2);
     
+    // Distribuisci gli eventi in modo più realistico durante la settimana e l'orario lavorativo
     for (let i = 0; i < numEventi; i++) {
+        // Seleziona una categoria
+        const categoria = categorie[Math.floor(Math.random() * categorie.length)];
+        
         // Genera una data casuale nel range
         const dataInizio = createDate(
             new Date(dataInizioRange.getTime() + 
             Math.random() * (dataFineRange.getTime() - dataInizioRange.getTime()))
         );
         
-        // Imposta un'ora casuale (8-20)
-        dataInizio.setHours(Math.floor(Math.random() * 12) + 8, 0, 0);
+        // Distribuisci gli eventi lavorativi principalmente nei giorni feriali e orari lavorativi
+        if (categoria === 'work') {
+            // Aggiusta al giorno feriale più vicino (1-5 = Lun-Ven)
+            const giorno = dataInizio.getDay();
+            if (giorno === 0) dataInizio.setDate(dataInizio.getDate() + 1); // Domenica -> Lunedì
+            if (giorno === 6) dataInizio.setDate(dataInizio.getDate() + 2); // Sabato -> Lunedì
+            
+            // Orario lavorativo (9-18)
+            dataInizio.setHours(9 + Math.floor(Math.random() * 8), Math.floor(Math.random() * 4) * 15, 0);
+        } 
+        // Eventi familiari più probabili nel weekend e serali
+        else if (categoria === 'family') {
+            // Più probabilità di weekend
+            if (Math.random() < 0.6) {
+                const giornoAttuale = dataInizio.getDay();
+                if (giornoAttuale >= 1 && giornoAttuale <= 5) {
+                    // Sposta al weekend più vicino
+                    dataInizio.setDate(dataInizio.getDate() + (6 - giornoAttuale));
+                }
+            }
+            
+            // Sera o giorno nel weekend
+            if (dataInizio.getDay() === 0 || dataInizio.getDay() === 6) {
+                dataInizio.setHours(10 + Math.floor(Math.random() * 10), Math.floor(Math.random() * 4) * 15, 0);
+            } else {
+                dataInizio.setHours(18 + Math.floor(Math.random() * 4), Math.floor(Math.random() * 4) * 15, 0);
+            }
+        }
+        // Eventi salute più probabili in orario lavorativo
+        else if (categoria === 'health') {
+            dataInizio.setHours(8 + Math.floor(Math.random() * 10), Math.floor(Math.random() * 4) * 15, 0);
+        }
+        // Eventi personali variabili ma più frequenti dopo il lavoro
+        else {
+            if (Math.random() < 0.7) {
+                dataInizio.setHours(17 + Math.floor(Math.random() * 6), Math.floor(Math.random() * 4) * 15, 0);
+            } else {
+                dataInizio.setHours(8 + Math.floor(Math.random() * 12), Math.floor(Math.random() * 4) * 15, 0);
+            }
+        }
         
-        // Durata casuale (30min - 2h)
-        const durata = (Math.floor(Math.random() * 4) + 1) * 30;
+        // Durata in base alla categoria
+        let durata;
+        if (categoria === 'work') {
+            durata = [30, 60, 90, 120][Math.floor(Math.random() * 4)]; // 30min - 2h
+        } else if (categoria === 'health') {
+            durata = [30, 45, 60][Math.floor(Math.random() * 3)]; // 30-60min
+        } else if (categoria === 'family') {
+            durata = [60, 120, 180, 240][Math.floor(Math.random() * 4)]; // 1-4h
+        } else {
+            durata = [45, 60, 90, 120, 180][Math.floor(Math.random() * 5)]; // 45min - 3h
+        }
+        
         const dataFine = createDate(dataInizio);
         dataFine.setMinutes(dataFine.getMinutes() + durata);
         
-        // Scegli categoria, titolo e descrizione casuali
-        const categoria = categorie[Math.floor(Math.random() * categorie.length)];
-        const titolo = titoli[Math.floor(Math.random() * titoli.length)];
-        const descrizione = descrizioni[Math.floor(Math.random() * descrizioni.length)];
+        // Scegli titolo e descrizione in base alla categoria
+        const titolo = titoli[categoria][Math.floor(Math.random() * titoli[categoria].length)];
+        const descrizione = descrizioni[categoria][Math.floor(Math.random() * descrizioni[categoria].length)];
         
         // Aggiungi l'evento
         eventi.push({
-            id: generateUniqueId(), // Ora questa funzione esiste
+            id: generateUniqueId(),
             titolo,
             descrizione,
             dataInizio,
@@ -264,7 +329,7 @@ function generaEventiTest(numEventi = 15) {
     // Salva gli eventi
     salvaEventi();
     
-    console.log(`Generati ${numEventi} eventi di test`);
+    console.log(`Generati ${numEventi} eventi di test realistici`);
 }
 
 // Funzione per salvare le modifiche agli eventi
@@ -300,33 +365,113 @@ function initializeEventHandlers() {
 function attachEventClickHandlers() {
     console.log('Attaching event click handlers');
     
-    // Rimuovi prima eventuali listener esistenti
+    // Rimuovi prima tutti i listener esistenti, in modo più efficace
     removeEventClickHandlers();
     
-    // Seleziona tutti gli elementi evento in tutte le viste
-    const eventElements = document.querySelectorAll('.event, .time-event, .list-event');
+    // Seleziona tutti gli elementi evento in tutte le viste usando delegazione di eventi
+    // Questo approccio è più efficiente e riduce il numero di listener
+    const containers = [
+        document.getElementById('monthGrid'),     // Vista mensile
+        document.getElementById('weekGrid'),      // Vista settimanale
+        document.getElementById('dayGrid'),       // Vista giornaliera
+        document.getElementById('eventsList')     // Vista lista
+    ];
     
-    console.log('Found ' + eventElements.length + ' event elements');
-    
-    eventElements.forEach(function(eventElement) {
-        console.log('Attaching click handler to:', eventElement);
-        
-        // Aggiungi il nuovo listener
-        eventElement.addEventListener('click', handleEventClick);
-        
-        // Aggiungi un attributo per debug
-        eventElement.setAttribute('data-has-click-handler', 'true');
+    // Rimuovi i listener esistenti
+    containers.forEach(container => {
+        if (container) {
+            container.removeEventListener('click', handleContainerClick);
+            // Aggiungi il nuovo listener usando delegazione di eventi
+            container.addEventListener('click', handleContainerClick);
+        }
     });
+    
+    console.log('Event handlers attached via event delegation');
 }
+
+function handleContainerClick(e) {
+    // Controlla se il click è su un evento o un elemento "più eventi"
+    const eventElement = e.target.closest('.event, .time-event, .list-event');
+    const moreEventsElement = e.target.closest('.more-events');
+    const dayElement = e.target.closest('.calendar-day, .time-slot');
+    
+    // Evita che l'evento si propaghi ulteriormente
+    e.stopPropagation();
+    
+    // Se è un click su un evento
+    if (eventElement) {
+        const id = eventElement.dataset.id;
+        if (id) {
+            console.log('Event clicked:', id);
+            apriModalEvento(id);
+            return;
+        }
+    }
+    
+    // Se è un click su "più eventi"
+    if (moreEventsElement) {
+        const parentDay = moreEventsElement.closest('.calendar-day, .time-slot');
+        if (parentDay) {
+            const dataStr = parentDay.dataset.date;
+            if (dataStr) {
+                console.log('More events clicked for date:', dataStr);
+                // Converti la stringa in oggetto data
+                const [anno, mese, giorno] = dataStr.split('-').map(Number);
+                const data = createDate({anno, mese, giorno});
+                apriModalListaEventi(data);
+                return;
+            }
+        }
+    }
+    
+    // Se è un click su un giorno o slot temporale (per aggiungere evento)
+    if (dayElement && !eventElement && !moreEventsElement) {
+        const dataStr = dayElement.dataset.date;
+        const ora = dayElement.dataset.ora;
+        
+        if (dataStr) {
+            console.log('Day/slot clicked for new event:', dataStr, ora);
+            // Converti la stringa in oggetto data
+            let data;
+            
+            if (dataStr.includes('T')) {
+                // Formato ISO completo
+                data = createDate(new Date(dataStr));
+            } else {
+                // Formato YYYY-MM-DD con ora opzionale
+                const [anno, mese, giorno] = dataStr.split('-').map(Number);
+                data = createDate({anno, mese, giorno});
+                
+                // Se c'è anche l'ora, impostala
+                if (ora !== undefined) {
+                    data.setHours(parseInt(ora), 0, 0);
+                }
+            }
+            
+            apriModalNuovoEvento(data);
+        }
+    }
+}
+
 
 // Funzione per rimuovere i gestori di click dagli eventi
 function removeEventClickHandlers() {
-    const eventElements = document.querySelectorAll('.event[data-has-click-handler="true"], .time-event[data-has-click-handler="true"], .list-event[data-has-click-handler="true"]');
+    // Utilizziamo la delegazione degli eventi, quindi dobbiamo rimuovere
+    // solo i listener dai container principali
+    const containers = [
+        document.getElementById('monthGrid'),
+        document.getElementById('weekGrid'),
+        document.getElementById('dayGrid'),
+        document.getElementById('eventsList')
+    ];
     
-    eventElements.forEach(function(eventElement) {
-        eventElement.removeEventListener('click', handleEventClick);
-        eventElement.removeAttribute('data-has-click-handler');
+    containers.forEach(container => {
+        if (container) {
+            container.removeEventListener('click', handleContainerClick);
+        }
     });
+    
+    console.log('Removed all event click handlers');
 }
 
 // Funzione per gestire il click su un evento
@@ -394,11 +539,10 @@ function getCurrentDate() {
 /**
  * Aggiorna l'indicatore dell'ora corrente nelle viste giornaliera e settimanale
  */
-// Cerca questa funzione nel file events.js
 function updateCurrentTimeIndicator() {
     console.log('Updating current time indicator');
     
-    // Rimuovi eventuali indicatori esistenti
+    // Rimuovi eventuali indicatori esistenti per evitare duplicati
     document.querySelectorAll('.current-time-indicator').forEach(el => el.remove());
     
     // Ottieni l'ora corrente con precisione ai secondi
@@ -410,11 +554,11 @@ function updateCurrentTimeIndicator() {
     // Calcola la posizione verticale in base all'ora corrente con maggiore precisione
     const hourHeight = 60; // Altezza di ogni slot orario in pixel
     const topPosition = (hours * hourHeight) + 
-                         (minutes / 60 * hourHeight) + 
-                         (seconds / 3600 * hourHeight) + 
-                         50; // +50 per l'header
+                        (minutes / 60 * hourHeight) + 
+                        (seconds / 3600 * hourHeight) + 
+                        50; // +50 per l'header
     
-    // Crea l'indicatore per la vista giornaliera
+    // Vista giornaliera
     if (vistaAttuale === 'day') {
         const dayGrid = document.querySelector('.day-grid');
         if (dayGrid && isStessoGiorno(dataAttuale, now)) {
@@ -422,11 +566,17 @@ function updateCurrentTimeIndicator() {
             indicator.className = 'current-time-indicator';
             indicator.style.top = `${topPosition}px`;
             dayGrid.appendChild(indicator);
-            console.log('Added time indicator to day view at position:', topPosition);
+            
+            // Aggiungi anche un marker per il punto corrente
+            const marker = document.createElement('div');
+            marker.className = 'current-time-marker';
+            marker.style.top = `${topPosition - 5}px`;
+            marker.style.left = '0px';
+            dayGrid.appendChild(marker);
         }
     }
     
-    // Crea l'indicatore per la vista settimanale
+    // Vista settimanale
     if (vistaAttuale === 'week') {
         const weekGrid = document.querySelector('.week-grid');
         if (weekGrid) {
@@ -436,33 +586,40 @@ function updateCurrentTimeIndicator() {
             fineSettimana.setDate(fineSettimana.getDate() + 6);
             
             if (now >= inizioSettimana && now <= fineSettimana) {
-                const indicator = document.createElement('div');
-                indicator.className = 'current-time-indicator';
-                indicator.style.top = `${topPosition}px`;
-                
                 // Trova l'indice corretto del giorno corrente nella settimana visualizzata
                 let giornoCorretto = -1;
-                const giorniSettimana = [];
                 for (let i = 0; i < 7; i++) {
                     const giorno = createDate(inizioSettimana);
                     giorno.setDate(giorno.getDate() + i);
-                    giorniSettimana.push(giorno);
                     
                     if (isStessoGiorno(now, giorno)) {
                         giornoCorretto = i;
+                        break;
                     }
                 }
                 
                 if (giornoCorretto !== -1) {
                     // Calcola la larghezza di ogni colonna
-                    const columnWidth = 100 / 7; // percentuale
-                    
-                    // Imposta la posizione orizzontale basata sull'indice corretto
-                    indicator.style.left = `${giornoCorretto * columnWidth}%`;
-                    indicator.style.width = `${columnWidth}%`;
-                    
-                    weekGrid.appendChild(indicator);
-                    console.log('Added time indicator to week view at position:', topPosition, 'day index:', giornoCorretto);
+                    const dayColumns = weekGrid.querySelectorAll('.time-slot-header');
+                    if (dayColumns.length > 0) {
+                        const columnWidth = dayColumns[0].offsetWidth;
+                        const leftPosition = (giornoCorretto * columnWidth);
+                        
+                        const indicator = document.createElement('div');
+                        indicator.className = 'current-time-indicator';
+                        indicator.style.top = `${topPosition}px`;
+                        indicator.style.left = `${leftPosition}px`;
+                        indicator.style.width = `${columnWidth}px`;
+                        
+                        weekGrid.appendChild(indicator);
+                        
+                        // Aggiungi il marker per la posizione esatta
+                        const marker = document.createElement('div');
+                        marker.className = 'current-time-marker';
+                        marker.style.top = `${topPosition - 5}px`;
+                        marker.style.left = `${leftPosition + (columnWidth / 2) - 5}px`;
+                        weekGrid.appendChild(marker);
+                    }
                 }
             }
         }

@@ -70,6 +70,11 @@ function aggiornaVista() {
         if (typeof updateCurrentTimeIndicator === 'function') {
             updateCurrentTimeIndicator();
         }
+        
+        if (typeof initTimeIndicator === 'function') {
+            setTimeout(initTimeIndicator, 300);
+        }
+
     }, 300);
     
     // Aggiorna l'intestazione

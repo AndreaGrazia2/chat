@@ -5,6 +5,11 @@
 /**
  * Renderizza la vista settimanale
  */
+/**
+ * views-week.js - Miglioramento della funzione renderizzaVistaSettimanale
+ * Risolve il problema della visualizzazione degli eventi sovrapposti
+ * e mantiene la funzionalità "+X eventi"
+ */
 function renderizzaVistaSettimanale() {
     const weekGrid = document.getElementById('weekGrid');
     if (!weekGrid) return;
@@ -60,6 +65,13 @@ function renderizzaVistaSettimanale() {
         }
     });
     
+    // Per ogni cella, posiziona gli eventi sovrapposti
+    for (let i = 0; i < eventiPerCella.length; i++) {
+        if (eventiPerCella[i].length > 0) {
+            eventiPerCella[i] = posizionaEventiSovrapposti(eventiPerCella[i]);
+        }
+    }
+    
     // Crea le celle orarie per ogni ora e giorno
     for (let ora = 0; ora < 24; ora++) {
         for (let giorno = 0; giorno < 7; giorno++) {
@@ -75,6 +87,9 @@ function renderizzaVistaSettimanale() {
             // Crea l'HTML per gli eventi in questa cella
             let eventiHtml = '';
             
+            // Costante per il numero massimo di eventi da mostrare direttamente
+            const maxEventiVisibili = 1;
+            
             // Mostra solo il primo evento e un indicatore se ce ne sono altri
             if (eventiCella.length > 0) {
                 const primoEvento = eventiCella[0];
@@ -84,6 +99,8 @@ function renderizzaVistaSettimanale() {
                 // Aggiungi la classe new-event solo se l'evento è nuovo
                 const newEventClass = primoEvento.isNew ? 'new-event' : '';
                 
+                // Non usiamo le colonne per un singolo evento nella vista settimanale
+                // Utilizziamo l'intera larghezza della cella
                 eventiHtml += `
                     <div class="time-event ${primoEvento.categoria} ${newEventClass}" data-id="${primoEvento.id}">
                         <div class="time-event-title">${primoEvento.titolo}</div>
@@ -136,12 +153,12 @@ function renderizzaVistaSettimanale() {
         timeIndicator.style.backgroundColor = '#f44336';
         timeIndicator.style.zIndex = '100';
         
-        // Calcola la posizione verticale in base all'ora e ai minuti (come in events.js)
+        // Calcola la posizione verticale in base all'ora e ai minuti
         const hourHeight = 60; // altezza in pixel di ogni cella oraria
         const topPosition = (ora * hourHeight) + 
                            (minuti / 60 * hourHeight) + 
                            (secondi / 3600 * hourHeight) + 
-                           50; // +50 per l'header, come in events.js
+                           50; // +50 per l'header
         timeIndicator.style.top = `${topPosition}px`;
         
         // Trova l'indice corretto del giorno corrente nella settimana visualizzata
@@ -176,7 +193,7 @@ function renderizzaVistaSettimanale() {
     weekGrid.querySelectorAll('.time-slot').forEach(slot => {
         slot.addEventListener('click', (e) => {
             // Evita di aprire il modal se si è cliccato su un evento
-            if (e.target.closest('.time-event')) return;
+            if (e.target.closest('.time-event, .more-events')) return;
             
             const ora = parseInt(slot.dataset.ora);
             const giorno = parseInt(slot.dataset.giorno);
@@ -204,7 +221,7 @@ function renderizzaVistaSettimanale() {
             const slot = indicator.closest('.time-slot');
             const dataISOString = slot.dataset.date;
             
-            // Ottieni la data per questo slot
+            // Ottieni la data e l'ora per questo slot
             const data = new Date(dataISOString);
             
             // Usa la funzione esistente apriModalListaEventi
@@ -216,7 +233,6 @@ function renderizzaVistaSettimanale() {
     if (typeof enableDragAndDrop === 'function') {
         setTimeout(enableDragAndDrop, 100);
     }
-    
 }
 
 // Funzione di supporto per la vista settimanale

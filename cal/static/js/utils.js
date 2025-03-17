@@ -224,41 +224,47 @@ function getEuropeanWeekday(date) {
  *                                   - Un oggetto con proprietà: {anno, mese, giorno, ore, minuti}
  * @returns {Date} - Un oggetto Date normalizzato
  */
+/**
+ * utils.js - Miglioramento della funzione createDate
+ * Questa soluzione centralizzata risolve problemi di timezone e incoerenze
+ */
 function createDate(data) {
-    // Caso 1: Se è già un oggetto Date, ritorna una copia per evitare modifiche indesiderate
+    // Caso 1: Se è già un oggetto Date, ritorna una copia
     if (data instanceof Date) {
         return new Date(data.getTime());
     }
     
-    // Caso 2: Se è una stringa (es: da input form o da API)
+    // Caso 2: Se è una stringa
     if (typeof data === 'string') {
-        // Controllo se il formato è YYYY-MM-DD
+        // Formato YYYY-MM-DD
         if (/^\d{4}-\d{2}-\d{2}$/.test(data)) {
             const [anno, mese, giorno] = data.split('-').map(Number);
             return new Date(anno, mese - 1, giorno, 0, 0, 0, 0);
         }
         
-        // Controllo se il formato è YYYY-MM-DD HH:MM o simili
+        // Formato ISO con orario
         if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(data)) {
-            // Crea una nuova data come copia esatta 
             const dateObj = new Date(data);
-            // Importante: non fare aggiustamenti di timezone qui
-            return dateObj;
+            // Gestisce esplicitamente la timezone locale
+            return new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), 
+                           dateObj.getHours(), dateObj.getMinutes(), dateObj.getSeconds());
         }
         
-        // Altri formati di stringa (prova a convertire)
+        // Altri formati
         return new Date(data);
     }
     
-    // Caso 3: Se è un oggetto con proprietà specifiche
+    // Caso 3: Oggetto con proprietà specifiche
     if (data && typeof data === 'object') {
-        const { anno, mese, giorno, ore = 0, minuti = 0 } = data;
+        // Supporta sia il formato 0-based (getMonth) che 1-based (input form)
+        const mese = data.mese > 0 && data.mese <= 12 ? data.mese - 1 : data.mese;
+        const { anno, giorno, ore = 0, minuti = 0 } = data;
         if (anno !== undefined && mese !== undefined && giorno !== undefined) {
-            return new Date(anno, mese - 1, giorno, ore, minuti, 0, 0);
+            return new Date(anno, mese, giorno, ore, minuti, 0, 0);
         }
     }
     
-    // Default: data corrente se l'input non è valido
+    // Default: data corrente
     console.warn('Formato data non valido:', data);
     return new Date();
 }
