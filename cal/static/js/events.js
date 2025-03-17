@@ -35,9 +35,9 @@ function aggiungiEvento(evento) {
     // Genera un ID univoco
     const id = generateUniqueId();
     
-    // Assicurati che le date siano create correttamente senza problemi di timezone
-    let dataInizio = new Date(evento.dataInizio);
-    let dataFine = new Date(evento.dataFine);
+    // Utilizza la funzione helper centralizzata per gestire le date
+    let dataInizio = createDate(evento.dataInizio);
+    let dataFine = createDate(evento.dataFine);
     
     // Crea l'oggetto evento
     const nuovoEvento = {
@@ -47,7 +47,7 @@ function aggiungiEvento(evento) {
         dataInizio: dataInizio,
         dataFine: dataFine,
         categoria: evento.categoria || 'personal',
-        creato: new Date(),
+        creato: createDate(new Date()),
         isNew: true // Aggiungiamo questo flag per l'animazione
     };
     
@@ -88,9 +88,9 @@ function modificaEvento(eventoId, datiAggiornati) {
     const eventoAggiornato = {
         ...eventi[indice],
         ...datiAggiornati,
-        dataInizio: datiAggiornati.dataInizio ? new Date(datiAggiornati.dataInizio) : eventi[indice].dataInizio,
-        dataFine: datiAggiornati.dataFine ? new Date(datiAggiornati.dataFine) : eventi[indice].dataFine,
-        modificato: new Date()
+        dataInizio: datiAggiornati.dataInizio ? createDate(datiAggiornati.dataInizio) : eventi[indice].dataInizio,
+        dataFine: datiAggiornati.dataFine ? createDate(datiAggiornati.dataFine) : eventi[indice].dataFine,
+        modificato: createDate(new Date())
     };
     
     // Sostituisci l'evento nell'array
@@ -144,7 +144,7 @@ function getEventi() {
  */
 function getEventiGiorno(data) {
     return eventi.filter(evento => {
-        const dataEvento = new Date(evento.dataInizio);
+        const dataEvento = createDate(evento.dataInizio);
         return isStessoGiorno(dataEvento, data);
     });
 }
@@ -157,7 +157,7 @@ function getEventiGiorno(data) {
  */
 function getEventiMese(anno, mese) {
     return eventi.filter(evento => {
-        const dataEvento = new Date(evento.dataInizio);
+        const dataEvento = createDate(evento.dataInizio);
         return dataEvento.getFullYear() === anno && dataEvento.getMonth() === mese;
     });
 }
@@ -170,7 +170,7 @@ function getEventiMese(anno, mese) {
  */
 function getEventiSettimana(dataInizio, dataFine) {
     return eventi.filter(evento => {
-        const dataEvento = new Date(evento.dataInizio);
+        const dataEvento = createDate(evento.dataInizio);
         return dataEvento >= dataInizio && dataEvento <= dataFine;
     });
 }
@@ -192,10 +192,12 @@ function caricaEventi() {
     if (eventiSalvati) {
         eventi = JSON.parse(eventiSalvati);
         
-        // Converti le stringhe di data in oggetti Date
+        // Converti le stringhe di data in oggetti Date usando la funzione centralizzata
         eventi.forEach(evento => {
-            evento.dataInizio = new Date(evento.dataInizio);
-            evento.dataFine = new Date(evento.dataFine);
+            evento.dataInizio = createDate(evento.dataInizio);
+            evento.dataFine = createDate(evento.dataFine);
+            if (evento.creato) evento.creato = createDate(evento.creato);
+            if (evento.modificato) evento.modificato = createDate(evento.modificato);
         });
         console.log(`Caricati ${eventi.length} eventi dal localStorage`);
     } else {
@@ -221,18 +223,18 @@ function generaEventiTest(numEventi = 15) {
     ];
     
     // Data di inizio: un mese indietro
-    const dataInizioRange = new Date();
+    const dataInizioRange = createDate(new Date());
     dataInizioRange.setMonth(dataInizioRange.getMonth() - 1);
     
     // Data di fine: due mesi avanti
-    const dataFineRange = new Date();
+    const dataFineRange = createDate(new Date());
     dataFineRange.setMonth(dataFineRange.getMonth() + 2);
     
     for (let i = 0; i < numEventi; i++) {
         // Genera una data casuale nel range
-        const dataInizio = new Date(
-            dataInizioRange.getTime() + 
-            Math.random() * (dataFineRange.getTime() - dataInizioRange.getTime())
+        const dataInizio = createDate(
+            new Date(dataInizioRange.getTime() + 
+            Math.random() * (dataFineRange.getTime() - dataInizioRange.getTime()))
         );
         
         // Imposta un'ora casuale (8-20)
@@ -240,7 +242,7 @@ function generaEventiTest(numEventi = 15) {
         
         // Durata casuale (30min - 2h)
         const durata = (Math.floor(Math.random() * 4) + 1) * 30;
-        const dataFine = new Date(dataInizio);
+        const dataFine = createDate(dataInizio);
         dataFine.setMinutes(dataFine.getMinutes() + durata);
         
         // Scegli categoria, titolo e descrizione casuali
@@ -269,6 +271,14 @@ function generaEventiTest(numEventi = 15) {
 function saveEventChanges(eventId, changes) {
     // Qui implementa la logica per salvare le modifiche
     console.log('Evento aggiornato:', eventId, changes);
+    
+    // Normalizza le date usando la funzione centralizzata
+    if (changes.dataInizio) {
+        changes.dataInizio = createDate(changes.dataInizio);
+    }
+    if (changes.dataFine) {
+        changes.dataFine = createDate(changes.dataFine);
+    }
     
     // Se stai usando localStorage per memorizzare gli eventi
     const events = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
@@ -391,7 +401,7 @@ function updateCurrentTimeIndicator() {
     document.querySelectorAll('.current-time-indicator').forEach(el => el.remove());
     
     // Ottieni l'ora corrente con precisione ai secondi
-    const now = new Date();
+    const now = createDate(new Date());
     const hours = now.getHours();
     const minutes = now.getMinutes();
     const seconds = now.getSeconds();
@@ -421,7 +431,7 @@ function updateCurrentTimeIndicator() {
         if (weekGrid) {
             // Verifica se il giorno corrente è nella settimana visualizzata
             const inizioSettimana = getPrimoGiornoSettimana(dataAttuale);
-            const fineSettimana = new Date(inizioSettimana);
+            const fineSettimana = createDate(inizioSettimana);
             fineSettimana.setDate(fineSettimana.getDate() + 6);
             
             if (now >= inizioSettimana && now <= fineSettimana) {

@@ -215,3 +215,50 @@ function getEuropeanWeekday(date) {
     // Converti da 0-6 (domenica-sabato) a 0-6 (lunedì-domenica)
     return date.getDay() === 0 ? 6 : date.getDay() - 1;
 }
+
+/**
+ * Funzione centralizzata per creare o convertire date, gestendo uniformemente i timezone
+ * @param {Date|string|Object} data - Può essere:
+ *                                   - Un oggetto Date esistente
+ *                                   - Una stringa in formato ISO
+ *                                   - Un oggetto con proprietà: {anno, mese, giorno, ore, minuti}
+ * @returns {Date} - Un oggetto Date normalizzato
+ */
+function createDate(data) {
+    // Caso 1: Se è già un oggetto Date, ritorna una copia per evitare modifiche indesiderate
+    if (data instanceof Date) {
+        return new Date(data.getTime());
+    }
+    
+    // Caso 2: Se è una stringa (es: da input form o da API)
+    if (typeof data === 'string') {
+        // Controllo se il formato è YYYY-MM-DD
+        if (/^\d{4}-\d{2}-\d{2}$/.test(data)) {
+            const [anno, mese, giorno] = data.split('-').map(Number);
+            return new Date(anno, mese - 1, giorno, 0, 0, 0, 0);
+        }
+        
+        // Controllo se il formato è YYYY-MM-DD HH:MM o simili
+        if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(data)) {
+            // Crea una nuova data come copia esatta 
+            const dateObj = new Date(data);
+            // Importante: non fare aggiustamenti di timezone qui
+            return dateObj;
+        }
+        
+        // Altri formati di stringa (prova a convertire)
+        return new Date(data);
+    }
+    
+    // Caso 3: Se è un oggetto con proprietà specifiche
+    if (data && typeof data === 'object') {
+        const { anno, mese, giorno, ore = 0, minuti = 0 } = data;
+        if (anno !== undefined && mese !== undefined && giorno !== undefined) {
+            return new Date(anno, mese - 1, giorno, ore, minuti, 0, 0);
+        }
+    }
+    
+    // Default: data corrente se l'input non è valido
+    console.warn('Formato data non valido:', data);
+    return new Date();
+}

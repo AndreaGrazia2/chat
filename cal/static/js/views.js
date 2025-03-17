@@ -111,7 +111,7 @@ function aggiornaIntestazione() {
             break;
         case 'week':
             const inizioSettimana = getPrimoGiornoSettimana(dataAttuale);
-            const fineSettimana = new Date(inizioSettimana);
+            const fineSettimana = createDate(inizioSettimana);
             fineSettimana.setDate(fineSettimana.getDate() + 6);
             
             if (inizioSettimana.getMonth() === fineSettimana.getMonth()) {
@@ -182,7 +182,7 @@ function renderizzaMiniCalendario() {
     }
     
     // Aggiungi i giorni del mese corrente
-    const oggi = new Date();
+    const oggi = createDate(new Date());
     
     for (let i = 1; i <= giorniTotali; i++) {
         const isOggi = oggi.getDate() === i && oggi.getMonth() === mese && oggi.getFullYear() === anno;
@@ -224,7 +224,7 @@ function renderizzaMiniCalendario() {
     document.querySelectorAll('.mini-calendar-day').forEach(day => {
         day.addEventListener('click', () => {
             const [anno, mese, giorno] = day.dataset.date.split('-').map(Number);
-            dataAttuale = new Date(anno, mese - 1, giorno);
+            dataAttuale = createDate({anno, mese, giorno});
             renderizzaMiniCalendario();
             aggiornaVista();
         });
@@ -244,30 +244,33 @@ function apriModalNuovoEvento(data) {
     eventForm.reset();
     eventForm.removeAttribute('data-event-id');
     
+    // Utilizza la funzione centralizzata per gestire le date
+    const dataEventoInizio = createDate(data);
+    
     // Imposta la data e l'ora iniziale usando il fuso orario locale
-    const anno = data.getFullYear();
-    const mese = (data.getMonth() + 1).toString().padStart(2, '0');
-    const giorno = data.getDate().toString().padStart(2, '0');
+    const anno = dataEventoInizio.getFullYear();
+    const mese = (dataEventoInizio.getMonth() + 1).toString().padStart(2, '0');
+    const giorno = dataEventoInizio.getDate().toString().padStart(2, '0');
     const dataStr = `${anno}-${mese}-${giorno}`;
     
-    const ore = data.getHours().toString().padStart(2, '0');
-    const minuti = data.getMinutes().toString().padStart(2, '0');
+    const ore = dataEventoInizio.getHours().toString().padStart(2, '0');
+    const minuti = dataEventoInizio.getMinutes().toString().padStart(2, '0');
     const oraStr = `${ore}:${minuti}`;
     
     document.getElementById('eventDate').value = dataStr;
     document.getElementById('eventTime').value = oraStr;
     
     // Imposta la data e l'ora finale (1 ora dopo)
-    const dataFine = new Date(data);
-    dataFine.setHours(dataFine.getHours() + 1);
+    const dataEventoFine = createDate(dataEventoInizio);
+    dataEventoFine.setHours(dataEventoFine.getHours() + 1);
     
-    const annoFine = dataFine.getFullYear();
-    const meseFine = (dataFine.getMonth() + 1).toString().padStart(2, '0');
-    const giornoFine = dataFine.getDate().toString().padStart(2, '0');
+    const annoFine = dataEventoFine.getFullYear();
+    const meseFine = (dataEventoFine.getMonth() + 1).toString().padStart(2, '0');
+    const giornoFine = dataEventoFine.getDate().toString().padStart(2, '0');
     const dataFineStr = `${annoFine}-${meseFine}-${giornoFine}`;
     
-    const oreFine = dataFine.getHours().toString().padStart(2, '0');
-    const minutiFine = dataFine.getMinutes().toString().padStart(2, '0');
+    const oreFine = dataEventoFine.getHours().toString().padStart(2, '0');
+    const minutiFine = dataEventoFine.getMinutes().toString().padStart(2, '0');
     const oraFineStr = `${oreFine}:${minutiFine}`;
     
     document.getElementById('eventEndDate').value = dataFineStr;
@@ -304,15 +307,22 @@ function apriModalNuovoEvento(data) {
             return;
         }
         
-        // Crea le date con componenti espliciti per evitare problemi di fuso orario
-        const [annoInizio, meseInizio, giornoInizio] = data.split('-').map(Number);
-        const [oreInizio, minutiInizio] = ora.split(':').map(Number);
-        const [annoFine, meseFine, giornoFine] = dataFine.split('-').map(Number);
-        const [oreFine, minutiFine] = oraFine.split(':').map(Number);
+        // Crea oggetti Date usando la funzione centralizzata
+        const dataInizio = createDate({
+            anno: parseInt(data.split('-')[0]),
+            mese: parseInt(data.split('-')[1]),
+            giorno: parseInt(data.split('-')[2]),
+            ore: parseInt(ora.split(':')[0]),
+            minuti: parseInt(ora.split(':')[1])
+        });
         
-        // Crea oggetti Date locali senza ambiguità di timezone
-        const dataInizio = new Date(annoInizio, meseInizio - 1, giornoInizio, oreInizio, minutiInizio, 0, 0);
-        const dataFinale = new Date(annoFine, meseFine - 1, giornoFine, oreFine, minutiFine, 0, 0);
+        const dataFinale = createDate({
+            anno: parseInt(dataFine.split('-')[0]),
+            mese: parseInt(dataFine.split('-')[1]),
+            giorno: parseInt(dataFine.split('-')[2]),
+            ore: parseInt(oraFine.split(':')[0]),
+            minuti: parseInt(oraFine.split(':')[1])
+        });
         
         // Validazione delle date
         if (!validaDateEvento(dataInizio, dataFinale)) {
@@ -354,7 +364,7 @@ function apriModalListaEventi(data) {
     let html = '';
     
     // Ordina gli eventi per orario
-    eventiGiorno.sort((a, b) => new Date(a.dataInizio) - new Date(b.dataInizio));
+    eventiGiorno.sort((a, b) => createDate(a.dataInizio) - createDate(b.dataInizio));
     
     // Aggiungi ogni evento alla lista
     eventiGiorno.forEach(evento => {
@@ -407,8 +417,8 @@ function apriModalEvento(id) {
     document.getElementById('eventTitle').value = evento.titolo;
     document.getElementById('eventDescription').value = evento.descrizione || '';
     
-    const dataInizio = new Date(evento.dataInizio);
-    const dataFine = new Date(evento.dataFine);
+    const dataInizio = createDate(evento.dataInizio);
+    const dataFine = createDate(evento.dataFine);
     
     // Formatta le date con padding zero
     const annoInizio = dataInizio.getFullYear();
@@ -476,15 +486,22 @@ function apriModalEvento(id) {
             return;
         }
         
-        // Crea le date con componenti espliciti per evitare problemi di fuso orario
-        const [annoInizio, meseInizio, giornoInizio] = data.split('-').map(Number);
-        const [oreInizio, minutiInizio] = ora.split(':').map(Number);
-        const [annoFine, meseFine, giornoFine] = dataFine.split('-').map(Number);
-        const [oreFine, minutiFine] = oraFine.split(':').map(Number);
+        // Crea oggetti Date usando la funzione centralizzata
+        const dataInizio = createDate({
+            anno: parseInt(data.split('-')[0]),
+            mese: parseInt(data.split('-')[1]),
+            giorno: parseInt(data.split('-')[2]),
+            ore: parseInt(ora.split(':')[0]),
+            minuti: parseInt(ora.split(':')[1])
+        });
         
-        // Crea oggetti Date locali senza ambiguità di timezone
-        const dataInizio = new Date(annoInizio, meseInizio - 1, giornoInizio, oreInizio, minutiInizio, 0, 0);
-        const dataFinale = new Date(annoFine, meseFine - 1, giornoFine, oreFine, minutiFine, 0, 0);
+        const dataFinale = createDate({
+            anno: parseInt(dataFine.split('-')[0]),
+            mese: parseInt(dataFine.split('-')[1]),
+            giorno: parseInt(dataFine.split('-')[2]),
+            ore: parseInt(oraFine.split(':')[0]),
+            minuti: parseInt(oraFine.split(':')[1])
+        });
         
         // Validazione delle date
         if (!validaDateEvento(dataInizio, dataFinale)) {

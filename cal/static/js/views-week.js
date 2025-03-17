@@ -15,7 +15,7 @@ function renderizzaVistaSettimanale() {
     // Crea l'array dei giorni della settimana
     const giorniSettimana = [];
     for (let i = 0; i < 7; i++) {
-        const giorno = new Date(inizioSettimana);
+        const giorno = createDate(inizioSettimana);
         giorno.setDate(giorno.getDate() + i);
         giorniSettimana.push(giorno);
     }
@@ -23,7 +23,7 @@ function renderizzaVistaSettimanale() {
     // Crea l'intestazione della griglia settimanale
     let headerHtml = '';
     giorniSettimana.forEach(giorno => {
-        const isOggi = isStessoGiorno(giorno, new Date());
+        const isOggi = isStessoGiorno(giorno, createDate(new Date()));
         headerHtml += `
             <div class="time-slot-header ${isOggi ? 'today' : ''}">
                 <div>${['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'][giorno.getDay() === 0 ? 6 : giorno.getDay() - 1]}</div>
@@ -36,7 +36,7 @@ function renderizzaVistaSettimanale() {
     let gridHtml = headerHtml;
     
     // Ottieni tutti gli eventi della settimana
-    const fineSettimana = new Date(inizioSettimana);
+    const fineSettimana = createDate(inizioSettimana);
     fineSettimana.setDate(fineSettimana.getDate() + 6);
     fineSettimana.setHours(23, 59, 59);
     
@@ -46,7 +46,7 @@ function renderizzaVistaSettimanale() {
     const eventiPerCella = Array(24 * 7).fill().map(() => []);
     
     eventiSettimana.forEach(evento => {
-        const dataInizio = new Date(evento.dataInizio);
+        const dataInizio = createDate(evento.dataInizio);
         // Calcola il giorno della settimana (0-6, dove 0 è lunedì)
         const giornoSettimana = dataInizio.getDay() === 0 ? 6 : dataInizio.getDay() - 1;
         // Usa l'ora come indice
@@ -63,10 +63,10 @@ function renderizzaVistaSettimanale() {
     // Crea le celle orarie per ogni ora e giorno
     for (let ora = 0; ora < 24; ora++) {
         for (let giorno = 0; giorno < 7; giorno++) {
-            const dataOra = new Date(giorniSettimana[giorno]);
+            const dataOra = createDate(giorniSettimana[giorno]);
             dataOra.setHours(ora, 0, 0);
             
-            const isOraCorrente = new Date().getHours() === ora && isStessoGiorno(dataOra, new Date());
+            const isOraCorrente = createDate(new Date()).getHours() === ora && isStessoGiorno(dataOra, createDate(new Date()));
             const indiceCella = ora * 7 + giorno;
             
             // Ottieni gli eventi per questa cella
@@ -75,8 +75,8 @@ function renderizzaVistaSettimanale() {
             // Crea l'HTML per gli eventi in questa cella
             let eventiHtml = '';
             eventiCella.forEach(evento => {
-                const dataInizio = new Date(evento.dataInizio);
-                const dataFine = new Date(evento.dataFine);
+                const dataInizio = createDate(evento.dataInizio);
+                const dataFine = createDate(evento.dataFine);
                 
                 // Aggiungi la classe new-event solo se l'evento è nuovo
                 const newEventClass = evento.isNew ? 'new-event' : '';
@@ -102,7 +102,7 @@ function renderizzaVistaSettimanale() {
     weekGrid.innerHTML = gridHtml;
     
     // Aggiungi l'indicatore dell'ora corrente
-    const oggi = new Date();
+    const oggi = createDate(new Date());
     const giornoSettimanaOggi = oggi.getDay() === 0 ? 6 : oggi.getDay() - 1;
     
     // Verifica se il giorno corrente è nella settimana visualizzata
@@ -139,7 +139,7 @@ function renderizzaVistaSettimanale() {
             const ora = parseInt(slot.dataset.ora);
             const giorno = parseInt(slot.dataset.giorno);
             
-            const data = new Date(giorniSettimana[giorno]);
+            const data = createDate(giorniSettimana[giorno]);
             data.setHours(ora, 0, 0);
             
             apriModalNuovoEvento(data);
@@ -164,7 +164,7 @@ function renderizzaVistaSettimanale() {
 // Funzione di supporto per la vista settimanale
 function renderWeekView(date = new Date()) {
     // Assicurati che dataAttuale sia impostata correttamente
-    dataAttuale = date || dataAttuale;
+    dataAttuale = createDate(date) || dataAttuale;
     
     // Renderizza la vista
     renderizzaVistaSettimanale();

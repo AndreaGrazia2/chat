@@ -6,10 +6,53 @@
 let darkMode = false;
 let sidebarVisible = false;
 
+// Variabile per tenere traccia del timer dell'ora corrente
+let currentTimeIndicatorInterval;
+
+// Cache degli elementi DOM frequentemente utilizzati
+const domCache = {
+    monthGrid: null,
+    weekGrid: null,
+    dayGrid: null,
+    eventsList: null,
+    miniCalendar: null,
+    currentDate: null,
+    modals: {}
+};
+
+/**
+ * Inizializza la cache degli elementi DOM
+ */
+function initDomCache() {
+    domCache.monthGrid = document.getElementById('monthGrid');
+    domCache.weekGrid = document.getElementById('weekGrid');
+    domCache.dayGrid = document.getElementById('dayGrid');
+    domCache.eventsList = document.getElementById('eventsList');
+    domCache.miniCalendar = document.getElementById('miniCalendar');
+    domCache.currentDate = document.querySelector('.current-date');
+    
+    // Modals
+    domCache.modals.event = document.getElementById('eventModal');
+    domCache.modals.eventsList = document.getElementById('eventsListModal');
+    
+    // Form elements
+    domCache.eventForm = document.getElementById('eventForm');
+    domCache.eventTitle = document.getElementById('eventTitle');
+    domCache.eventDescription = document.getElementById('eventDescription');
+    domCache.eventDate = document.getElementById('eventDate');
+    domCache.eventTime = document.getElementById('eventTime');
+    domCache.eventEndDate = document.getElementById('eventEndDate');
+    domCache.eventEndTime = document.getElementById('eventEndTime');
+    domCache.eventCategory = document.getElementById('eventCategory');
+}
+
 /**
  * Inizializza l'applicazione
  */
 function initApp() {
+    // Inizializza la cache DOM
+    initDomCache();
+    
     // Carica gli eventi salvati
     caricaEventi();
     
@@ -42,6 +85,12 @@ function initApp() {
         attachEventClickHandlers();
     }
     
+    // Pulisci eventuali timer esistenti
+    if (currentTimeIndicatorInterval) {
+        clearInterval(currentTimeIndicatorInterval);
+        currentTimeIndicatorInterval = null;
+    }
+    
     // Inizializza l'indicatore dell'ora corrente
     if (typeof updateCurrentTimeIndicator === 'function') {
         updateCurrentTimeIndicator();
@@ -54,7 +103,7 @@ function initApp() {
         setTimeout(() => {
             updateCurrentTimeIndicator();
             // Dopo il primo allineamento, aggiorna ogni minuto esatto
-            setInterval(updateCurrentTimeIndicator, 60000);
+            currentTimeIndicatorInterval = setInterval(updateCurrentTimeIndicator, 60000);
         }, millisecondsToNextMinute);
     }
 }
@@ -93,6 +142,12 @@ function initEventListeners() {
             document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             
+            // Prima di cambiare vista, pulisci i timer esistenti
+            if (currentTimeIndicatorInterval) {
+                clearInterval(currentTimeIndicatorInterval);
+                currentTimeIndicatorInterval = null;
+            }
+            
             vistaAttuale = btn.dataset.view;
             aggiornaVista();
             
@@ -103,7 +158,12 @@ function initEventListeners() {
             
             // Aggiorna l'indicatore dell'ora corrente
             if (typeof updateCurrentTimeIndicator === 'function') {
-                setTimeout(updateCurrentTimeIndicator, 300);
+                setTimeout(() => {
+                    updateCurrentTimeIndicator();
+                    
+                    // Imposta un nuovo intervallo per l'ora corrente
+                    currentTimeIndicatorInterval = setInterval(updateCurrentTimeIndicator, 60000);
+                }, 300);
             }
         });
     });

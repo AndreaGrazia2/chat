@@ -31,7 +31,7 @@ function renderizzaVistaMensile() {
     
     for (let i = 0; i < giornoSettimana; i++) {
         const giorno = giorniMesePrecedente - giornoSettimana + i + 1;
-        const data = new Date(annoPrecedente, mesePrecedente, giorno);
+        const data = createDate({anno: annoPrecedente, mese: mesePrecedente + 1, giorno: giorno});
         const eventiGiorno = getEventiGiorno(data);
         
         const mesePrecedenteFormattato = String(mesePrecedente + 1).padStart(2, '0');
@@ -48,11 +48,11 @@ function renderizzaVistaMensile() {
     }
     
     // Aggiungi i giorni del mese corrente
-    const oggi = new Date();
+    const oggi = createDate(new Date());
     
     for (let i = 1; i <= giorniTotali; i++) {
         const isOggi = oggi.getDate() === i && oggi.getMonth() === mese && oggi.getFullYear() === anno;
-        const data = new Date(anno, mese, i);
+        const data = createDate({anno: anno, mese: mese + 1, giorno: i});
         const eventiGiorno = getEventiGiorno(data);
         
         const meseFormattato = String(mese + 1).padStart(2, '0');
@@ -76,7 +76,7 @@ function renderizzaVistaMensile() {
     const annoSuccessivo = mese === 11 ? anno + 1 : anno;
     
     for (let i = 1; i <= giorniRimanenti; i++) {
-        const data = new Date(annoSuccessivo, meseSuccessivo, i);
+        const data = createDate({anno: annoSuccessivo, mese: meseSuccessivo + 1, giorno: i});
         const eventiGiorno = getEventiGiorno(data);
         
         const meseSuccessivoFormattato = String(meseSuccessivo + 1).padStart(2, '0');
@@ -110,7 +110,7 @@ function renderizzaVistaMensile() {
             e.stopPropagation();
             const dataStr = moreElement.closest('.calendar-day').dataset.date;
             const [anno, mese, giorno] = dataStr.split('-').map(Number);
-            const data = new Date(anno, mese - 1, giorno);
+            const data = createDate({anno, mese, giorno});
             console.log('Cliccato su più eventi:', data);
             apriModalListaEventi(data);
         });
@@ -121,7 +121,7 @@ function renderizzaVistaMensile() {
         dayElement.addEventListener('click', () => {
             const dataStr = dayElement.dataset.date;
             const [anno, mese, giorno] = dataStr.split('-').map(Number);
-            const data = new Date(anno, mese - 1, giorno);
+            const data = createDate({anno, mese, giorno});
             apriModalNuovoEvento(data);
         });
     });
@@ -166,7 +166,7 @@ function renderizzaEventiGiorno(eventi, maxEventi = 3) {
 // Funzione di supporto per la vista mensile
 function renderMonthView(date = new Date()) {
     // Assicurati che dataAttuale sia impostata correttamente
-    dataAttuale = date || dataAttuale;
+    dataAttuale = createDate(date) || dataAttuale;
     
     // Renderizza la vista
     renderizzaVistaMensile();

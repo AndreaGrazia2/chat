@@ -2,6 +2,37 @@
  * mobile.js - Gestione delle funzionalità specifiche per dispositivi mobili
  */
 
+// Handler functions defined outside to be able to remove them
+function handleMobilePrevClick() {
+    const prevBtn = document.getElementById('prevBtn');
+    if (prevBtn) prevBtn.click();
+    updateMobileCurrentDate();
+}
+
+function handleMobileNextClick() {
+    const nextBtn = document.getElementById('nextBtn');
+    if (nextBtn) nextBtn.click();
+    updateMobileCurrentDate();
+}
+
+function handleMobileTodayClick() {
+    const todayBtn = document.getElementById('todayBtn');
+    if (todayBtn) todayBtn.click();
+    updateMobileCurrentDate();
+}
+
+function handleMobileViewChange() {
+    const viewType = this.dataset.view;
+    
+    document.querySelectorAll('.view-btn').forEach(viewBtn => {
+        if (viewBtn.dataset.view === viewType) {
+            viewBtn.click();
+        }
+    });
+    
+    updateMobileViewSelector();
+}
+
 /**
  * Inizializza le funzionalità mobile
  */
@@ -65,6 +96,19 @@ function createMobileViewSelector() {
     // Rimuovi eventuali selettori esistenti
     const existingSelector = document.querySelector('.mobile-view-selector');
     if (existingSelector) {
+        // Rimuovi prima i listener
+        const prevBtn = existingSelector.querySelector('#mobilePrevBtn');
+        const nextBtn = existingSelector.querySelector('#mobileNextBtn');
+        const todayBtn = existingSelector.querySelector('#mobileTodayBtn');
+        
+        if (prevBtn) prevBtn.removeEventListener('click', handleMobilePrevClick);
+        if (nextBtn) nextBtn.removeEventListener('click', handleMobileNextClick);
+        if (todayBtn) todayBtn.removeEventListener('click', handleMobileTodayClick);
+        
+        existingSelector.querySelectorAll('.mobile-view-btn').forEach(btn => {
+            btn.removeEventListener('click', handleMobileViewChange);
+        });
+        
         existingSelector.remove();
     }
     
@@ -121,40 +165,13 @@ function createMobileViewSelector() {
     // Aggiungi il selettore al DOM
     document.querySelector('.app-container').appendChild(mobileViewSelector);
     
-    // Aggiungi gli event listener per i pulsanti di navigazione mobile
-    document.getElementById('mobilePrevBtn').addEventListener('click', () => {
-        const prevBtn = document.getElementById('prevBtn');
-        if (prevBtn) prevBtn.click();
-        updateMobileCurrentDate();
-    });
+    // Aggiungi gli event listener con le funzioni handler separate
+    document.getElementById('mobilePrevBtn').addEventListener('click', handleMobilePrevClick);
+    document.getElementById('mobileNextBtn').addEventListener('click', handleMobileNextClick);
+    document.getElementById('mobileTodayBtn').addEventListener('click', handleMobileTodayClick);
     
-    document.getElementById('mobileNextBtn').addEventListener('click', () => {
-        const nextBtn = document.getElementById('nextBtn');
-        if (nextBtn) nextBtn.click();
-        updateMobileCurrentDate();
-    });
-    
-    document.getElementById('mobileTodayBtn').addEventListener('click', () => {
-        const todayBtn = document.getElementById('todayBtn');
-        if (todayBtn) todayBtn.click();
-        updateMobileCurrentDate();
-    });
-    
-    // Aggiungi gli event listener per i pulsanti di vista
     document.querySelectorAll('.mobile-view-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            // Replace cambiaVista with the correct function
-            const viewType = btn.dataset.view;
-            
-            // Find all view buttons and update active state
-            document.querySelectorAll('.view-btn').forEach(viewBtn => {
-                if (viewBtn.dataset.view === viewType) {
-                    viewBtn.click(); // Click the corresponding desktop view button
-                }
-            });
-            
-            updateMobileViewSelector();
-        });
+        btn.addEventListener('click', handleMobileViewChange);
     });
 }
 

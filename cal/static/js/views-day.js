@@ -12,14 +12,14 @@ function posizionaEventiSovrapposti(eventiGiorno) {
     const eventi = JSON.parse(JSON.stringify(eventiGiorno));
     
     // Ordina gli eventi per ora di inizio
-    eventi.sort((a, b) => new Date(a.dataInizio) - new Date(b.dataInizio));
+    eventi.sort((a, b) => createDate(a.dataInizio) - createDate(b.dataInizio));
     
     // Traccia delle colonne occupate (fino a che ora)
     const colonne = [];
     
     eventi.forEach(evento => {
-        const dataInizio = new Date(evento.dataInizio);
-        const dataFine = new Date(evento.dataFine);
+        const dataInizio = createDate(evento.dataInizio);
+        const dataFine = createDate(evento.dataFine);
         
         // Trova la prima colonna disponibile
         let colonnaDisponibile = 0;
@@ -54,7 +54,7 @@ function renderizzaVistaGiornaliera() {
     if (!dayGrid) return;
     
     // Crea l'intestazione della griglia giornaliera
-    const isOggi = isStessoGiorno(dataAttuale, new Date());
+    const isOggi = isStessoGiorno(dataAttuale, createDate(new Date()));
     let headerHtml = `
         <div class="time-slot-header ${isOggi ? 'today' : ''}">
             <div>${['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'][getEuropeanWeekday(dataAttuale)]}</div>
@@ -70,7 +70,7 @@ function renderizzaVistaGiornaliera() {
     const eventiPerOra = Array(25).fill().map(() => []);
     
     eventiPosizionati.forEach(evento => {
-        const dataInizio = new Date(evento.dataInizio);
+        const dataInizio = createDate(evento.dataInizio);
         const oraInizio = dataInizio.getHours();
         
         // Aggiungi l'evento all'array dell'ora corrispondente
@@ -84,10 +84,10 @@ function renderizzaVistaGiornaliera() {
     
     // Crea le celle orarie per ogni ora
     for (let ora = 0; ora < 25; ora++) {
-        const dataOra = new Date(dataAttuale);
+        const dataOra = createDate(dataAttuale);
         dataOra.setHours(ora, 0, 0);
         
-        const isOraCorrente = new Date().getHours() === ora && isStessoGiorno(dataOra, new Date());
+        const isOraCorrente = createDate(new Date()).getHours() === ora && isStessoGiorno(dataOra, createDate(new Date()));
         
         // Ottieni gli eventi per questa ora
         const eventiOra = eventiPerOra[ora];
@@ -95,8 +95,8 @@ function renderizzaVistaGiornaliera() {
         // Crea l'HTML per gli eventi in questa ora
         let eventiHtml = '';
         eventiOra.forEach(evento => {
-            const dataInizio = new Date(evento.dataInizio);
-            const dataFine = new Date(evento.dataFine);
+            const dataInizio = createDate(evento.dataInizio);
+            const dataFine = createDate(evento.dataFine);
             
             // Aggiungi la classe new-event solo se l'evento è nuovo
             const newEventClass = evento.isNew ? 'new-event' : '';
@@ -129,7 +129,7 @@ function renderizzaVistaGiornaliera() {
     dayGrid.innerHTML = gridHtml;
     
     // Aggiungi l'indicatore dell'ora corrente
-    const oggi = new Date();
+    const oggi = createDate(new Date());
     if (isStessoGiorno(oggi, dataAttuale)) {
         const ora = oggi.getHours();
         const minuti = oggi.getMinutes();
@@ -154,7 +154,7 @@ function renderizzaVistaGiornaliera() {
             
             const ora = parseInt(slot.dataset.ora);
             
-            const data = new Date(dataAttuale);
+            const data = createDate(dataAttuale);
             data.setHours(ora, 0, 0);
             
             apriModalNuovoEvento(data);

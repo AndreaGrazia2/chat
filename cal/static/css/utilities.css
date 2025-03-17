@@ -117,23 +117,41 @@
 
 /* ===== CURRENT TIME INDICATOR ===== */
 .current-time-indicator {
-	position: absolute;
-	left: 0;
-	right: 0;
-	height: 2px;
-	background-color: #f44336;
-	z-index: 2;
+    position: absolute;
+    left: 0;
+    right: 0;
+    width: 100%;  /* Assicura che copra l'intera larghezza */
+    height: 2px;
+    background-color: #f44336;
+    z-index: 2;
+    pointer-events: none;
 }
 
 .current-time-indicator::before {
-	content: '';
-	position: absolute;
-	left: -5px;
-	top: -4px;
-	width: 10px;
-	height: 10px;
-	border-radius: 50%;
-	background-color: #f44336;
+    content: '';
+    position: absolute;
+    left: -5px;
+    top: -4px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #f44336;
+}
+
+/* Per la vista settimanale, nascondiamo il cerchio predefinito quando usiamo il marker personalizzato */
+.week-grid .current-time-indicator::before {
+    display: none;
+}
+
+/* Stilizzazione del marker personalizzato per la vista settimanale */
+.current-time-marker {
+    display: block;
+    position: absolute;
+    width: 10px !important;
+    height: 10px !important;
+    border-radius: 50%;
+    background-color: #f44336;
+    z-index: 3;
 }
 
 /* ===== NOTIFICHE ===== */
