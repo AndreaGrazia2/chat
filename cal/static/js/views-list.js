@@ -43,8 +43,11 @@ function renderizzaVistaLista() {
     
     // Aggiungi ogni evento alla lista
     eventiGiorno.forEach(evento => {
+        // Aggiungi la classe new-event solo se l'evento è nuovo
+        const newEventClass = evento.isNew ? 'new-event' : '';
+        
         html += `
-            <div class="list-event" data-id="${evento.id}">
+            <div class="list-event ${newEventClass}" data-id="${evento.id}">
                 <div class="list-event-category ${evento.categoria}"></div>
                 <div class="list-event-time">
                     ${formatTimeItalian(evento.dataInizio)} - ${formatTimeItalian(evento.dataFine)}

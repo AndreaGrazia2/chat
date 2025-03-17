@@ -47,7 +47,8 @@ function aggiungiEvento(evento) {
         dataInizio: dataInizio,
         dataFine: dataFine,
         categoria: evento.categoria || 'personal',
-        creato: new Date()
+        creato: new Date(),
+        isNew: true // Aggiungiamo questo flag per l'animazione
     };
     
     // Aggiungi l'evento all'array
@@ -58,6 +59,14 @@ function aggiungiEvento(evento) {
     
     // Aggiorna la vista del calendario
     aggiornaViste();
+    
+    // Rimuoviamo il flag isNew dopo un po' di tempo
+    setTimeout(() => {
+        const index = eventi.findIndex(e => e.id === id);
+        if (index !== -1) {
+            eventi[index].isNew = false;
+        }
+    }, 2000);
     
     return id;
 }

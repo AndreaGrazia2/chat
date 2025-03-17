@@ -136,8 +136,11 @@ function renderizzaEventiGiorno(eventi, maxEventi = 3) {
     
     // Crea l'HTML per ogni evento
     eventiDaMostrare.forEach(evento => {
+        // Aggiungi la classe new-event solo se l'evento è nuovo
+        const newEventClass = evento.isNew ? 'new-event' : '';
+        
         html += `
-            <div class="event ${evento.categoria}" data-id="${evento.id}">
+            <div class="event ${evento.categoria} ${newEventClass}" data-id="${evento.id}">
                 ${formatTimeItalian(evento.dataInizio)} - ${evento.titolo}
             </div>
         `;

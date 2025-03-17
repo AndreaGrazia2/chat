@@ -78,8 +78,11 @@ function renderizzaVistaSettimanale() {
                 const dataInizio = new Date(evento.dataInizio);
                 const dataFine = new Date(evento.dataFine);
                 
+                // Aggiungi la classe new-event solo se l'evento è nuovo
+                const newEventClass = evento.isNew ? 'new-event' : '';
+                
                 eventiHtml += `
-                    <div class="time-event ${evento.categoria}" data-id="${evento.id}">
+                    <div class="time-event ${evento.categoria} ${newEventClass}" data-id="${evento.id}">
                         <div class="time-event-title">${evento.titolo}</div>
                         <div class="time-event-time">${formatTimeItalian(dataInizio)} - ${formatTimeItalian(dataFine)}</div>
                     </div>

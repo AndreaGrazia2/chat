@@ -101,16 +101,16 @@
 	display: none;
 }
 
+.event.new-event {
+    animation: slideIn 0.2s ease-out;
+}
+
 .calendar-view.active {
 	display: block;
 	animation: fadeIn 0.3s ease-in-out;
 }
 
 /* ===== EVENTI ANIMAZIONI ===== */
-.event {
-	animation: slideIn 0.2s ease-out;
-}
-
 .event:active {
 	transform: scale(0.98);
 }
