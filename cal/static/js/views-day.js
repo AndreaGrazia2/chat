@@ -53,7 +53,11 @@ function renderizzaVistaGiornaliera() {
     const dayGrid = document.getElementById('dayGrid');
     if (!dayGrid) return;
     
-    const dataVisualizzata = dataSelezionata || createDate(new Date()) || dataAttuale;
+    if (!dataSelezionata || !isStessoGiorno(dataSelezionata, dataAttuale)) {
+        dataSelezionata = createDate(dataAttuale);
+    }
+    
+    const dataVisualizzata = dataSelezionata; // Usiamo sempre dataSelezionata qui
 
     // Crea l'intestazione della griglia giornaliera
     const isOggi = isStessoGiorno(dataVisualizzata, createDate(new Date()));

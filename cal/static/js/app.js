@@ -208,13 +208,12 @@ function initEventListeners() {
                     break;
                 case 'day':
                     dataAttuale.setDate(dataAttuale.getDate() - 1);
-                    // Aggiorna dataSelezionata SOLO in vista giornaliera
+                    
+                    // MODIFICATO: Aggiorna anche dataSelezionata per mantenerle sincronizzate
                     if (dataSelezionata) {
-                        // Crea una nuova data basata su dataSelezionata e decrementa di un giorno
-                        const nuovaDataSelezionata = createDate(dataSelezionata);
-                        nuovaDataSelezionata.setDate(nuovaDataSelezionata.getDate() - 1);
-                        dataSelezionata = nuovaDataSelezionata;
+                        dataSelezionata = createDate(dataAttuale);
                     }
+                    break;
                 case 'list':
                     dataAttuale.setDate(dataAttuale.getDate() - 1);
                     break;
@@ -239,12 +238,12 @@ function initEventListeners() {
                     break;
                 case 'day':
                     dataAttuale.setDate(dataAttuale.getDate() + 1);
+                    
+                    // MODIFICATO: Aggiorna anche dataSelezionata per mantenerle sincronizzate
                     if (dataSelezionata) {
-                        // Crea una nuova data basata su dataSelezionata e incrementa di un giorno
-                        const nuovaDataSelezionata = createDate(dataSelezionata);
-                        nuovaDataSelezionata.setDate(nuovaDataSelezionata.getDate() + 1);
-                        dataSelezionata = nuovaDataSelezionata;
+                        dataSelezionata = createDate(dataAttuale);
                     }
+                    break;
                 case 'list':
                     dataAttuale.setDate(dataAttuale.getDate() + 1);
                     break;
@@ -261,11 +260,10 @@ function initEventListeners() {
     if (todayBtn) {
         todayBtn.addEventListener('click', () => {
             dataAttuale = new Date();
-
-            if (vistaAttuale === 'day') {
-                dataSelezionata = createDate(dataAttuale);
-            }
-
+        
+            // MODIFICATO: Aggiorna dataSelezionata per tutte le viste, non solo per la vista giornaliera
+            dataSelezionata = createDate(dataAttuale);
+        
             aggiornaViste();
             
             // Dopo l'aggiornamento delle viste, collega i gestori agli eventi

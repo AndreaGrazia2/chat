@@ -49,6 +49,11 @@ function aggiornaVista() {
             renderizzaVistaSettimanale();
             break;
         case 'day':
+            // NUOVO: Se siamo nella vista giornaliera, assicuriamoci che dataSelezionata sia sincronizzata con dataAttuale
+            if (!dataSelezionata || !isStessoGiorno(dataSelezionata, dataAttuale)) {
+                dataSelezionata = createDate(dataAttuale);
+                console.log('Vista giornaliera: dataSelezionata sincronizzata con dataAttuale', dataSelezionata);
+            }
             renderizzaVistaGiornaliera();
             break;
         case 'list':
@@ -74,7 +79,6 @@ function aggiornaVista() {
         if (typeof initTimeIndicator === 'function') {
             setTimeout(initTimeIndicator, 300);
         }
-
     }, 300);
     
     // Aggiorna l'intestazione
@@ -243,6 +247,10 @@ function renderizzaMiniCalendario() {
  * @param {Date} data - Data iniziale per l'evento
  */
 function apriModalNuovoEvento(data) {
+    if (vistaAttuale === 'day') {
+        dataSelezionata = createDate(data);
+    }
+
     // Aggiorna il titolo del modal
     document.getElementById('modalTitle').textContent = 'Nuovo Evento';
     

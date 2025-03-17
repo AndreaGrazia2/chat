@@ -38,6 +38,10 @@ function aggiungiEvento(evento) {
     // Utilizza la funzione helper centralizzata per gestire le date
     let dataInizio = createDate(evento.dataInizio);
     let dataFine = createDate(evento.dataFine);
+
+    if (vistaAttuale === 'day') {
+        dataSelezionata = createDate(dataInizio);
+    }
     
     // Crea l'oggetto evento
     const nuovoEvento = {
@@ -80,7 +84,11 @@ function aggiungiEvento(evento) {
 function modificaEvento(eventoId, datiAggiornati) {
     // Trova l'indice dell'evento
     const indice = eventi.findIndex(e => e.id === eventoId);
-    
+
+    if (vistaAttuale === 'day' && datiAggiornati.dataInizio) {
+        dataSelezionata = createDate(datiAggiornati.dataInizio);
+    }
+
     // Se l'evento non esiste, restituisci null
     if (indice === -1) return null;
     
