@@ -59,67 +59,105 @@ function initDragAndDrop(viewName) {
             this.classList.remove('drag-over');
         });
         
-        // Rimuovi l'evidenziazione dopo il drop
-        target.addEventListener('drop', function(e) {
-            e.preventDefault();
-            this.classList.remove('drag-over');
-            
-            // Ottieni l'ID dell'evento trascinato
-            const eventId = e.dataTransfer.getData('text/plain');
-            console.log(`Evento ${eventId} rilasciato in:`, this);
-            
-            // Qui implementare la logica per spostare effettivamente l'evento
-            // Ad esempio, se nella vista giornaliera:
-            if (viewName === 'day') {
-                const ora = parseInt(this.dataset.ora);
-                const nuovaData = new Date(dataAttuale);
-                nuovaData.setHours(ora, 0, 0);
-                
-                // Aggiorna l'evento nel database
-                console.log(`Aggiornamento evento ${eventId} alla data:`, nuovaData);
-            }
-            
-            // Se nella vista settimanale:
-            if (viewName === 'week') {
-                const ora = parseInt(this.dataset.ora);
-                const giorno = parseInt(this.dataset.giorno);
-                
-                // Calcola la nuova data
-                const inizioSettimana = getPrimoGiornoSettimana(dataAttuale);
-                const nuovaData = new Date(inizioSettimana);
-                nuovaData.setDate(nuovaData.getDate() + giorno);
-                nuovaData.setHours(ora, 0, 0);
-                
-                // Aggiorna l'evento nel database
-                console.log(`Aggiornamento evento ${eventId} alla data:`, nuovaData);
-            }
-            
-            // Se nella vista mensile:
-            if (viewName === 'month') {
-                const dataStr = this.dataset.date;
-                const [anno, mese, giorno] = dataStr.split('-').map(Number);
-                
-                // Trova l'evento originale
-                const evento = eventi.find(e => e.id === eventId);
-                
-                if (evento) {
-                    // Mantieni l'ora originale, cambia solo la data
-                    const nuovaData = new Date(anno, mese - 1, giorno);
-                    nuovaData.setHours(
-                        evento.dataInizio.getHours(),
-                        evento.dataInizio.getMinutes()
-                    );
-                    
-                    // Aggiorna l'evento nel database
-                    console.log(`Aggiornamento evento ${eventId} alla data:`, nuovaData);
-                }
-            }
-            
-            // In una vera implementazione, qui chiameresti la funzione per aggiornare l'evento
-            // modificaEvento(eventId, { dataInizio: nuovaData });
-            // Poi rigenereresti la vista
-            // aggiornaViste();
-        });
+		// Nel gestore drop, aggiungiamo la logica per aggiornare effettivamente l'evento
+		target.addEventListener('drop', function(e) {
+			e.preventDefault();
+			this.classList.remove('drag-over');
+			
+			// Ottieni l'ID dell'evento trascinato
+			const eventId = e.dataTransfer.getData('text/plain');
+			console.log(`Evento ${eventId} rilasciato in:`, this);
+			
+			// Trova l'evento originale
+			const eventoOriginale = eventi.find(e => e.id === eventId);
+			if (!eventoOriginale) {
+				console.error('Evento non trovato:', eventId);
+				return;
+			}
+			
+			// Gestisci in base alla vista corrente
+			if (vistaAttuale === 'day') {
+				const ora = parseInt(this.dataset.ora);
+				const nuovaData = new Date(dataAttuale);
+				nuovaData.setHours(ora, 0, 0);
+				
+				// Calcola la durata dell'evento originale in minuti
+				const durataOriginale = (eventoOriginale.dataFine - eventoOriginale.dataInizio) / (1000 * 60);
+				
+				// Crea la nuova data di fine basata sulla durata originale
+				const nuovaDataFine = new Date(nuovaData.getTime() + durataOriginale * 60 * 1000);
+				
+				// Aggiorna l'evento nel database
+				console.log(`Aggiornamento evento ${eventId} alla data:`, nuovaData);
+				modificaEvento(eventId, {
+					dataInizio: nuovaData,
+					dataFine: nuovaDataFine
+				});
+			}
+			
+			// Se nella vista settimanale:
+			else if (vistaAttuale === 'week') {
+				const ora = parseInt(this.dataset.ora);
+				const giorno = parseInt(this.dataset.giorno);
+				
+				// Calcola la nuova data
+				const inizioSettimana = getPrimoGiornoSettimana(dataAttuale);
+				const nuovaData = new Date(inizioSettimana);
+				nuovaData.setDate(nuovaData.getDate() + giorno);
+				nuovaData.setHours(ora, 0, 0);
+				
+				// Calcola la durata dell'evento originale in minuti
+				const durataOriginale = (eventoOriginale.dataFine - eventoOriginale.dataInizio) / (1000 * 60);
+				
+				// Crea la nuova data di fine basata sulla durata originale
+				const nuovaDataFine = new Date(nuovaData.getTime() + durataOriginale * 60 * 1000);
+				
+				// Aggiorna l'evento nel database
+				console.log(`Aggiornamento evento ${eventId} alla data:`, nuovaData);
+				modificaEvento(eventId, {
+					dataInizio: nuovaData,
+					dataFine: nuovaDataFine
+				});
+			}
+			
+			// Se nella vista mensile:
+			else if (vistaAttuale === 'month') {
+				const dataStr = this.dataset.date;
+				const [anno, mese, giorno] = dataStr.split('-').map(Number);
+				
+				// Trova l'evento originale
+				const evento = eventi.find(e => e.id === eventId);
+				
+				if (evento) {
+					// Mantieni l'ora originale, cambia solo la data
+					const nuovaData = new Date(anno, mese - 1, giorno);
+					nuovaData.setHours(
+						evento.dataInizio.getHours(),
+						evento.dataInizio.getMinutes()
+					);
+					
+					// Calcola la durata dell'evento originale in minuti
+					const durataOriginale = (evento.dataFine - evento.dataInizio) / (1000 * 60);
+					
+					// Crea la nuova data di fine basata sulla durata originale
+					const nuovaDataFine = new Date(nuovaData.getTime() + durataOriginale * 60 * 1000);
+					
+					// Aggiorna l'evento nel database
+					console.log(`Aggiornamento evento ${eventId} alla data:`, nuovaData);
+					modificaEvento(eventId, {
+						dataInizio: nuovaData,
+						dataFine: nuovaDataFine
+					});
+				}
+			}
+			
+			// Aggiorna le viste
+			aggiornaViste();
+			
+			// Mostra una notifica di conferma
+			mostraNotifica('Evento spostato con successo', 'success');
+		});
+
     });
 }
 

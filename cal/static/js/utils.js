@@ -111,11 +111,23 @@ function isStessoGiorno(date1, date2) {
 }
 
 /**
- * Genera un ID univoco per gli eventi
+ * Genera un ID univoco per gli eventi, verificando che non sia già in uso
  * @returns {string} - ID univoco
  */
 function generateUniqueId() {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+    let id;
+    let isUnique = false;
+    
+    // Continua a generare ID finché non ne troviamo uno univoco
+    while (!isUnique) {
+        // Genera un ID combinando timestamp e numeri casuali
+        id = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+        
+        // Verifica che questo ID non sia già in uso
+        isUnique = eventi.every(evento => evento.id !== id);
+    }
+    
+    return id;
 }
 
 /**

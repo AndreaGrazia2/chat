@@ -34,8 +34,11 @@ function renderizzaVistaMensile() {
         const data = new Date(annoPrecedente, mesePrecedente, giorno);
         const eventiGiorno = getEventiGiorno(data);
         
+        const mesePrecedenteFormattato = String(mesePrecedente + 1).padStart(2, '0');
+        const giornoFormattato = String(giorno).padStart(2, '0');
+        
         html += `
-            <div class="calendar-day other-month" data-date="${annoPrecedente}-${mesePrecedente + 1}-${giorno}">
+            <div class="calendar-day other-month" data-date="${annoPrecedente}-${mesePrecedenteFormattato}-${giornoFormattato}">
                 <div class="day-number">${giorno}</div>
                 <div class="day-events">
                     ${renderizzaEventiGiorno(eventiGiorno, 2)}
@@ -52,8 +55,11 @@ function renderizzaVistaMensile() {
         const data = new Date(anno, mese, i);
         const eventiGiorno = getEventiGiorno(data);
         
+        const meseFormattato = String(mese + 1).padStart(2, '0');
+        const giornoFormattato = String(i).padStart(2, '0');
+        
         html += `
-            <div class="calendar-day ${isOggi ? 'today' : ''}" data-date="${anno}-${mese + 1}-${i}">
+            <div class="calendar-day ${isOggi ? 'today' : ''}" data-date="${anno}-${meseFormattato}-${giornoFormattato}">
                 <div class="day-number">${i}</div>
                 <div class="day-events">
                     ${renderizzaEventiGiorno(eventiGiorno, 3)}
@@ -73,8 +79,11 @@ function renderizzaVistaMensile() {
         const data = new Date(annoSuccessivo, meseSuccessivo, i);
         const eventiGiorno = getEventiGiorno(data);
         
+        const meseSuccessivoFormattato = String(meseSuccessivo + 1).padStart(2, '0');
+        const giornoFormattato = String(i).padStart(2, '0');
+        
         html += `
-            <div class="calendar-day other-month" data-date="${annoSuccessivo}-${meseSuccessivo + 1}-${i}">
+            <div class="calendar-day other-month" data-date="${annoSuccessivo}-${meseSuccessivoFormattato}-${giornoFormattato}">
                 <div class="day-number">${i}</div>
                 <div class="day-events">
                     ${renderizzaEventiGiorno(eventiGiorno, 2)}

@@ -248,3 +248,97 @@ body {
 	visibility: visible;
 	opacity: 1;
 }
+
+/* Miglioramento tema scuro per input e form elements */
+.dark-theme input[type="text"],
+.dark-theme input[type="date"],
+.dark-theme input[type="time"],
+.dark-theme select,
+.dark-theme textarea {
+    background-color: var(--bg-dark);
+    color: var(--text-dark);
+    border-color: var(--border-dark);
+}
+
+/* Impostare lo stile focus per migliorare l'accessibilità */
+.dark-theme input:focus,
+.dark-theme select:focus,
+.dark-theme textarea:focus {
+    border-color: var(--primary);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(29, 116, 245, 0.25);
+}
+
+/* Migliorare visualizzazione dello sfondo del modal in tema scuro */
+.dark-theme .modal-content {
+    background-color: var(--bg-dark);
+    border-color: var(--border-dark);
+}
+
+/* Assicurarsi che i bottoni abbiano il colore del testo corretto nel tema scuro */
+.dark-theme .btn {
+    color: var(--text-dark);
+}
+
+.dark-theme .btn-primary {
+    color: white;
+}
+
+/* Migliorare lo stile hover per elementi interattivi nel tema scuro */
+.dark-theme .btn:hover:not(.btn-primary) {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark-theme .calendar-day:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Migliorare visibilità degli eventi nel tema scuro */
+.dark-theme .event {
+    border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+/* Migliorare visibilità del bordo del calendario in tema scuro */
+.dark-theme .calendar-grid-header,
+.dark-theme .calendar-grid {
+    border-color: var(--border-dark);
+}
+
+.dark-theme .time-slot,
+.dark-theme .calendar-day {
+    border-color: var(--border-dark);
+}
+
+/* Assicurarsi che le etichette delle ore siano visibili nel tema scuro */
+.dark-theme .time-label {
+    color: var(--text-dark);
+}
+
+/* Migliorare la visualizzazione dei popup e tooltip in tema scuro */
+.dark-theme .tooltip:hover::after {
+    background-color: var(--text-dark);
+    color: var(--bg-dark);
+}
+
+/* Assicurare che il mini-calendario abbia il giusto contrasto in tema scuro */
+.dark-theme .mini-calendar-day:not(.today):not(.selected):hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Migliorare notifiche in tema scuro */
+.dark-theme .notification {
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+
+/* Migliorare il contrasto della navigazione mobile in tema scuro */
+.dark-theme .mobile-view-selector {
+    background-color: var(--bg-dark);
+    border-top-color: var(--border-dark);
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
+}
+
+/* Correggere il colore di sfondo del loader in tema scuro */
+.dark-theme .loader-spinner {
+    border-color: rgba(29, 116, 245, 0.2);
+    border-left-color: var(--primary);
+}

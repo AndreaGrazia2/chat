@@ -16,6 +16,46 @@ function initMobile() {
     
     // Aggiungi un listener per il ridimensionamento della finestra
     window.addEventListener('resize', updateMobileViewSelector);
+    
+    // Adatta il mini calendario per dispositivi mobili
+    adjustMiniCalendarForMobile();
+    
+    // Aggiungi un listener per ridimensionamento per il mini calendario
+    window.addEventListener('resize', adjustMiniCalendarForMobile);
+}
+
+/**
+ * Adatta il mini calendario per dispositivi mobili
+ */
+function adjustMiniCalendarForMobile() {
+    // Verifica se siamo su dispositivo mobile
+    if (window.innerWidth <= 768) {
+        // Aggiungi classe specifica per dispositivi mobili al mini calendario
+        const miniCalendar = document.getElementById('miniCalendar');
+        if (miniCalendar) {
+            miniCalendar.classList.add('mobile-optimized');
+            
+            // Assicura che tutti i giorni abbiano una dimensione touch adeguata
+            const calendarDays = miniCalendar.querySelectorAll('.mini-calendar-day');
+            calendarDays.forEach(day => {
+                day.style.minWidth = '28px';
+                day.style.minHeight = '28px';
+            });
+        }
+    } else {
+        // Rimuovi la classe se siamo su desktop
+        const miniCalendar = document.getElementById('miniCalendar');
+        if (miniCalendar) {
+            miniCalendar.classList.remove('mobile-optimized');
+            
+            // Reimposta le dimensioni
+            const calendarDays = miniCalendar.querySelectorAll('.mini-calendar-day');
+            calendarDays.forEach(day => {
+                day.style.minWidth = '';
+                day.style.minHeight = '';
+            });
+        }
+    }
 }
 
 /**

@@ -45,8 +45,17 @@ function initApp() {
     // Inizializza l'indicatore dell'ora corrente
     if (typeof updateCurrentTimeIndicator === 'function') {
         updateCurrentTimeIndicator();
-        // Aggiorna l'indicatore ogni minuto
-        setInterval(updateCurrentTimeIndicator, 60000);
+        
+        // Calcola i millisecondi rimanenti fino al prossimo minuto
+        const now = new Date();
+        const millisecondsToNextMinute = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
+        
+        // Imposta un timeout per allinearsi con il prossimo minuto esatto
+        setTimeout(() => {
+            updateCurrentTimeIndicator();
+            // Dopo il primo allineamento, aggiorna ogni minuto esatto
+            setInterval(updateCurrentTimeIndicator, 60000);
+        }, millisecondsToNextMinute);
     }
 }
 

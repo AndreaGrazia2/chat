@@ -191,6 +191,22 @@
 	    color: var(--primary);
 	    font-weight: 500;
 	}
+	
+	/* Miglioramento per il mini calendario nella sidebar */
+    .mini-calendar {
+        max-width: 250px;
+        margin: 0 auto 20px auto;
+    }
+    
+    .mini-calendar-grid {
+        gap: 4px;
+    }
+    
+    .mini-calendar-day {
+        width: 32px;
+        height: 32px;
+        font-size: 13px;
+    }
 }
 
 /* ===== SMARTPHONE (max-width: 768px) ===== */
@@ -271,10 +287,25 @@
 		margin-bottom: 12px;
 	}
 
-	/* Mini calendario */
-	.mini-calendar-day {
-		font-size: 10px;
-	}
+	/* Mini calendario ottimizzato per smartphone */
+    .mini-calendar {
+        max-width: 100%;
+        margin-bottom: 15px;
+    }
+    
+    .mini-calendar-grid {
+        gap: 2px;
+    }
+    
+    .mini-calendar-day {
+        width: 28px;
+        height: 28px;
+        font-size: 11px;
+    }
+    
+    .mini-calendar-weekday {
+        font-size: 10px;
+    }
 
 	/* Vista lista */
 	.list-event {
@@ -345,4 +376,35 @@
 		padding: 6px 8px;
 		font-size: 12px;
 	}
+	
+	/* Mini calendario ulteriormente ottimizzato per smartphone piccoli */
+    .mini-calendar-day {
+        width: 24px;
+        height: 24px;
+        font-size: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    /* Migliorare la visualizzazione della sidebar su schermi piccoli */
+    .sidebar {
+        width: 260px;
+    }
+    
+    /* Assicurarsi che il touch funzioni correttamente sul mini calendario */
+    .mini-calendar-day {
+        padding: 0;
+        touch-action: manipulation; /* Migliora interazione touch */
+    }
+    
+    /* Adattamento migliore per le etichette di categoria */
+    .category-item {
+        gap: 6px;
+        padding: 6px 0;
+    }
+    
+    .category-name {
+        font-size: 13px;
+    }
 }

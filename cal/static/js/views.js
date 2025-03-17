@@ -76,6 +76,28 @@ function aggiornaVista() {
 }
 
 /**
+ * Valida le date di un evento
+ * @param {Date} dataInizio - Data di inizio dell'evento
+ * @param {Date} dataFine - Data di fine dell'evento
+ * @returns {boolean} - True se le date sono valide, altrimenti false
+ */
+function validaDateEvento(dataInizio, dataFine) {
+    // Verifica che entrambe le date siano valide
+    if (isNaN(dataInizio.getTime()) || isNaN(dataFine.getTime())) {
+        mostraNotifica('Date non valide. Controllare il formato.', 'warning');
+        return false;
+    }
+    
+    // Verifica che la data di fine non sia precedente alla data di inizio
+    if (dataFine <= dataInizio) {
+        mostraNotifica('La data di fine deve essere successiva alla data di inizio', 'warning');
+        return false;
+    }
+    
+    return true;
+}
+
+/**
  * Aggiorna l'intestazione con la data corrente
  */
 function aggiornaIntestazione() {
@@ -259,6 +281,7 @@ function apriModalNuovoEvento(data) {
     
     // Aggiorna l'event listener del pulsante salva
     const saveButton = document.getElementById('saveEvent');
+    // Nel saveButton.onclick della funzione apriModalNuovoEvento 
     saveButton.onclick = () => {
         // Raccogli i dati dal form
         const titolo = document.getElementById('eventTitle').value;
@@ -287,8 +310,14 @@ function apriModalNuovoEvento(data) {
         const [annoFine, meseFine, giornoFine] = dataFine.split('-').map(Number);
         const [oreFine, minutiFine] = oraFine.split(':').map(Number);
         
-        const dataInizio = new Date(annoInizio, meseInizio - 1, giornoInizio, oreInizio, minutiInizio);
-        const dataFinale = new Date(annoFine, meseFine - 1, giornoFine, oreFine, minutiFine);
+        // Crea oggetti Date locali senza ambiguità di timezone
+        const dataInizio = new Date(annoInizio, meseInizio - 1, giornoInizio, oreInizio, minutiInizio, 0, 0);
+        const dataFinale = new Date(annoFine, meseFine - 1, giornoFine, oreFine, minutiFine, 0, 0);
+        
+        // Validazione delle date
+        if (!validaDateEvento(dataInizio, dataFinale)) {
+            return; // Esci se la validazione fallisce
+        }
         
         // Crea l'evento
         aggiungiEvento({
@@ -424,6 +453,7 @@ function apriModalEvento(id) {
     
     // Aggiorna l'event listener del pulsante salva
     const saveButton = document.getElementById('saveEvent');
+    // Nel saveButton.onclick della funzione apriModalEvento
     saveButton.onclick = () => {
         // Raccogli i dati dal form
         const titolo = document.getElementById('eventTitle').value;
@@ -452,8 +482,14 @@ function apriModalEvento(id) {
         const [annoFine, meseFine, giornoFine] = dataFine.split('-').map(Number);
         const [oreFine, minutiFine] = oraFine.split(':').map(Number);
         
-        const dataInizio = new Date(annoInizio, meseInizio - 1, giornoInizio, oreInizio, minutiInizio);
-        const dataFinale = new Date(annoFine, meseFine - 1, giornoFine, oreFine, minutiFine);
+        // Crea oggetti Date locali senza ambiguità di timezone
+        const dataInizio = new Date(annoInizio, meseInizio - 1, giornoInizio, oreInizio, minutiInizio, 0, 0);
+        const dataFinale = new Date(annoFine, meseFine - 1, giornoFine, oreFine, minutiFine, 0, 0);
+        
+        // Validazione delle date
+        if (!validaDateEvento(dataInizio, dataFinale)) {
+            return; // Esci se la validazione fallisce
+        }
         
         // Modifica l'evento
         modificaEvento(id, {
