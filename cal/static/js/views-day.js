@@ -3,6 +3,50 @@
  */
 
 /**
+ * Posiziona gli eventi sovrapposti nella vista giornaliera
+ * @param {Array} eventiGiorno - Eventi del giorno
+ * @returns {Array} - Eventi con informazioni di posizionamento
+ */
+function posizionaEventiSovrapposti(eventiGiorno) {
+    // Clona gli eventi per non modificare gli originali
+    const eventi = JSON.parse(JSON.stringify(eventiGiorno));
+    
+    // Ordina gli eventi per ora di inizio
+    eventi.sort((a, b) => new Date(a.dataInizio) - new Date(b.dataInizio));
+    
+    // Traccia delle colonne occupate (fino a che ora)
+    const colonne = [];
+    
+    eventi.forEach(evento => {
+        const dataInizio = new Date(evento.dataInizio);
+        const dataFine = new Date(evento.dataFine);
+        
+        // Trova la prima colonna disponibile
+        let colonnaDisponibile = 0;
+        while (colonne[colonnaDisponibile] && dataInizio < colonne[colonnaDisponibile]) {
+            colonnaDisponibile++;
+        }
+        
+        // Assegna la colonna all'evento
+        evento.colonna = colonnaDisponibile;
+        evento.totalColonne = 1;
+        
+        // Aggiorna lo spazio occupato
+        colonne[colonnaDisponibile] = dataFine;
+    });
+    
+    // Calcola il numero totale di colonne necessarie
+    const maxColonne = Math.max(...eventi.map(e => e.colonna), 0) + 1;
+    
+    // Aggiorna il totale delle colonne per ogni evento
+    eventi.forEach(evento => {
+        evento.totalColonne = maxColonne;
+    });
+    
+    return eventi;
+}
+
+/**
  * Renderizza la vista giornaliera
  */
 function renderizzaVistaGiornaliera() {
@@ -13,18 +57,19 @@ function renderizzaVistaGiornaliera() {
     const isOggi = isStessoGiorno(dataAttuale, new Date());
     let headerHtml = `
         <div class="time-slot-header ${isOggi ? 'today' : ''}">
-            <div>${['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'][dataAttuale.getDay() === 0 ? 6 : dataAttuale.getDay() - 1]}</div>
+            <div>${['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'][getEuropeanWeekday(dataAttuale)]}</div>
             <div>${dataAttuale.getDate()}</div>
         </div>
     `;
     
-    // Ottieni tutti gli eventi del giorno
+    // Ottieni tutti gli eventi del giorno e posizionali
     const eventiGiorno = getEventiGiorno(dataAttuale);
+    const eventiPosizionati = posizionaEventiSovrapposti(eventiGiorno);
     
     // Organizza gli eventi per ora
     const eventiPerOra = Array(25).fill().map(() => []);
     
-    eventiGiorno.forEach(evento => {
+    eventiPosizionati.forEach(evento => {
         const dataInizio = new Date(evento.dataInizio);
         const oraInizio = dataInizio.getHours();
         
@@ -56,8 +101,15 @@ function renderizzaVistaGiornaliera() {
             // Aggiungi la classe new-event solo se l'evento è nuovo
             const newEventClass = evento.isNew ? 'new-event' : '';
             
+            // Calcola la larghezza in base alla colonna e al totale di colonne
+            const larghezza = 100 / evento.totalColonne;
+            const margineSinistro = (larghezza * evento.colonna);
+            const larghezzaEvento = larghezza;
+            
             eventiHtml += `
-                <div class="time-event ${evento.categoria} ${newEventClass}" data-id="${evento.id}">
+                <div class="time-event ${evento.categoria} ${newEventClass}" 
+                     data-id="${evento.id}" 
+                     style="left: ${margineSinistro}%; width: ${larghezzaEvento}%;">
                     <div class="time-event-title">${evento.titolo}</div>
                     <div class="time-event-time">${formatTimeItalian(dataInizio)} - ${formatTimeItalian(dataFine)}</div>
                     <div class="time-event-description">${evento.descrizione || ''}</div>

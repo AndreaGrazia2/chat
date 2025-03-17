@@ -191,3 +191,27 @@ function addHour(date, hours) {
     newDate.setHours(newDate.getHours() + hours);
     return newDate;
 }
+
+/**
+ * Crea una data locale senza problemi di fuso orario
+ * @param {number} year - Anno
+ * @param {number} month - Mese (1-12)
+ * @param {number} day - Giorno
+ * @param {number} hours - Ore (default 0)
+ * @param {number} minutes - Minuti (default 0)
+ * @returns {Date} - Data locale
+ */
+function createLocalDate(year, month, day, hours = 0, minutes = 0) {
+    // Mese in JavaScript è 0-based (0 = gennaio, 11 = dicembre)
+    return new Date(year, month - 1, day, hours, minutes, 0, 0);
+}
+
+/**
+ * Converte l'indice del giorno della settimana in formato europeo (0 = Lunedì, 6 = Domenica)
+ * @param {Date} date - Data da cui estrarre il giorno della settimana
+ * @returns {number} - Indice del giorno in formato europeo
+ */
+function getEuropeanWeekday(date) {
+    // Converti da 0-6 (domenica-sabato) a 0-6 (lunedì-domenica)
+    return date.getDay() === 0 ? 6 : date.getDay() - 1;
+}
