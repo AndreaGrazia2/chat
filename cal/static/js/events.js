@@ -290,18 +290,15 @@ function initializeEventHandlers() {
 function attachEventClickHandlers() {
     console.log('Attaching event click handlers');
     
+    // Rimuovi prima eventuali listener esistenti
+    removeEventClickHandlers();
+    
     // Seleziona tutti gli elementi evento in tutte le viste
     const eventElements = document.querySelectorAll('.event, .time-event, .list-event');
     
     console.log('Found ' + eventElements.length + ' event elements');
     
     eventElements.forEach(function(eventElement) {
-        // Verifica se l'elemento ha già un gestore di eventi
-        if (eventElement.getAttribute('data-has-click-handler') === 'true') {
-            console.log('Event already has click handler, skipping:', eventElement);
-            return; // Salta questo elemento
-        }
-        
         console.log('Attaching click handler to:', eventElement);
         
         // Aggiungi il nuovo listener
@@ -309,6 +306,16 @@ function attachEventClickHandlers() {
         
         // Aggiungi un attributo per debug
         eventElement.setAttribute('data-has-click-handler', 'true');
+    });
+}
+
+// Funzione per rimuovere i gestori di click dagli eventi
+function removeEventClickHandlers() {
+    const eventElements = document.querySelectorAll('.event[data-has-click-handler="true"], .time-event[data-has-click-handler="true"], .list-event[data-has-click-handler="true"]');
+    
+    eventElements.forEach(function(eventElement) {
+        eventElement.removeEventListener('click', handleEventClick);
+        eventElement.removeAttribute('data-has-click-handler');
     });
 }
 
@@ -397,38 +404,42 @@ function updateCurrentTimeIndicator() {
                          50; // +50 per l'header
     
     // Crea l'indicatore per la vista giornaliera
-    const dayGrid = document.querySelector('.day-grid');
-    if (dayGrid && isStessoGiorno(dataAttuale, now)) {
-        const indicator = document.createElement('div');
-        indicator.className = 'current-time-indicator';
-        indicator.style.top = `${topPosition}px`;
-        dayGrid.appendChild(indicator);
-        console.log('Added time indicator to day view at position:', topPosition);
-    }
-    
-    // Crea l'indicatore per la vista settimanale
-    const weekGrid = document.querySelector('.week-grid');
-    if (weekGrid) {
-        // Verifica se il giorno corrente è nella settimana visualizzata
-        const inizioSettimana = getPrimoGiornoSettimana(dataAttuale);
-        const fineSettimana = new Date(inizioSettimana);
-        fineSettimana.setDate(fineSettimana.getDate() + 6);
-        
-        if (now >= inizioSettimana && now <= fineSettimana) {
+    if (vistaAttuale === 'day') {
+        const dayGrid = document.querySelector('.day-grid');
+        if (dayGrid && isStessoGiorno(dataAttuale, now)) {
             const indicator = document.createElement('div');
             indicator.className = 'current-time-indicator';
             indicator.style.top = `${topPosition}px`;
+            dayGrid.appendChild(indicator);
+            console.log('Added time indicator to day view at position:', topPosition);
+        }
+    }
+    
+    // Crea l'indicatore per la vista settimanale
+    if (vistaAttuale === 'week') {
+        const weekGrid = document.querySelector('.week-grid');
+        if (weekGrid) {
+            // Verifica se il giorno corrente è nella settimana visualizzata
+            const inizioSettimana = getPrimoGiornoSettimana(dataAttuale);
+            const fineSettimana = new Date(inizioSettimana);
+            fineSettimana.setDate(fineSettimana.getDate() + 6);
             
-            // In vista settimanale, posiziona l'indicatore nel giorno corretto
-            const giornoSettimanaOggi = now.getDay() === 0 ? 6 : now.getDay() - 1; // Formato europeo (0 = Lunedì)
-            const colonna = giornoSettimanaOggi + 1; // +1 perché la prima colonna è per le etichette delle ore
-            
-            // Imposta la posizione orizzontale
-            indicator.style.left = `${colonna * (100 / 7)}%`;
-            indicator.style.width = `${100 / 7}%`;
-            
-            weekGrid.appendChild(indicator);
-            console.log('Added time indicator to week view at position:', topPosition);
+            if (now >= inizioSettimana && now <= fineSettimana) {
+                const indicator = document.createElement('div');
+                indicator.className = 'current-time-indicator';
+                indicator.style.top = `${topPosition}px`;
+                
+                // In vista settimanale, posiziona l'indicatore nel giorno corretto
+                const giornoSettimanaOggi = now.getDay() === 0 ? 6 : now.getDay() - 1; // Formato europeo (0 = Lunedì)
+                const colonna = giornoSettimanaOggi + 1; // +1 perché la prima colonna è per le etichette delle ore
+                
+                // Imposta la posizione orizzontale
+                indicator.style.left = `${colonna * (100 / 7)}%`;
+                indicator.style.width = `${100 / 7}%`;
+                
+                weekGrid.appendChild(indicator);
+                console.log('Added time indicator to week view at position:', topPosition);
+            }
         }
     }
 }
