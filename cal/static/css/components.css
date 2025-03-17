@@ -246,17 +246,17 @@
 .day-number {
 	font-weight: 500;
 	margin-bottom: 8px;
-}
-
-.today .day-number {
-	background-color: var(--primary);
-	color: white;
-	width: 24px;
+    width: 24px;
 	height: 24px;
 	border-radius: 50%;
 	display: flex;
 	align-items: center;
 	justify-content: center;
+}
+
+.today .day-number {
+	background-color: var(--primary);
+	color: white;
 }
 
 /* ===== EVENTI ===== */
@@ -296,13 +296,18 @@
 
 .more-events {
     font-size: 12px;
-    color: var(--primary);
+    color: white;
     cursor: pointer;
-    padding: 2px 0;
+    padding: 2px 4px;
+    background-color: var(--primary);
+    border-radius: 4px;
+    text-align: center;
+    transition: background-color 0.2s;
 }
 
 .more-events:hover {
-    text-decoration: underline;
+    background-color: #1a68d9;
+    text-decoration: none;
 }
 
 /* ===== VISTA SETTIMANALE E GIORNALIERA ===== */
@@ -369,6 +374,27 @@
     border-bottom: 1px solid var(--border-color);
     border-right: 1px solid var(--border-color);
     position: relative;
+}
+/* Add this style for more events in week view */
+.time-slot .more-events {
+    position: absolute;
+    bottom: 2px;
+    left: 4px;
+    right: 4px;
+    font-size: 12px;
+    color: white;
+    cursor: pointer;
+    padding: 2px 4px;
+    background-color: var(--primary);
+    border-radius: 4px;
+    text-align: center;
+    z-index: 2; /* Higher than time-event */
+    transition: background-color 0.2s;
+}
+
+.time-slot .more-events:hover {
+    background-color: #1a68d9; /* Same hover color as other blue buttons */
+    text-decoration: none; /* This removes the underline */
 }
 
 .time-event {

@@ -74,24 +74,36 @@ function renderizzaVistaSettimanale() {
             
             // Crea l'HTML per gli eventi in questa cella
             let eventiHtml = '';
-            eventiCella.forEach(evento => {
-                const dataInizio = createDate(evento.dataInizio);
-                const dataFine = createDate(evento.dataFine);
+            
+            // Mostra solo il primo evento e un indicatore se ce ne sono altri
+            if (eventiCella.length > 0) {
+                const primoEvento = eventiCella[0];
+                const dataInizio = createDate(primoEvento.dataInizio);
+                const dataFine = createDate(primoEvento.dataFine);
                 
                 // Aggiungi la classe new-event solo se l'evento è nuovo
-                const newEventClass = evento.isNew ? 'new-event' : '';
+                const newEventClass = primoEvento.isNew ? 'new-event' : '';
                 
                 eventiHtml += `
-                    <div class="time-event ${evento.categoria} ${newEventClass}" data-id="${evento.id}">
-                        <div class="time-event-title">${evento.titolo}</div>
+                    <div class="time-event ${primoEvento.categoria} ${newEventClass}" data-id="${primoEvento.id}">
+                        <div class="time-event-title">${primoEvento.titolo}</div>
                         <div class="time-event-time">${formatTimeItalian(dataInizio)} - ${formatTimeItalian(dataFine)}</div>
                     </div>
                 `;
-            });
+                
+                // Aggiungi un indicatore se ci sono più eventi
+                if (eventiCella.length > 1) {
+                    eventiHtml += `
+                        <div class="more-events" data-count="${eventiCella.length - 1}">
+                            +${eventiCella.length - 1} altri
+                        </div>
+                    `;
+                }
+            }
             
             // Crea la cella con gli eventi
             gridHtml += `
-                <div class="time-slot ${isOraCorrente ? 'current-time' : ''}" data-ora="${ora}" data-giorno="${giorno}">
+                <div class="time-slot ${isOraCorrente ? 'current-time' : ''}" data-ora="${ora}" data-giorno="${giorno}" data-date="${dataOra.toISOString()}">
                     ${eventiHtml}
                 </div>
             `;
@@ -184,11 +196,27 @@ function renderizzaVistaSettimanale() {
             apriModalEvento(id);
         });
     });
-    
+
+    // Aggiungi gli event listener agli indicatori "più eventi"
+    weekGrid.querySelectorAll('.more-events').forEach(indicator => {
+        indicator.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const slot = indicator.closest('.time-slot');
+            const dataISOString = slot.dataset.date;
+            
+            // Ottieni la data per questo slot
+            const data = new Date(dataISOString);
+            
+            // Usa la funzione esistente apriModalListaEventi
+            apriModalListaEventi(data);
+        });
+    });
+
     // Inizializza il drag and drop
     if (typeof enableDragAndDrop === 'function') {
         setTimeout(enableDragAndDrop, 100);
     }
+    
 }
 
 // Funzione di supporto per la vista settimanale
