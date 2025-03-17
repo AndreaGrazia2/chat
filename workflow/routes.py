@@ -29,3 +29,23 @@ def execute_workflow(workflow_id):
     """API per eseguire un workflow specifico"""
     # Implementazione futura: eseguire il workflow
     return jsonify({"success": True, "message": "Workflow eseguito con successo"})
+
+@workflow_bp.route('/api/workflows', methods=['POST'])
+def create_workflow():
+    """API per creare un nuovo workflow"""
+    workflow_data = request.json
+    # Implementazione futura: salvare il workflow in un database
+    return jsonify({"success": True, "message": "Workflow creato con successo"})
+
+@workflow_bp.route('/api/workflows/<workflow_id>', methods=['PUT'])
+def update_workflow(workflow_id):
+    """API per aggiornare un workflow esistente"""
+    workflow_data = request.json
+    # Implementazione futura: aggiornare il workflow nel database
+    return jsonify({"success": True, "message": "Workflow aggiornato con successo"})
+
+@workflow_bp.route('/api/workflows/<workflow_id>', methods=['DELETE'])
+def delete_workflow(workflow_id):
+    """API per eliminare un workflow"""
+    # Implementazione futura: eliminare il workflow dal database
+    return jsonify({"success": True, "message": "Workflow eliminato con successo"})
