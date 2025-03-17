@@ -53,17 +53,19 @@ function renderizzaVistaGiornaliera() {
     const dayGrid = document.getElementById('dayGrid');
     if (!dayGrid) return;
     
+    const dataVisualizzata = dataSelezionata || createDate(new Date()) || dataAttuale;
+
     // Crea l'intestazione della griglia giornaliera
-    const isOggi = isStessoGiorno(dataAttuale, createDate(new Date()));
+    const isOggi = isStessoGiorno(dataVisualizzata, createDate(new Date()));
     let headerHtml = `
         <div class="time-slot-header ${isOggi ? 'today' : ''}">
-            <div>${['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'][getEuropeanWeekday(dataAttuale)]}</div>
-            <div>${dataAttuale.getDate()}</div>
+            <div>${['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'][getEuropeanWeekday(dataVisualizzata)]}</div>
+            <div>${dataVisualizzata.getDate()}</div>
         </div>
     `;
     
     // Ottieni tutti gli eventi del giorno e posizionali
-    const eventiGiorno = getEventiGiorno(dataAttuale);
+    const eventiGiorno = getEventiGiorno(dataVisualizzata);
     const eventiPosizionati = posizionaEventiSovrapposti(eventiGiorno);
     
     // Organizza gli eventi per ora
@@ -84,7 +86,7 @@ function renderizzaVistaGiornaliera() {
     
     // Crea le celle orarie per ogni ora
     for (let ora = 0; ora < 25; ora++) {
-        const dataOra = createDate(dataAttuale);
+        const dataOra = createDate(dataVisualizzata);
         dataOra.setHours(ora, 0, 0);
         
         const isOraCorrente = createDate(new Date()).getHours() === ora && isStessoGiorno(dataOra, createDate(new Date()));
@@ -130,7 +132,7 @@ function renderizzaVistaGiornaliera() {
     
     // Aggiungi l'indicatore dell'ora corrente
     const oggi = createDate(new Date());
-    if (isStessoGiorno(oggi, dataAttuale)) {
+    if (isStessoGiorno(oggi, dataVisualizzata)) {
         const ora = oggi.getHours();
         const minuti = oggi.getMinutes();
         
@@ -154,7 +156,7 @@ function renderizzaVistaGiornaliera() {
             
             const ora = parseInt(slot.dataset.ora);
             
-            const data = createDate(dataAttuale);
+            const data = createDate(dataVisualizzata);
             data.setHours(ora, 0, 0);
             
             apriModalNuovoEvento(data);

@@ -70,6 +70,20 @@ def index():
     """Reindirizza alla pagina principale della chat"""
     return redirect('/chat/')
 
+# Add this after your Flask app initialization
+@app.errorhandler(404)
+def page_not_found(e):
+    # Get the requested URL
+    requested_url = request.url
+    
+    # Log the 404 error with just the file path and referrer
+    print(f"404 Not Found: {requested_url}")
+    if request.referrer:
+        print(f"Referrer: {request.referrer}")
+    
+    # Return the standard 404 response
+    return f"404 Not Found: {requested_url}", 404
+
 # Avvio dell'applicazione
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))

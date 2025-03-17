@@ -5,6 +5,7 @@
 // Variabili globali per le viste
 let vistaAttuale = 'month';
 let dataAttuale = new Date();
+let dataSelezionata = null; // variabile per tenere traccia della data selezionata
 
 /**
  * Inizializza le viste del calendario
@@ -224,6 +225,7 @@ function renderizzaMiniCalendario() {
     document.querySelectorAll('.mini-calendar-day').forEach(day => {
         day.addEventListener('click', () => {
             const [anno, mese, giorno] = day.dataset.date.split('-').map(Number);
+            dataSelezionata = createDate({anno, mese, giorno});
             dataAttuale = createDate({anno, mese, giorno});
             renderizzaMiniCalendario();
             aggiornaVista();

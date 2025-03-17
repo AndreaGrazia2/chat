@@ -394,6 +394,7 @@ function getCurrentDate() {
 /**
  * Aggiorna l'indicatore dell'ora corrente nelle viste giornaliera e settimanale
  */
+// Cerca questa funzione nel file events.js
 function updateCurrentTimeIndicator() {
     console.log('Updating current time indicator');
     
@@ -439,16 +440,30 @@ function updateCurrentTimeIndicator() {
                 indicator.className = 'current-time-indicator';
                 indicator.style.top = `${topPosition}px`;
                 
-                // In vista settimanale, posiziona l'indicatore nel giorno corretto
-                const giornoSettimanaOggi = now.getDay() === 0 ? 6 : now.getDay() - 1; // Formato europeo (0 = Lunedì)
-                const colonna = giornoSettimanaOggi + 1; // +1 perché la prima colonna è per le etichette delle ore
+                // Trova l'indice corretto del giorno corrente nella settimana visualizzata
+                let giornoCorretto = -1;
+                const giorniSettimana = [];
+                for (let i = 0; i < 7; i++) {
+                    const giorno = createDate(inizioSettimana);
+                    giorno.setDate(giorno.getDate() + i);
+                    giorniSettimana.push(giorno);
+                    
+                    if (isStessoGiorno(now, giorno)) {
+                        giornoCorretto = i;
+                    }
+                }
                 
-                // Imposta la posizione orizzontale
-                indicator.style.left = `${colonna * (100 / 7)}%`;
-                indicator.style.width = `${100 / 7}%`;
-                
-                weekGrid.appendChild(indicator);
-                console.log('Added time indicator to week view at position:', topPosition);
+                if (giornoCorretto !== -1) {
+                    // Calcola la larghezza di ogni colonna
+                    const columnWidth = 100 / 7; // percentuale
+                    
+                    // Imposta la posizione orizzontale basata sull'indice corretto
+                    indicator.style.left = `${giornoCorretto * columnWidth}%`;
+                    indicator.style.width = `${columnWidth}%`;
+                    
+                    weekGrid.appendChild(indicator);
+                    console.log('Added time indicator to week view at position:', topPosition, 'day index:', giornoCorretto);
+                }
             }
         }
     }

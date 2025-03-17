@@ -109,40 +109,54 @@ function renderizzaVistaSettimanale() {
     if (oggi >= giorniSettimana[0] && oggi <= giorniSettimana[6]) {
         const ora = oggi.getHours();
         const minuti = oggi.getMinutes();
+        const secondi = oggi.getSeconds(); // Aggiungiamo i secondi per maggiore precisione
+
+        // Rimuovi tutti i marker e indicatori esistenti
+        document.querySelectorAll('.current-time-marker, .current-time-indicator').forEach(el => el.remove());
         
-        const top = (ora + minuti / 60) * 60; // 60px per ora
+        // Approccio completamente diverso: crea un elemento che attraversa tutta la riga
+        const timeIndicator = document.createElement('div');
+        timeIndicator.className = 'current-time-indicator';
+        timeIndicator.style.position = 'absolute';
+        timeIndicator.style.left = '0';
+        timeIndicator.style.right = '0';
+        timeIndicator.style.height = '2px';
+        timeIndicator.style.backgroundColor = '#f44336';
+        timeIndicator.style.zIndex = '100';
         
-        const indicatore = document.createElement('div');
-        indicatore.className = 'current-time-indicator';
-        indicatore.style.top = `${top}px`;
+        // Calcola la posizione verticale in base all'ora e ai minuti (come in events.js)
+        const hourHeight = 60; // altezza in pixel di ogni cella oraria
+        const topPosition = (ora * hourHeight) + 
+                           (minuti / 60 * hourHeight) + 
+                           (secondi / 3600 * hourHeight) + 
+                           50; // +50 per l'header, come in events.js
+        timeIndicator.style.top = `${topPosition}px`;
         
-        const timeSlots = weekGrid.querySelectorAll('.time-slot');
-        
-        // Calcola correttamente l'indice del giorno corrente
-        const giornoSettimanaOggi = oggi.getDay() === 0 ? 6 : oggi.getDay() - 1;
-        const index = giornoSettimanaOggi + (ora * 7);
-        
-        if (timeSlots[index]) {
-            const existingMarker = timeSlots[index].querySelector('.current-time-marker');
-            
-            // Rimuovi eventuali marker esistenti
-            if (existingMarker) {
-                existingMarker.remove();
+        // Trova l'indice corretto del giorno corrente nella settimana visualizzata
+        let giornoCorretto = -1;
+        for (let i = 0; i < giorniSettimana.length; i++) {
+            if (isStessoGiorno(oggi, giorniSettimana[i])) {
+                giornoCorretto = i;
+                break;
             }
-            
-            // Crea un nuovo marker personalizzato
-            const marker = document.createElement('div');
-            marker.className = 'current-time-marker';
-            
-            // Imposta lo stile per posizionarlo correttamente
-            marker.style.position = 'absolute';
-            marker.style.left = '0';
-            marker.style.right = '0';
-            marker.style.height = '2px';
-            marker.style.backgroundColor = '#f44336'; // Colore rosso
-            marker.style.zIndex = '10';
-            
-            timeSlots[index].appendChild(marker);
+        }
+        
+        // Se abbiamo trovato il giorno corrente nella settimana visualizzata
+        if (giornoCorretto !== -1) {
+            const dayColumns = weekGrid.querySelectorAll('.time-slot-header');
+            if (dayColumns[giornoCorretto]) {
+                const columnWidth = dayColumns[0].offsetWidth;
+                const leftPosition = (giornoCorretto * columnWidth);
+                timeIndicator.style.left = `${leftPosition}px`;
+                timeIndicator.style.width = `${columnWidth}px`;
+                
+                // Aggiungi l'indicatore direttamente alla griglia
+                weekGrid.style.position = 'relative';
+                weekGrid.appendChild(timeIndicator);
+                
+                // Debug - aggiungi un attributo per identificare quale giorno è stato selezionato
+                timeIndicator.setAttribute('data-day-index', giornoCorretto);
+            }
         }
     }
     
