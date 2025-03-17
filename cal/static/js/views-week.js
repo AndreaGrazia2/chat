@@ -106,14 +106,7 @@ function renderizzaVistaSettimanale() {
     const giornoSettimanaOggi = oggi.getDay() === 0 ? 6 : oggi.getDay() - 1;
     
     // Verifica se il giorno corrente è nella settimana visualizzata
-    if (isStessoGiorno(oggi, giorniSettimana[0]) || 
-        isStessoGiorno(oggi, giorniSettimana[1]) || 
-        isStessoGiorno(oggi, giorniSettimana[2]) || 
-        isStessoGiorno(oggi, giorniSettimana[3]) || 
-        isStessoGiorno(oggi, giorniSettimana[4]) || 
-        isStessoGiorno(oggi, giorniSettimana[5]) || 
-        isStessoGiorno(oggi, giorniSettimana[6])) {
-        
+    if (oggi >= giorniSettimana[0] && oggi <= giorniSettimana[6]) {
         const ora = oggi.getHours();
         const minuti = oggi.getMinutes();
         
@@ -124,9 +117,32 @@ function renderizzaVistaSettimanale() {
         indicatore.style.top = `${top}px`;
         
         const timeSlots = weekGrid.querySelectorAll('.time-slot');
+        
+        // Calcola correttamente l'indice del giorno corrente
+        const giornoSettimanaOggi = oggi.getDay() === 0 ? 6 : oggi.getDay() - 1;
         const index = giornoSettimanaOggi + (ora * 7);
+        
         if (timeSlots[index]) {
-            timeSlots[index].appendChild(indicatore);
+            const existingMarker = timeSlots[index].querySelector('.current-time-marker');
+            
+            // Rimuovi eventuali marker esistenti
+            if (existingMarker) {
+                existingMarker.remove();
+            }
+            
+            // Crea un nuovo marker personalizzato
+            const marker = document.createElement('div');
+            marker.className = 'current-time-marker';
+            
+            // Imposta lo stile per posizionarlo correttamente
+            marker.style.position = 'absolute';
+            marker.style.left = '0';
+            marker.style.right = '0';
+            marker.style.height = '2px';
+            marker.style.backgroundColor = '#f44336'; // Colore rosso
+            marker.style.zIndex = '10';
+            
+            timeSlots[index].appendChild(marker);
         }
     }
     

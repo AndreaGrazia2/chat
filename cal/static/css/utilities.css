@@ -138,11 +138,6 @@
     background-color: #f44336;
 }
 
-/* Per la vista settimanale, nascondiamo il cerchio predefinito quando usiamo il marker personalizzato */
-.week-grid .current-time-indicator::before {
-    display: none;
-}
-
 /* Stilizzazione del marker personalizzato per la vista settimanale */
 .current-time-marker {
     display: block;

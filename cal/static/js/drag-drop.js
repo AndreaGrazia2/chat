@@ -1,8 +1,6 @@
 /**
  * drag-drop.js - Gestione del drag and drop per gli eventi del calendario
  */
-
-// Inizializza il drag and drop
 function initDragAndDrop(viewName) {
     console.log('Inizializzazione drag and drop per vista:', viewName);
     
@@ -20,7 +18,10 @@ function initDragAndDrop(viewName) {
     }
     
     // Trova tutti gli elementi eventi
-    const events = document.querySelectorAll(selectors.join(', '));
+    let events = [];
+    if (selectors.length > 0) {
+        events = Array.from(document.querySelectorAll(selectors.join(', ')));
+    }
     console.log(`Trovati ${events.length} elementi`);
     
     // Rendi ogni elemento trascinabile
@@ -47,17 +48,19 @@ function initDragAndDrop(viewName) {
     }
     
     // Aggiungi event listeners per evidenziazione
-    document.querySelectorAll(dropTargets.join(', ')).forEach(target => {
-        // Rimuovi eventuali listener precedenti per evitare duplicati
-        target.removeEventListener('dragover', handleDragOver);
-        target.removeEventListener('dragleave', handleDragLeave);
-        target.removeEventListener('drop', handleDrop);
-        
-        // Aggiungi i nuovi listener
-        target.addEventListener('dragover', handleDragOver);
-        target.addEventListener('dragleave', handleDragLeave);
-        target.addEventListener('drop', handleDrop);
-    });
+    if (dropTargets.length > 0) {
+        document.querySelectorAll(dropTargets.join(', ')).forEach(target => {
+            // Rimuovi eventuali listener precedenti per evitare duplicati
+            target.removeEventListener('dragover', handleDragOver);
+            target.removeEventListener('dragleave', handleDragLeave);
+            target.removeEventListener('drop', handleDrop);
+            
+            // Aggiungi i nuovi listener
+            target.addEventListener('dragover', handleDragOver);
+            target.addEventListener('dragleave', handleDragLeave);
+            target.addEventListener('drop', handleDrop);
+        });
+    }
 }
 
 // Funzione per gestire il dragover
