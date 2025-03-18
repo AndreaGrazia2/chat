@@ -163,3 +163,52 @@ class WorkflowExecution:
             "timestamp": datetime.now().isoformat(),
             "status": status
         })
+    
+    @classmethod
+    def get_by_id(cls, execution_id):
+        """Ottiene un'esecuzione dal database tramite ID"""
+        with get_db_cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT * FROM workflow_executions
+                WHERE id = %s
+                """,
+                (execution_id,)
+            )
+            
+            result = cursor.fetchone()
+            
+            if not result:
+                return None
+            
+            # Crea un'istanza di WorkflowExecution con i dati dal database
+            execution = cls(
+                id=result['id'],
+                workflow_id=result['workflow_id'],
+                status=result['status'],
+                started_at=result['started_at'],
+                completed_at=result['completed_at'],
+                input_data=result['input_data'],
+                output_data=result['output_data'],
+                execution_path=result['execution_path'],
+                error_message=result['error_message']
+            )
+            
+            return execution
+    
+    def get_logs(self):
+        """Ottiene i log dell'esecuzione dal database"""
+        with get_db_cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT * FROM execution_logs
+                WHERE execution_id = %s
+                ORDER BY id ASC
+                """,
+                (self.id,)
+            )
+            
+            logs = cursor.fetchall()
+            
+            # Converti i risultati in dizionari
+            return [dict(log) for log in logs] if logs else []

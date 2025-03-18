@@ -12,6 +12,11 @@
     <script src="/common/js/navbar.js"></script>
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Add this in the head section of your HTML -->
+    <meta name="execution-id" content="{{ execution_id }}">
+    
+    <!-- Or add a hidden input field -->
+    <input type="hidden" id="execution-id-data" value="{{ execution_id }}">
 </head>
 
 <body class="bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
@@ -174,7 +179,7 @@
 
     <script>
         // Include execution ID from the Flask template
-        const executionId = {{ execution_id }};
+        const executionId = "{{ execution_id }}";
     </script>
     <script src="/workflow/static/js/workflow-execution.js"></script>
 </body>

@@ -2,7 +2,27 @@ document.addEventListener('DOMContentLoaded', function() {
     // Elementi DOM
     const executionInfo = document.getElementById('execution-info');
     const executionLoading = document.getElementById('execution-loading');
-    const executionId = window.executionId;
+    
+    // Get the execution ID from the template
+    // Make sure this is correctly set in your HTML template
+    const executionId = document.getElementById('execution-id-data')?.value || 
+                        document.querySelector('meta[name="execution-id"]')?.content;
+    
+    if (!executionId) {
+        console.error('Execution ID not found in the page');
+        // Show an error message to the user
+        if (executionInfo) {
+            executionInfo.innerHTML = `
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                    <p>Error: Execution ID not found. Please check the URL and try again.</p>
+                </div>
+            `;
+        }
+        return;
+    }
+    
+    console.log('Loading execution details for ID:', executionId);
+    
     const autoRefreshCheckbox = document.getElementById('auto-refresh');
     const refreshBtn = document.getElementById('refresh-btn');
     const logEntries = document.getElementById('log-entries');

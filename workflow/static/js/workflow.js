@@ -340,6 +340,11 @@ document.addEventListener('DOMContentLoaded', function () {
         );
     });
 
+    // Gestione eventi per i pulsanti dell'interfaccia
+    // ...
+
+    // VECCHIA IMPLEMENTAZIONE - Commentata
+    /*
     DOM.saveBtn.addEventListener('click', function () {
         // Verifica se ci sono nodi nel workflow
         if (state.nodes.length === 0) {
@@ -374,7 +379,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
         URL.revokeObjectURL(url);
     });
+    */
 
+    // VECCHIA IMPLEMENTAZIONE - Commentata
+    /*
     DOM.loadFile.addEventListener('change', function (e) {
         const file = e.target.files[0];
         if (!file) return;
@@ -403,6 +411,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         reader.readAsText(file);
     });
+    */
 
     // Gestione eventi del modale di conferma
     DOM.confirmBtn.addEventListener('click', function () {
@@ -469,8 +478,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Prepara i dati del workflow
         const workflow = {
-            name: document.getElementById('workflow-name-input').value || 'Untitled Workflow',
-            description: document.getElementById('workflow-description-input').value || '',
+            name: state.workflowName || 'Untitled Workflow',  // Usa lo stato invece dell'elemento DOM
+            description: state.workflowDescription || '',     // Usa lo stato invece dell'elemento DOM
             json_definition: {
                 nodes: state.nodes.map(node => ({
                     id: node.id,
@@ -488,7 +497,7 @@ document.addEventListener('DOMContentLoaded', function () {
             },
             is_active: true
         };
-
+     
         try {
             // Se abbiamo un ID del workflow, aggiorniamo il workflow esistente
             if (state.workflowId) {
@@ -665,10 +674,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Imposta l'ID del workflow nello stato
             state.workflowId = workflow.id;
-
-            // Imposta i campi del form con i dati del workflow
-            document.getElementById('workflow-name-input').value = workflow.name;
-            document.getElementById('workflow-description-input').value = workflow.description || '';
+            
+            // Salva nome e descrizione nello stato invece di cercare di impostare elementi DOM che potrebbero non esistere
+            state.workflowName = workflow.name;
+            state.workflowDescription = workflow.description || '';
 
             // Carica il workflow nell'editor
             Utils.loadWorkflow(workflow.json_definition);
@@ -902,6 +911,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Aggiungi questi eventi agli event handler nell'editor
 
+    // NUOVA IMPLEMENTAZIONE - Mantieni solo questa
     // 1. Modifica il comportamento del pulsante Save
     DOM.saveBtn.addEventListener('click', function () {
         // Aggiungi una richiesta per nome e descrizione
@@ -976,7 +986,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // 2. Modifica il comportamento del pulsante Load
-    DOM.loadFile.addEventListener('change', function (e) {
+    DOM.loadFile.addEventListener('click', function (e) {
         // Sostituisci con un pulsante che apre l'elenco di workflow dal server
         e.preventDefault();
 

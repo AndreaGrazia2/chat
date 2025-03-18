@@ -149,45 +149,51 @@ def execute_workflow(workflow_id):
             "error": str(e)
         }), 500
 
-@workflow_bp.route('/api/executions/<int:execution_id>')
+@workflow_bp.route('/api/executions/<int:execution_id>', methods=['GET'])
 def get_execution(execution_id):
-    """API per ottenere i dettagli di una specifica esecuzione"""
-    from ..db.connection import get_db_cursor
+    """API per ottenere i dettagli di un'esecuzione specifica"""
+    from ..models.workflow import WorkflowExecution
     
-    with get_db_cursor() as cursor:
-        # Ottieni l'esecuzione
-        cursor.execute("""
-            SELECT * FROM workflow_executions 
-            WHERE id = %s
-        """, (execution_id,))
+    try:
+        # Ottieni l'esecuzione dal database
+        execution = WorkflowExecution.get_by_id(execution_id)
         
-        execution = cursor.fetchone()
         if not execution:
-            return jsonify({"error": "Execution not found"}), 404
+            return jsonify({"error": f"Execution with ID {execution_id} not found"}), 404
         
-        # Ottieni i log di questa esecuzione
-        cursor.execute("""
-            SELECT * FROM execution_logs 
-            WHERE execution_id = %s
-            ORDER BY timestamp
-        """, (execution_id,))
+        # Formatta la risposta
+        response = {
+            "id": execution.id,
+            "workflow_id": execution.workflow_id,
+            "status": execution.status,
+            "started_at": execution.started_at.isoformat() if execution.started_at else None,
+            "completed_at": execution.completed_at.isoformat() if execution.completed_at else None,
+            "input_data": execution.input_data,
+            "output_data": execution.output_data,
+            "execution_path": execution.execution_path,
+            "error_message": execution.error_message,
+            "logs": []  # Aggiungeremo i log se disponibili
+        }
         
-        logs = cursor.fetchall()
-    
-    # Converte il risultato in un formato appropriato
-    result = dict(execution)
-    result['logs'] = [dict(log) for log in logs]
-    
-    # Formatta le date
-    for date_field in ['started_at', 'completed_at']:
-        if result[date_field]:
-            result[date_field] = result[date_field].isoformat()
-    
-    for log in result['logs']:
-        if log['timestamp']:
-            log['timestamp'] = log['timestamp'].isoformat()
-    
-    return jsonify(result)
+        # Ottieni i log dell'esecuzione se disponibili
+        try:
+            logs = execution.get_logs()
+            if logs:
+                response["logs"] = logs
+        except Exception as log_error:
+            print(f"Error fetching logs: {str(log_error)}")
+        
+        return jsonify(response)
+        
+    except Exception as e:
+        import traceback
+        error_traceback = traceback.format_exc()
+        print(f"Error in get_execution: {str(e)}\n{error_traceback}")
+        return jsonify({
+            "error": f"Failed to fetch execution details: {str(e)}",
+            "function": "get_execution",
+            "route": f"/workflow/api/executions/{execution_id}"
+        }), 500
 
 @workflow_bp.route('/api/executions')
 def get_executions():
@@ -317,6 +323,8 @@ def monitor():
         }), 500
 
 @workflow_bp.route('/executions/<int:execution_id>/view', strict_slashes=False)
-def view_execution(execution_id):
+@workflow_bp.route('/executions/<int:execution_id>', methods=['GET'])
+def view_execution_page(execution_id):
     """Pagina per visualizzare i dettagli di un'esecuzione"""
-    return render_template('workflow_execution.html', execution_id=execution_id)
+    # Make sure execution_id is passed as a string to the template
+    return render_template('workflow_execution.html', execution_id=str(execution_id))

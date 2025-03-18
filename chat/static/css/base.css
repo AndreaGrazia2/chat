@@ -79,14 +79,15 @@ body {
 	height: auto;
 }
 
-/* Layout principale */
+/* Layout principale - modificato per supportare la navbar */
 .app-container {
-	display: grid;
-	grid-template-columns: 260px 1fr;
-	grid-template-rows: 60px 1fr;
-	height: 100vh;
-	width: 100vw;
-	overflow: hidden;
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    grid-template-rows: 60px 1fr;
+    height: calc(100vh - 50px); /* Sottraiamo l'altezza della navbar */
+    width: 100vw;
+    overflow: hidden;
+
 }
 
 /* Header principale */
@@ -184,7 +185,7 @@ body {
 	background-color: var(--bg-main);
 	position: sticky;
 	bottom: 0;
-	z-index: 5;
+	z-index: 50; /* Aumentiamo il z-index */
 }
 
 .message-input-container {
@@ -196,6 +197,7 @@ body {
 @media (max-width: 768px) {
 	.app-container {
 		grid-template-columns: 1fr;
+		height: calc(100vh - 50px); /* Aggiornato per la navbar */
 	}
 
 	.header {
