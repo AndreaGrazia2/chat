@@ -208,7 +208,7 @@ export function showConfirmModal(title, message, callback, infoOnly = false) {
 }
 
 export function initTheme() {
-    const darkMode = localStorage.getItem('darkMode') === 'true';
+    const darkMode = localStorage.getItem('workflow-theme') === 'true';
     if (darkMode) {
         document.documentElement.classList.add('dark');
         document.getElementById('sun-icon').classList.remove('hidden');

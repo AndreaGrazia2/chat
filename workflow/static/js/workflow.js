@@ -429,7 +429,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Salva lo stato nel localStorage
         const isDarkMode = document.documentElement.classList.contains('dark');
-        localStorage.setItem('darkMode', isDarkMode);
+        localStorage.setItem('workflow-theme', isDarkMode);
 
         // Aggiorna le icone
         if (isDarkMode) {
