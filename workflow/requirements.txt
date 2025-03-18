@@ -1,6 +1,0 @@
-Flask=
-psycopg2-binary
-langchain
-openai
-requests
-python-dotenv

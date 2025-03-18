@@ -32,6 +32,8 @@ class WorkflowExecutor:
         Note:
             Deve essere fornito almeno uno tra workflow_id e workflow_def
         """
+        self.execution = None
+        
         if workflow_id:
             # Carica il workflow dal database
             self.workflow = Workflow.get_by_id(workflow_id)
@@ -61,7 +63,7 @@ class WorkflowExecutor:
         
         try:
             # Crea una nuova esecuzione
-            execution = WorkflowExecution.create(
+            self.execution = WorkflowExecution.create(
                 workflow_id=self.workflow_id,
                 input_data=input_data
             )
@@ -78,15 +80,16 @@ class WorkflowExecutor:
             start_node = trigger_nodes[0]
             
             # Esegui il workflow a partire dal nodo trigger
-            result = self._process_node(start_node, nodes, connections, input_data, execution)
+            result = self._process_node(start_node, nodes, connections, input_data, self.execution)
             
             # Completa l'esecuzione con successo
-            execution.complete(result)
+            self.execution.complete(result)
             
             return result
             
         except Exception as e:
-            execution.fail(str(e))
+            if self.execution:
+                self.execution.fail(str(e))
             raise
     
     def _process_node(self, node, all_nodes, connections, data, execution):

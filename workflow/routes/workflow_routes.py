@@ -1,6 +1,8 @@
-from flask import Blueprint, request, jsonify, render_template
+from flask import Blueprint, request, jsonify, render_template, send_from_directory
 from ..models.workflow import Workflow, WorkflowExecution
 from ..executors.workflow_executor import WorkflowExecutor
+import json
+import time
 
 # Crea un Blueprint per il workflow
 workflow_bp = Blueprint('workflow', __name__, 
@@ -138,7 +140,8 @@ def execute_workflow(workflow_id):
         
         return jsonify({
             "success": True,
-            "result": result
+            "result": result,
+            "execution_id": executor.execution.id
         })
     except Exception as e:
         return jsonify({
@@ -185,3 +188,115 @@ def get_execution(execution_id):
             log['timestamp'] = log['timestamp'].isoformat()
     
     return jsonify(result)
+
+@workflow_bp.route('/api/executions')
+def get_executions():
+    """API per ottenere tutte le esecuzioni dei workflow, con paginazione"""
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 20))
+    workflow_id = request.args.get('workflow_id')
+    
+    from ..db.connection import get_db_cursor
+    
+    with get_db_cursor() as cursor:
+        # Costruisci la query di base
+        query = """
+            SELECT id, workflow_id, status, started_at, completed_at, 
+                   COALESCE(error_message, '') as error_message
+            FROM workflow_executions
+        """
+        
+        params = []
+        count_query = "SELECT COUNT(*) FROM workflow_executions"
+        
+        # Filtra per workflow_id se richiesto
+        if workflow_id:
+            query += " WHERE workflow_id = %s"
+            count_query += " WHERE workflow_id = %s"
+            params.append(int(workflow_id))
+        
+        # Aggiungi ordinamento e paginazione
+        query += " ORDER BY started_at DESC LIMIT %s OFFSET %s"
+        params.extend([per_page, (page - 1) * per_page])
+        
+        # Esegui la query principale
+        cursor.execute(query, params)
+        executions = cursor.fetchall()
+        
+        # Conta il totale di record per la paginazione
+        cursor_count = connection.cursor()
+        count_params = [int(workflow_id)] if workflow_id else []
+        cursor.execute(count_query, count_params)
+        total_count = cursor.fetchone()[0]
+    
+    # Formatta le date
+    for execution in executions:
+        for date_field in ['started_at', 'completed_at']:
+            if execution[date_field]:
+                execution[date_field] = execution[date_field].isoformat()
+    
+    return jsonify({
+        "executions": [dict(e) for e in executions],
+        "total": total_count,
+        "page": page,
+        "per_page": per_page,
+        "pages": (total_count + per_page - 1) // per_page
+    })
+
+@workflow_bp.route('/api/executions/<int:execution_id>/logs/stream')
+def stream_execution_logs(execution_id):
+    """API per ottenere i log di esecuzione in streaming (polling)"""
+    last_log_id = request.args.get('last_id', 0)
+    try:
+        last_log_id = int(last_log_id)
+    except ValueError:
+        last_log_id = 0
+    
+    from ..db.connection import get_db_cursor
+    
+    with get_db_cursor() as cursor:
+        # Verifica che l'esecuzione esista
+        cursor.execute("SELECT id, status FROM workflow_executions WHERE id = %s", (execution_id,))
+        execution = cursor.fetchone()
+        
+        if not execution:
+            return jsonify({"error": "Execution not found"}), 404
+        
+        # Ottieni i nuovi log dall'ultimo ID
+        cursor.execute("""
+            SELECT * FROM execution_logs 
+            WHERE execution_id = %s AND id > %s
+            ORDER BY id
+        """, (execution_id, last_log_id))
+        
+        logs = cursor.fetchall()
+    
+    # Formatta i log
+    formatted_logs = []
+    for log in logs:
+        log_dict = dict(log)
+        if log_dict['timestamp']:
+            log_dict['timestamp'] = log_dict['timestamp'].isoformat()
+        formatted_logs.append(log_dict)
+    
+    return jsonify({
+        "logs": formatted_logs,
+        "execution_status": execution['status'],
+        "is_completed": execution['status'] in ['completed', 'failed']
+    })
+
+# Rotte per la visualizzazione UI
+@workflow_bp.route('/editor')
+def editor():
+    """Pagina dell'editor di workflow"""
+    return render_template('workflow_editor.html')
+
+@workflow_bp.route('/monitor')
+def monitor():
+    """Pagina di monitoraggio delle esecuzioni"""
+    return render_template('workflow_monitor.html')
+
+@workflow_bp.route('/executions/<int:execution_id>/view')
+def view_execution(execution_id):
+    """Pagina per visualizzare i dettagli di un'esecuzione"""
+    return render_template('workflow_execution.html', execution_id=execution_id)

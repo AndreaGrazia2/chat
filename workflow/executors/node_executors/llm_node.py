@@ -1,51 +1,64 @@
 import time
-from langchain.llms import OpenAI
-from langchain.chat_models import ChatOpenAI
+import json
+import requests
 from langchain.prompts import PromptTemplate
-from langchain.schema import HumanMessage
 from ..base import NodeExecutor
-from ...config import OPENAI_API_KEY
+from ...config import OPENROUTER_API_KEY, OPENROUTER_API_URL, OPENROUTER_MODEL
 
 class LLMNodeExecutor(NodeExecutor):
     """Executor per nodi di tipo LLM"""
     
     def execute(self, input_data):
-        """Esegue un nodo LLM"""
+        """Esegue un nodo LLM usando OpenRouter API"""
         start_time = time.time()
         
         try:
+            # Verifica che l'API key sia configurata
+            if not OPENROUTER_API_KEY:
+                raise ValueError("OpenRouter API key non configurata")
+            
             # Ottieni la configurazione del modello
-            model_name = self.config.get('model', 'gpt-3.5-turbo')
+            model_name = self.config.get('model', OPENROUTER_MODEL)
             temperature = float(self.config.get('temperature', 0.7))
             prompt_template = self.config.get('prompt', '{input}')
+            system_prompt = self.config.get('system_prompt', "You are a helpful assistant in a workflow application.")
             
             # Prepara il prompt con i dati di input
             prompt = PromptTemplate.from_template(prompt_template)
             
             # Crea variabili da utilizzare nel template
-            # Fondi input_data con eventuali variabili aggiuntive
             variables = {**input_data}
             
-            # Gestisci modelli di chat vs modelli di completamento
-            if model_name.startswith(('gpt-3.5-turbo', 'gpt-4')):
-                llm = ChatOpenAI(
-                    model_name=model_name,
-                    temperature=temperature,
-                    openai_api_key=OPENAI_API_KEY
-                )
-                # Prepara il messaggio
-                formatted_prompt = prompt.format(**variables)
-                messages = [HumanMessage(content=formatted_prompt)]
-                response = llm.invoke(messages)
-                result = response.content
-            else:
-                llm = OpenAI(
-                    model_name=model_name,
-                    temperature=temperature,
-                    openai_api_key=OPENAI_API_KEY
-                )
-                formatted_prompt = prompt.format(**variables)
-                result = llm.invoke(formatted_prompt)
+            # Formatta il prompt
+            formatted_prompt = prompt.format(**variables)
+            
+            # Prepara il payload per OpenRouter
+            payload = {
+                "model": model_name,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": formatted_prompt}
+                ],
+                "temperature": temperature
+            }
+            
+            # Invia la richiesta a OpenRouter
+            response = requests.post(
+                OPENROUTER_API_URL,
+                headers={
+                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                    "Content-Type": "application/json"
+                },
+                json=payload,
+                timeout=30
+            )
+            
+            # Verifica la risposta
+            response.raise_for_status()
+            response_data = response.json()
+            
+            # Estrai il testo della risposta
+            result = response_data['choices'][0]['message']['content']
             
             # Crea output data
             output_data = {**input_data, "llm_response": result}
@@ -56,7 +69,7 @@ class LLMNodeExecutor(NodeExecutor):
                 input_data=input_data,
                 output_data=output_data,
                 status="completed",
-                message="LLM node executed successfully",
+                message=f"LLM query executed successfully using model: {model_name}",
                 duration_ms=duration_ms
             )
             

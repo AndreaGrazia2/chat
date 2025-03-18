@@ -1,3 +1,8 @@
+import os
+import sys
+# Aggiungi la directory corrente al path
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+
 from flask import Flask
 from routes.workflow_routes import workflow_bp
 from config import SECRET_KEY, DEBUG

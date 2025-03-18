@@ -10,7 +10,7 @@ import * as Utils from './utils.js';
 document.addEventListener('DOMContentLoaded', function () {
     // Inizializza gli elementi DOM
     initDOM();
-    
+
     // Inizializza l'applicazione
     Ui.initTheme();
     DOM.canvasContent = Ui.initCanvasTransform();
@@ -455,4 +455,543 @@ document.addEventListener('DOMContentLoaded', function () {
 
         Utils.validateWorkflow();
     });
+
+    //=========================
+    // Listener for the Backend
+
+    // Funzione per salvare il workflow nel database
+    async function saveWorkflowToServer() {
+        // Verifica se ci sono nodi nel workflow
+        if (state.nodes.length === 0) {
+            Ui.showConfirmModal('Cannot Save', 'The canvas is empty. There is nothing to save.', null, true);
+            return;
+        }
+
+        // Prepara i dati del workflow
+        const workflow = {
+            name: document.getElementById('workflow-name-input').value || 'Untitled Workflow',
+            description: document.getElementById('workflow-description-input').value || '',
+            json_definition: {
+                nodes: state.nodes.map(node => ({
+                    id: node.id,
+                    type: node.type,
+                    name: node.name,
+                    x: node.x,
+                    y: node.y,
+                    config: node.config
+                })),
+                connections: state.connections.map(conn => ({
+                    id: conn.id,
+                    source: conn.source,
+                    target: conn.target
+                }))
+            },
+            is_active: true
+        };
+
+        try {
+            // Se abbiamo un ID del workflow, aggiorniamo il workflow esistente
+            if (state.workflowId) {
+                const response = await fetch(`/workflow/api/workflows/${state.workflowId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(workflow)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+                }
+
+                Ui.showConfirmModal('Success', 'Workflow updated successfully!', null, true);
+            } else {
+                // Altrimenti creiamo un nuovo workflow
+                const response = await fetch('/workflow/api/workflows', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(workflow)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                state.workflowId = result.id;
+
+                Ui.showConfirmModal('Success', `Workflow created successfully with ID: ${result.id}`, null, true);
+            }
+        } catch (error) {
+            console.error('Error saving workflow:', error);
+            Ui.showConfirmModal('Error', `Failed to save workflow: ${error.message}`, null, true);
+        }
+    }
+
+    // Funzione per eseguire il workflow
+    async function executeWorkflow(input) {
+        // Verifica se abbiamo un ID del workflow
+        if (!state.workflowId) {
+            // Se non abbiamo un ID, salva prima il workflow
+            Ui.showConfirmModal('Execute Workflow',
+                'The workflow needs to be saved before execution. Do you want to save it now?',
+                async () => {
+                    await saveWorkflowToServer();
+                    if (state.workflowId) {
+                        executeWorkflowWithId(state.workflowId, input);
+                    }
+                });
+            return;
+        }
+
+        executeWorkflowWithId(state.workflowId, input);
+    }
+
+    // Funzione helper per eseguire il workflow con un ID specifico
+    async function executeWorkflowWithId(workflowId, input) {
+        try {
+            // Mostra un loader
+            const executionLoader = document.createElement('div');
+            executionLoader.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            executionLoader.innerHTML = `
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 max-w-md mx-auto">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Executing Workflow</h3>
+                <div class="flex items-center">
+                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Executing workflow, please wait...</span>
+                </div>
+            </div>
+        `;
+            document.body.appendChild(executionLoader);
+
+            // Prepara l'input per l'esecuzione
+            const executionInput = input || {};
+
+            // Chiama l'API per eseguire il workflow
+            const response = await fetch(`/workflow/api/workflows/${workflowId}/execute`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(executionInput)
+            });
+
+            // Rimuovi il loader
+            executionLoader.remove();
+
+            if (!response.ok) {
+                throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+            }
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Mostra i risultati dell'esecuzione
+                showExecutionResults(result);
+
+                // Offri un link per visualizzare i dettagli dell'esecuzione
+                Ui.showConfirmModal('Execution Complete',
+                    `Workflow executed successfully! Execution ID: ${result.execution_id}`,
+                    () => {
+                        window.open(`/workflow/executions/${result.execution_id}/view`, '_blank');
+                    },
+                    false);
+            } else {
+                Ui.showConfirmModal('Execution Failed', `Error: ${result.error}`, null, true);
+            }
+        } catch (error) {
+            console.error('Error executing workflow:', error);
+            document.querySelector('.execution-loader')?.remove();
+            Ui.showConfirmModal('Error', `Failed to execute workflow: ${error.message}`, null, true);
+        }
+    }
+
+    // Funzione per mostrare i risultati dell'esecuzione
+    function showExecutionResults(result) {
+        // Crea un modale per visualizzare i risultati
+        const resultsModal = document.createElement('div');
+        resultsModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        resultsModal.id = 'execution-results-modal';
+
+        resultsModal.innerHTML = `
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mx-auto max-w-4xl max-h-[80vh] overflow-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold">Execution Results</h2>
+                <button id="close-results-modal" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="mb-4">
+                <p><span class="font-medium">Execution ID:</span> ${result.execution_id}</p>
+            </div>
+            
+            <div class="mt-4">
+                <h3 class="text-lg font-semibold mb-2">Result</h3>
+                <pre class="p-3 bg-gray-100 dark:bg-gray-700 rounded overflow-auto max-h-96">${JSON.stringify(result.result, null, 2)}</pre>
+            </div>
+            
+            <div class="mt-6 flex justify-end">
+                <a href="/workflow/executions/${result.execution_id}/view" target="_blank" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                    View Detailed Logs
+                </a>
+            </div>
+        </div>
+    `;
+
+        document.body.appendChild(resultsModal);
+
+        // Aggiungi event listener per chiudere il modale
+        document.getElementById('close-results-modal').addEventListener('click', function () {
+            resultsModal.remove();
+        });
+    }
+
+    // Funzione per caricare un workflow dal server
+    async function loadWorkflowFromServer(workflowId) {
+        try {
+            const response = await fetch(`/workflow/api/workflows/${workflowId}`);
+
+            if (!response.ok) {
+                throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+            }
+
+            const workflow = await response.json();
+
+            // Imposta l'ID del workflow nello stato
+            state.workflowId = workflow.id;
+
+            // Imposta i campi del form con i dati del workflow
+            document.getElementById('workflow-name-input').value = workflow.name;
+            document.getElementById('workflow-description-input').value = workflow.description || '';
+
+            // Carica il workflow nell'editor
+            Utils.loadWorkflow(workflow.json_definition);
+
+            return workflow;
+        } catch (error) {
+            console.error('Error loading workflow:', error);
+            Ui.showConfirmModal('Error', `Failed to load workflow: ${error.message}`, null, true);
+            return null;
+        }
+    }
+
+    // Funzione per caricare e mostrare l'elenco dei workflow
+    async function loadWorkflowsList() {
+        try {
+            const response = await fetch('/workflow/api/workflows');
+
+            if (!response.ok) {
+                throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+            }
+
+            const workflows = await response.json();
+
+            // Crea un modale per mostrare l'elenco
+            const listModal = document.createElement('div');
+            listModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            listModal.id = 'workflows-list-modal';
+
+            // Se non ci sono workflow
+            if (workflows.length === 0) {
+                listModal.innerHTML = `
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 max-w-md mx-auto">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold">Load Workflow</h2>
+                        <button id="close-list-modal" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <p class="text-center text-gray-500 dark:text-gray-400 py-4">No workflows found.</p>
+                    
+                    <div class="mt-6 flex justify-end">
+                        <button id="close-modal-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">Close</button>
+                    </div>
+                </div>
+            `;
+            } else {
+                // Crea la tabella di workflow
+                let workflowsHTML = '';
+                workflows.forEach(workflow => {
+                    const createdAt = new Date(workflow.created_at).toLocaleString();
+                    const updatedAt = new Date(workflow.updated_at).toLocaleString();
+
+                    workflowsHTML += `
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            ${workflow.id}
+                        </td>
+                        <td class="px-6 py-4">
+                            ${workflow.name}
+                        </td>
+                        <td class="px-6 py-4">
+                            ${workflow.description || '-'}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            ${createdAt}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            ${updatedAt}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 load-workflow-btn" data-id="${workflow.id}">
+                                <i class="fas fa-edit"></i> Load
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                });
+
+                listModal.innerHTML = `
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mx-auto max-w-6xl max-h-[80vh] overflow-auto">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold">Load Workflow</h2>
+                        <button id="close-list-modal" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead class="bg-gray-50 dark:bg-gray-700">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        ID
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        Name
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        Description
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        Created
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        Updated
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        Actions
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                ${workflowsHTML}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+            }
+
+            document.body.appendChild(listModal);
+
+            // Aggiungi event listener per chiudere il modale
+            document.getElementById('close-list-modal').addEventListener('click', function () {
+                listModal.remove();
+            });
+
+            // Aggiungi event listener per i pulsanti di caricamento
+            document.querySelectorAll('.load-workflow-btn').forEach(btn => {
+                btn.addEventListener('click', async function () {
+                    const workflowId = parseInt(this.getAttribute('data-id'));
+
+                    // Chiedi conferma se ci sono nodi esistenti
+                    if (state.nodes.length > 0 || state.connections.length > 0) {
+                        Ui.showConfirmModal(
+                            'Load Workflow',
+                            'Loading a new workflow will replace the current one. Do you want to continue?',
+                            async () => {
+                                listModal.remove();
+                                await loadWorkflowFromServer(workflowId);
+                            }
+                        );
+                    } else {
+                        listModal.remove();
+                        await loadWorkflowFromServer(workflowId);
+                    }
+                });
+            });
+
+        } catch (error) {
+            console.error('Error loading workflows list:', error);
+            Ui.showConfirmModal('Error', `Failed to load workflows list: ${error.message}`, null, true);
+        }
+    }
+
+    // Funzione per preparare il form di input per l'esecuzione
+    function showExecutionInputForm() {
+        // Verifica se ci sono nodi nel workflow
+        if (state.nodes.length === 0) {
+            Ui.showConfirmModal('Cannot Execute', 'The canvas is empty. There is nothing to execute.', null, true);
+            return;
+        }
+
+        // Crea un modale per l'input dell'esecuzione
+        const inputModal = document.createElement('div');
+        inputModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        inputModal.id = 'execution-input-modal';
+
+        inputModal.innerHTML = `
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 max-w-md mx-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold">Execute Workflow</h2>
+                <button id="close-input-modal" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="execution-input">
+                    Input JSON (optional)
+                </label>
+                <textarea id="execution-input" rows="6" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white" placeholder="{}">{}</textarea>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    Provide input data for your workflow in JSON format.
+                </p>
+            </div>
+            
+            <div class="mt-6 flex justify-end space-x-3">
+                <button id="cancel-execution-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">
+                    Cancel
+                </button>
+                <button id="run-execution-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                    Run Workflow
+                </button>
+            </div>
+        </div>
+    `;
+
+        document.body.appendChild(inputModal);
+
+        // Aggiungi event listener per chiudere il modale
+        document.getElementById('close-input-modal').addEventListener('click', function () {
+            inputModal.remove();
+        });
+
+        document.getElementById('cancel-execution-btn').addEventListener('click', function () {
+            inputModal.remove();
+        });
+
+        document.getElementById('run-execution-btn').addEventListener('click', function () {
+            // Ottieni il JSON di input
+            const inputText = document.getElementById('execution-input').value;
+
+            try {
+                // Parse del JSON
+                const inputData = inputText.trim() ? JSON.parse(inputText) : {};
+
+                // Chiudi il modale
+                inputModal.remove();
+
+                // Esegui il workflow
+                executeWorkflow(inputData);
+
+            } catch (error) {
+                console.error('Invalid JSON input:', error);
+                Ui.showConfirmModal('Invalid Input', 'Please provide valid JSON input.', null, true);
+            }
+        });
+    }
+
+    // Aggiungi questi eventi agli event handler nell'editor
+
+    // 1. Modifica il comportamento del pulsante Save
+    DOM.saveBtn.addEventListener('click', function () {
+        // Aggiungi una richiesta per nome e descrizione
+        const saveModal = document.createElement('div');
+        saveModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        saveModal.id = 'save-workflow-modal';
+
+        saveModal.innerHTML = `
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 max-w-md mx-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold">Save Workflow</h2>
+                <button id="close-save-modal" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="workflow-name-input">
+                    Workflow Name *
+                </label>
+                <input type="text" id="workflow-name-input" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white" placeholder="My Workflow" value="${state.workflowName || ''}">
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="workflow-description-input">
+                    Description (optional)
+                </label>
+                <textarea id="workflow-description-input" rows="3" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white" placeholder="Workflow description...">${state.workflowDescription || ''}</textarea>
+            </div>
+            
+            <div class="mt-6 flex justify-end space-x-3">
+                <button id="cancel-save-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">
+                    Cancel
+                </button>
+                <button id="confirm-save-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                    Save
+                </button>
+            </div>
+        </div>
+    `;
+
+        document.body.appendChild(saveModal);
+
+        // Aggiungi event listener per chiudere il modale
+        document.getElementById('close-save-modal').addEventListener('click', function () {
+            saveModal.remove();
+        });
+
+        document.getElementById('cancel-save-btn').addEventListener('click', function () {
+            saveModal.remove();
+        });
+
+        document.getElementById('confirm-save-btn').addEventListener('click', function () {
+            const name = document.getElementById('workflow-name-input').value;
+            const description = document.getElementById('workflow-description-input').value;
+
+            if (!name) {
+                Ui.showConfirmModal('Error', 'Workflow name is required.', null, true);
+                return;
+            }
+
+            // Salva i valori nello stato
+            state.workflowName = name;
+            state.workflowDescription = description;
+
+            // Chiudi il modale
+            saveModal.remove();
+
+            // Salva il workflow
+            saveWorkflowToServer();
+        });
+    });
+
+    // 2. Modifica il comportamento del pulsante Load
+    DOM.loadFile.addEventListener('change', function (e) {
+        // Sostituisci con un pulsante che apre l'elenco di workflow dal server
+        e.preventDefault();
+
+        loadWorkflowsList();
+    });
+
+    // 3. Aggiungi un pulsante per eseguire il workflow
+    const executeBtn = document.createElement('button');
+    executeBtn.id = 'execute-btn';
+    executeBtn.className = 'px-3 py-1 bg-green-600 dark:bg-green-700 rounded hover:bg-green-700 dark:hover:bg-green-800 transition-colors duration-200';
+    executeBtn.innerHTML = '<i class="fas fa-play mr-1"></i> Execute';
+    executeBtn.addEventListener('click', showExecutionInputForm);
+
+    // Aggiungi il pulsante alla toolbar
+    document.querySelector('.toolbar .flex.space-x-3.items-center').appendChild(executeBtn);
+
+
 });
