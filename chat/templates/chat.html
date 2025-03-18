@@ -10,6 +10,9 @@
 	<link rel="stylesheet" href="/chat/static/css/base.css">
 	<link rel="stylesheet" href="/chat/static/css/components.css">
 	<link rel="stylesheet" href="/chat/static/css/utilities.css">
+	<!-- Shared navbar CSS and JS -->
+	<link rel="stylesheet" href="/common/css/navbar.css">
+	<script src="/common/js/navbar.js"></script>
 	<!-- Socket.IO (libreria esterna) -->
 	<script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
 
@@ -20,6 +23,7 @@
 </head>
 
 <body class="dark-theme">
+	{% include 'navbar.html' %}
 	<div class="app-container">
 		<header class="header">
 			<div class="header-left">

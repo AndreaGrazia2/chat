@@ -3,7 +3,7 @@ gevent.monkey.patch_all()
 
 import os
 import sys
-from flask import Flask, request, jsonify, redirect
+from flask import Flask, request, jsonify, redirect, Blueprint
 from flask_socketio import SocketIO
 from dotenv import load_dotenv
 
@@ -32,6 +32,20 @@ from chat.handlers import register_handlers
 # Crea l'applicazione Flask
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev_key')
+
+# Create a blueprint for common static files
+common_static = Blueprint('common_static', __name__, 
+                         static_folder=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'common/static'),
+                         static_url_path='/common')
+
+# Register the common static blueprint
+app.register_blueprint(common_static)
+
+# Add common templates to Jinja search path
+app.jinja_loader.searchpath.append(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), 'common/templates')
+)
+
 
 # Configura Socket.IO
 socketio = SocketIO(app, cors_allowed_origins="*",

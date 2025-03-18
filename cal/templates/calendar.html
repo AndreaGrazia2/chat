@@ -11,11 +11,15 @@
 	<link rel="stylesheet" href="/cal/static/css/utilities.css">
 	<link rel="stylesheet" href="/cal/static/css/responsive.css">
 	<link rel="stylesheet" href="/cal/static/css/drag-drop.css">
+	<!-- Shared navbar CSS and JS -->
+	<link rel="stylesheet" href="/common/css/navbar.css">
+	<script src="/common/js/navbar.js"></script>
 	<!-- Font Awesome per le icone -->
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 
 <body class="light-theme">
+	{% include 'navbar.html' %}
 	<div class="app-container">
 		<!-- Header principale -->
 		<header class="header">
