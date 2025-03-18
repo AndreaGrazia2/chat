@@ -10,7 +10,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 # Importa l'app Flask e le altre funzioni/variabili necessarie
 from app import app
 from chat.models import users, channels, messages
-from common.utils import get_llm_response
+# Update the import statement to import from the correct module
+from chat.handlers import get_llm_response
 
 @pytest.fixture
 def client():
