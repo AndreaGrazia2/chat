@@ -1,0 +1,38 @@
+import os
+import sys
+# Add the parent directory to the path so we can use absolute imports
+sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
+
+from flask import Flask
+from workflow.routes.workflow_routes import workflow_bp
+from workflow.config import SECRET_KEY, DEBUG
+import jinja2
+
+def create_app():
+    app = Flask(__name__, 
+                static_folder='static',  # Add this line to specify the static folder
+                template_folder='templates')  # Add this line to specify the template folder
+    app.config['SECRET_KEY'] = SECRET_KEY
+    
+    # Add common templates to Jinja search path
+    common_templates_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'common/templates')
+    app.jinja_loader = jinja2.ChoiceLoader([
+        app.jinja_loader,
+        jinja2.FileSystemLoader(common_templates_path)
+    ])
+    
+    # Register common static files
+    from flask import Blueprint
+    common_static = Blueprint('common_static', __name__, 
+                             static_folder=os.path.join(os.path.dirname(os.path.dirname(__file__)), 'common/static'),
+                             static_url_path='/common')
+    app.register_blueprint(common_static)
+    
+    # Register blueprints
+    app.register_blueprint(workflow_bp, url_prefix='/workflow')
+    
+    return app
+
+if __name__ == '__main__':
+    app = create_app()
+    app.run(debug=DEBUG, host='0.0.0.0', port=5000)

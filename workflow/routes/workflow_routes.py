@@ -1,14 +1,14 @@
 from flask import Blueprint, request, jsonify, render_template, send_from_directory
-from ..models.workflow import Workflow, WorkflowExecution
-from ..executors.workflow_executor import WorkflowExecutor
+from workflow.models.workflow import Workflow, WorkflowExecution
+from workflow.executors.workflow_executor import WorkflowExecutor
 import json
 import time
 
-# Crea un Blueprint per il workflow
+# Create Blueprint for workflow
 workflow_bp = Blueprint('workflow', __name__, 
-                      template_folder='templates',
-                      static_folder='static',
-                      static_url_path='/workflow/static')
+                        template_folder='../templates',
+                        static_folder='../static',
+                        static_url_path='/static')
 
 @workflow_bp.route('/')
 def index():
@@ -192,56 +192,66 @@ def get_execution(execution_id):
 @workflow_bp.route('/api/executions')
 def get_executions():
     """API per ottenere tutte le esecuzioni dei workflow, con paginazione"""
-    page = int(request.args.get('page', 1))
-    per_page = int(request.args.get('per_page', 20))
-    workflow_id = request.args.get('workflow_id')
-    
-    from ..db.connection import get_db_cursor
-    
-    with get_db_cursor() as cursor:
-        # Costruisci la query di base
-        query = """
-            SELECT id, workflow_id, status, started_at, completed_at, 
-                   COALESCE(error_message, '') as error_message
-            FROM workflow_executions
-        """
+    try:
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 20))
+        workflow_id = request.args.get('workflow_id')
         
-        params = []
-        count_query = "SELECT COUNT(*) FROM workflow_executions"
+        from ..db.connection import get_db_cursor
         
-        # Filtra per workflow_id se richiesto
-        if workflow_id:
-            query += " WHERE workflow_id = %s"
-            count_query += " WHERE workflow_id = %s"
-            params.append(int(workflow_id))
+        with get_db_cursor() as cursor:
+            # Costruisci la query di base
+            query = """
+                SELECT id, workflow_id, status, started_at, completed_at, 
+                       COALESCE(error_message, '') as error_message
+                FROM workflow_executions
+            """
+            
+            params = []
+            count_query = "SELECT COUNT(*) as count FROM workflow_executions"
+            
+            # Filtra per workflow_id se richiesto
+            if workflow_id:
+                query += " WHERE workflow_id = %s"
+                count_query += " WHERE workflow_id = %s"
+                params.append(int(workflow_id))
+            
+            # Aggiungi ordinamento e paginazione
+            query += " ORDER BY started_at DESC LIMIT %s OFFSET %s"
+            params.extend([per_page, (page - 1) * per_page])
+            
+            # Esegui la query principale
+            cursor.execute(query, params)
+            executions = cursor.fetchall()
+            
+            # Conta il totale di record per la paginazione
+            count_params = [int(workflow_id)] if workflow_id else []
+            cursor.execute(count_query, count_params)
+            result = cursor.fetchone()
+            total_count = result['count']  # Use the column name instead of index
         
-        # Aggiungi ordinamento e paginazione
-        query += " ORDER BY started_at DESC LIMIT %s OFFSET %s"
-        params.extend([per_page, (page - 1) * per_page])
+        # Formatta le date
+        for execution in executions:
+            for date_field in ['started_at', 'completed_at']:
+                if execution[date_field]:
+                    execution[date_field] = execution[date_field].isoformat()
         
-        # Esegui la query principale
-        cursor.execute(query, params)
-        executions = cursor.fetchall()
-        
-        # Conta il totale di record per la paginazione
-        cursor_count = connection.cursor()
-        count_params = [int(workflow_id)] if workflow_id else []
-        cursor.execute(count_query, count_params)
-        total_count = cursor.fetchone()[0]
-    
-    # Formatta le date
-    for execution in executions:
-        for date_field in ['started_at', 'completed_at']:
-            if execution[date_field]:
-                execution[date_field] = execution[date_field].isoformat()
-    
-    return jsonify({
-        "executions": [dict(e) for e in executions],
-        "total": total_count,
-        "page": page,
-        "per_page": per_page,
-        "pages": (total_count + per_page - 1) // per_page
-    })
+        return jsonify({
+            "executions": [dict(e) for e in executions],
+            "total": total_count,
+            "page": page,
+            "per_page": per_page,
+            "pages": (total_count + per_page - 1) // per_page
+        })
+    except Exception as e:
+        import traceback
+        error_traceback = traceback.format_exc()
+        print(f"Errore nella funzione get_executions: {str(e)}\n{error_traceback}")
+        return jsonify({
+            "error": f"Si è verificato un errore nel recupero delle esecuzioni: {str(e)}",
+            "function": "get_executions",
+            "route": "/api/executions"
+        }), 500
 
 @workflow_bp.route('/api/executions/<int:execution_id>/logs/stream')
 def stream_execution_logs(execution_id):
@@ -286,17 +296,27 @@ def stream_execution_logs(execution_id):
     })
 
 # Rotte per la visualizzazione UI
-@workflow_bp.route('/editor')
+@workflow_bp.route('/editor', strict_slashes=False)
 def editor():
     """Pagina dell'editor di workflow"""
-    return render_template('workflow_editor.html')
+    return render_template('workflow.html')
 
-@workflow_bp.route('/monitor')
+@workflow_bp.route('/monitor', strict_slashes=False)
 def monitor():
     """Pagina di monitoraggio delle esecuzioni"""
-    return render_template('workflow_monitor.html')
+    try:
+        return render_template('workflow_monitor.html')
+    except Exception as e:
+        import traceback
+        error_traceback = traceback.format_exc()
+        print(f"Errore nella route /monitor: {str(e)}\n{error_traceback}")
+        return jsonify({
+            "error": f"Si è verificato un errore nel caricamento della pagina di monitoraggio: {str(e)}",
+            "function": "monitor",
+            "route": "/workflow/monitor"
+        }), 500
 
-@workflow_bp.route('/executions/<int:execution_id>/view')
+@workflow_bp.route('/executions/<int:execution_id>/view', strict_slashes=False)
 def view_execution(execution_id):
     """Pagina per visualizzare i dettagli di un'esecuzione"""
     return render_template('workflow_execution.html', execution_id=execution_id)

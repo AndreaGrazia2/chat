@@ -54,6 +54,7 @@ socketio = SocketIO(app, cors_allowed_origins="*",
 # Registra i blueprint
 app.register_blueprint(chat_bp, url_prefix='/chat')
 app.register_blueprint(calendar_bp, url_prefix='/cal')
+# Look for this line in your main app.py
 app.register_blueprint(workflow_bp, url_prefix='/workflow')
 app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
 

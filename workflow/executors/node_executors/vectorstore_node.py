@@ -1,7 +1,7 @@
 import time
 import json
 import psycopg2
-from langchain.embeddings import OpenAIEmbeddings
+from langchain_community.embeddings import OpenAIEmbeddings
 from ..base import NodeExecutor
 from ...config import OPENAI_API_KEY, DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
 

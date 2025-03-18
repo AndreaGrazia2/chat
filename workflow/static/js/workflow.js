@@ -983,15 +983,12 @@ document.addEventListener('DOMContentLoaded', function () {
         loadWorkflowsList();
     });
 
-    // 3. Aggiungi un pulsante per eseguire il workflow
-    const executeBtn = document.createElement('button');
-    executeBtn.id = 'execute-btn';
-    executeBtn.className = 'px-3 py-1 bg-green-600 dark:bg-green-700 rounded hover:bg-green-700 dark:hover:bg-green-800 transition-colors duration-200';
-    executeBtn.innerHTML = '<i class="fas fa-play mr-1"></i> Execute';
-    executeBtn.addEventListener('click', showExecutionInputForm);
-
-    // Aggiungi il pulsante alla toolbar
-    document.querySelector('.toolbar .flex.space-x-3.items-center').appendChild(executeBtn);
-
+    // 3. Aggiungi un event listener per il pulsante Execute
+    const executeBtn = document.getElementById('execute-btn');
+    if (executeBtn) {
+        executeBtn.addEventListener('click', showExecutionInputForm);
+    } else {
+        console.error('Execute button not found in the DOM');
+    }
 
 });
