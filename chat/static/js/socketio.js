@@ -123,9 +123,15 @@ function handleMessageHistory(history) {
         });
 
         chatContainer.appendChild(fragment);
+    } else {
+        // Aggiungi un messaggio se non ci sono messaggi nella cronologia
+        const emptyElement = document.createElement('div');
+        emptyElement.className = 'empty-messages';
+        emptyElement.textContent = 'No messages yet. Start the conversation!';
+        chatContainer.appendChild(emptyElement);
     }
 
-    // Hide loader
+    // Hide loader - assicurati che venga sempre nascosto
     hideLoader();
 
     // Scroll to bottom
@@ -337,13 +343,34 @@ function joinDirectMessage(userId) {
  * @param {Object} messageData - Dati del messaggio
  */
 function sendChannelMessage(channelName, messageData) {
-	if (currentlyConnected) {
-		socket.emit('channelMessage', {
-			channelName: channelName,
-			message: messageData
-		});
-	}
+    if (currentlyConnected) {
+        try {
+            console.log(`Inviando messaggio al canale ${channelName}:`, messageData);
+            socket.emit('channelMessage', {
+                channelName: channelName,
+                message: messageData
+            });
+            
+            // Aggiungi timeout di sicurezza per verificare se il messaggio è stato ricevuto
+            setTimeout(() => {
+                const sentMessages = displayedMessages.filter(m => 
+                    m.isOwn && m.text === messageData.text && m.status !== 'sending'
+                );
+                
+                if (sentMessages.length === 0) {
+                    console.warn(`Possibile problema nell'invio del messaggio al canale ${channelName}:`, messageData);
+                }
+            }, 3000);
+        } catch (error) {
+            console.error(`Errore nell'invio del messaggio al canale ${channelName}:`, error);
+            showNotification(`Errore nell'invio del messaggio: ${error.message}`, true);
+        }
+    } else {
+        console.warn("Socket non connesso. Impossibile inviare il messaggio.");
+        showNotification("Non connesso al server. Messaggio non inviato.", true);
+    }
 }
+
 
 /**
  * Invia un messaggio diretto

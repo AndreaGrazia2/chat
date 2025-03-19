@@ -82,46 +82,58 @@ def get_channel_messages(channel_name):
             # Converti in formato per il frontend
             message_list = []
             for msg in messages:
-                # Ottieni i dati dell'utente che ha risposto (se presente)
-                reply_user = None
+                # Gestisci messaggio a cui si risponde
+                reply_to = None
                 if msg['reply_to_id']:
-                    cursor.execute(
-                        """
-                        SELECT m.id, m.text, u.id as user_id, u.username, u.display_name, u.avatar_url
-                        FROM chat_schema.messages m
-                        JOIN chat_schema.users u ON m.user_id = u.id
-                        WHERE m.id = %s
-                        """,
-                        (msg['reply_to_id'],)
-                    )
-                    reply_result = cursor.fetchone()
-                    if reply_result:
-                        reply_user = {
-                            'id': reply_result['user_id'],
-                            'username': reply_result['username'],
-                            'displayName': reply_result['display_name'],
-                            'avatarUrl': reply_result['avatar_url']
-                        }
+                    try:
+                        cursor.execute(
+                            """
+                            SELECT m.id, m.text, u.id as user_id, u.username, u.display_name, u.avatar_url
+                            FROM chat_schema.messages m
+                            JOIN chat_schema.users u ON m.user_id = u.id
+                            WHERE m.id = %s
+                            """,
+                            (msg['reply_to_id'],)
+                        )
+                        reply_result = cursor.fetchone()
+                        if reply_result:
+                            reply_to = {
+                                'id': msg['reply_to_id'],
+                                'text': reply_result['text'],
+                                'user': {
+                                    'id': reply_result['user_id'],
+                                    'username': reply_result['username'],
+                                    'displayName': reply_result['display_name'],
+                                    'avatarUrl': reply_result['avatar_url']
+                                }
+                            }
+                    except Exception as e:
+                        print(f"Error retrieving reply_to message: {e}")
+                        reply_to = None
                 
-                # Ottieni i dati dell'utente che ha inoltrato (se presente)
-                forwarded_user = None
+                # Gestisci messaggio inoltrato
+                forwarded_from = None
                 if msg['forwarded_from_id']:
-                    cursor.execute(
-                        """
-                        SELECT id, username, display_name, avatar_url
-                        FROM chat_schema.users
-                        WHERE id = %s
-                        """,
-                        (msg['forwarded_from_id'],)
-                    )
-                    forward_result = cursor.fetchone()
-                    if forward_result:
-                        forwarded_user = {
-                            'id': forward_result['id'],
-                            'username': forward_result['username'],
-                            'displayName': forward_result['display_name'],
-                            'avatarUrl': forward_result['avatar_url']
-                        }
+                    try:
+                        cursor.execute(
+                            """
+                            SELECT id, username, display_name, avatar_url
+                            FROM chat_schema.users
+                            WHERE id = %s
+                            """,
+                            (msg['forwarded_from_id'],)
+                        )
+                        forward_result = cursor.fetchone()
+                        if forward_result:
+                            forwarded_from = {
+                                'id': forward_result['id'],
+                                'username': forward_result['username'],
+                                'displayName': forward_result['display_name'],
+                                'avatarUrl': forward_result['avatar_url']
+                            }
+                    except Exception as e:
+                        print(f"Error retrieving forwarded_from user: {e}")
+                        forwarded_from = None
                 
                 message_list.append({
                     'id': msg['id'],
@@ -137,12 +149,8 @@ def get_channel_messages(channel_name):
                     'timestamp': msg['created_at'].isoformat(),
                     'type': msg['message_type'],
                     'fileData': json.loads(msg['file_data']) if msg['file_data'] else None,
-                    'replyTo': {
-                        'id': msg['reply_to_id'],
-                        'text': reply_result['text'] if reply_user else None,
-                        'user': reply_user
-                    } if msg['reply_to_id'] else None,
-                    'forwardedFrom': forwarded_user,
+                    'replyTo': reply_to,
+                    'forwardedFrom': forwarded_from,
                     'metadata': json.loads(msg['metadata']) if msg['metadata'] else None,
                     'reactions': json.loads(msg['reactions']) if msg['reactions'] else None,
                     'edited': msg['edited'],

@@ -155,7 +155,7 @@ function loadOlderMessages() {
         });
 }
 
-// Modifica le funzioni che caricano messaggi per un canale
+// caricano messaggi per un canale
 function loadChannelMessages(channelName, scrollToBottom = true) {
     currentConversationId = channelName;
     isChannel = true;
@@ -173,11 +173,20 @@ function loadChannelMessages(channelName, scrollToBottom = true) {
     
     // Mostra un loader
     showLoader();
+    console.log(`Loading messages for channel: ${channelName}`);
     
     // Carica i messaggi dal server
     fetch(`/chat/api/messages/channel/${channelName}`)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(messages => {
+            console.log(`Received ${messages.length} messages for channel ${channelName}`);
+            
+            // IMPORTANTE: Nascondi il loader qui, senza condizioni
             hideLoader();
             
             if (messages.length > 0) {
@@ -196,6 +205,7 @@ function loadChannelMessages(channelName, scrollToBottom = true) {
                     chatMessages.scrollTop = chatMessages.scrollHeight;
                 }
             } else {
+                console.log(`No messages found for channel ${channelName}`);
                 // Mostra un messaggio se non ci sono messaggi
                 const emptyElement = document.createElement('div');
                 emptyElement.className = 'empty-messages';
@@ -205,14 +215,21 @@ function loadChannelMessages(channelName, scrollToBottom = true) {
         })
         .catch(error => {
             console.error('Error loading channel messages:', error);
+            
+            // IMPORTANTE: Nascondi il loader anche in caso di errore
             hideLoader();
             
             // Mostra un messaggio di errore
+            const errorElement = document.createElement('div');
+            errorElement.className = 'empty-messages error-message';
+            errorElement.textContent = `Error loading messages: ${error.message}`;
+            chatMessages.appendChild(errorElement);
+            
             showNotification('Error loading channel messages: ' + error.message, true);
         });
 }
 
-// Modifica le funzioni che caricano messaggi per DM
+//caricano messaggi per DM
 function loadDirectMessages(userId, userName, scrollToBottom = true) {
     currentConversationId = userId;
     isChannel = false;
