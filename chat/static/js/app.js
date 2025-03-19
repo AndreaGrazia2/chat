@@ -65,7 +65,7 @@ const users = [{
     status: 'offline'
 }];
 
-// Testi di esempio per messaggi
+// Testi di esempio per messaggi (mantenuti per compatibilità con altre funzioni)
 const messageTexts = [
     'Hey there!',
     'How are you doing today?',
@@ -75,7 +75,7 @@ const messageTexts = [
     // ... altri testi (omessi per brevità)
 ];
 
-// Tipi di file per allegati
+// Tipi di file per allegati (mantenuti per compatibilità con altre funzioni)
 const fileTypes = [{
     ext: 'pdf',
     icon: 'fa-file-pdf',
@@ -92,11 +92,8 @@ function initializeApp() {
     // Setup del failsafe per history lock
     setupHistoryLockFailsafe();
     
-    // Genera messaggi di esempio
-    generateMockMessages();
-    
-    // Carica i messaggi iniziali
-    loadInitialMessages(batchSize);
+    // Inizializza messaggi vuoti invece di generarli
+    messages = [];
     
     // Aggiorna le info dell'header
     updateChatHeaderInfo();
@@ -843,59 +840,6 @@ function showContextMenu(x, y, messageId) {
 }
 
 /**
- * Genera messaggi di esempio
- */
-function generateMockMessages() {
-    messages = [];
-    const now = new Date();
-    
-    for (let i = 0; i < totalMessages; i++) {
-        const userId = Math.floor(Math.random() * users.length);
-        let messageText = messageTexts[Math.floor(Math.random() * messageTexts.length)];
-        
-        // Assicura che alcuni messaggi abbiano link (specialmente nel primo batch)
-        if (i > totalMessages - 20 && i % 4 === 0) {
-            messageText = 'Check out this useful resource: <span class="link-example">https://xbe.at/tools</span> - it helps with productivity!';
-        }
-        
-        // Timestamp progressivamente più indietro nel tempo per test migliori
-        const timestamp = new Date(now.getTime() - (totalMessages - i) * 60000);
-        const messageId = i + 1;
-        
-        // Crea casualmente messaggi di tipo speciale (inoltrati, allegati)
-        const random = Math.random();
-        let messageType = 'normal';
-        let fileData = null;
-        let forwardedFrom = null;
-        
-        // ~10% probabilità di messaggio inoltrato
-        if (random < 0.1) {
-            messageType = 'forwarded';
-            const forwardUserId = Math.floor(Math.random() * users.length);
-            forwardedFrom = users[forwardUserId];
-        }
-        // ~10% probabilità di allegato file
-        else if (random < 0.2) {
-            messageType = 'file';
-            fileData = fileTypes[Math.floor(Math.random() * fileTypes.length)];
-        }
-        
-        messages.push({
-            id: messageId,
-            user: users[userId],
-            text: messageText,
-            timestamp: timestamp,
-            isOwn: userId === 0,
-            type: messageType,
-            fileData: fileData,
-            forwardedFrom: forwardedFrom
-        });
-        
-        lastMessageId = messageId;
-    }
-}
-
-/**
  * Carica messaggi iniziali
  * @param {number} count - Numero di messaggi da caricare
  */
@@ -907,56 +851,21 @@ function loadInitialMessages(count) {
     // Mostra loader
     showLoader();
     
-    // Ottieni i messaggi più recenti
-    const startIndex = Math.max(messages.length - count, 0);
-    const batch = messages.slice(startIndex);
+    // In attesa che i messaggi arrivino dal server
+    const loadingIndicator = document.createElement('div');
+    loadingIndicator.className = 'empty-messages';
+    loadingIndicator.textContent = 'Loading messages...';
+    chatContainer.appendChild(loadingIndicator);
     
-    // Ordina cronologicamente
-    batch.sort((a, b) => a.timestamp - b.timestamp);
-    
-    // Tiene traccia delle date per i separatori
-    let lastDate = null;
-    
-    // Crea fragment per migliori performance
-    const fragment = document.createDocumentFragment();
-    
-    batch.forEach(message => {
-        const messageDate = new Date(message.timestamp).toDateString();
-        
-        // Aggiungi separatore data se necessario
-        if (messageDate !== lastDate) {
-            const divider = document.createElement('div');
-            divider.className = 'date-divider';
-            divider.innerHTML = `<span>${formatDate(message.timestamp)}</span>`;
-            fragment.appendChild(divider);
-            lastDate = messageDate;
-        }
-        
-        // Crea elemento messaggio
-        const messageEl = createMessageElement(message);
-        fragment.appendChild(messageEl);
-        
-        // Traccia messaggi visualizzati
-        displayedMessages.push(message);
-    });
-    
-    // Appendi tutto in una volta per migliori performance
-    chatContainer.appendChild(fragment);
-    
-    // Imposta numero iniziale di messaggi caricati
-    messagesLoaded = batch.length;
-    
-    // Nascondi loader
+    // Nascondi loader dopo un po' se non ci sono messaggi
     setTimeout(() => {
         hideLoader();
         
-        // Scorri in fondo
-        scrollToBottom(false);
-        
-        // Reset conteggio non letti
-        unreadMessages = 0;
-        updateUnreadBadge();
-    }, 300);
+        // Mostra messaggio se ancora nessun messaggio è arrivato
+        if (displayedMessages.length === 0 && chatContainer.children.length === 1) {
+            loadingIndicator.textContent = 'No messages yet. Start the conversation!';
+        }
+    }, 1000);
 }
 
 /**
@@ -984,77 +893,23 @@ function loadMoreMessages() {
     const chatContainer = document.getElementById('chatMessages');
     chatContainer.style.scrollBehavior = 'auto';
     
-    // Determina quali messaggi caricare
-    const startIndex = Math.max(messages.length - messagesLoaded - batchSize, 0);
-    const endIndex = messages.length - messagesLoaded;
-    const batch = messages.slice(startIndex, endIndex);
+    // Se stiamo usando la connessione socket.io, le richieste saranno gestite là
+    // Altrimenti, mostriamo solo un messaggio "Loading..."
     
-    debug("Batch ready to load", {
-        startIndex,
-        endIndex,
-        batchSize: batch.length
-    });
-    
-    // Esegue con ritardo visibile per mostrare il loader
+    // Simula un'attesa per il caricamento di messaggi
     setTimeout(() => {
         try {
-            // Ordina messaggi cronologicamente
-            batch.sort((a, b) => a.timestamp - b.timestamp);
+            // I messaggi dovrebbero arrivare tramite socket.io
+            // Se non è arrivato nulla, mostro un messaggio
+            const allLoadedIndicator = document.createElement('div');
+            allLoadedIndicator.className = 'date-divider start-of-conversation';
+            allLoadedIndicator.innerHTML = `<span>No more messages available</span>`;
+            chatContainer.prepend(allLoadedIndicator);
             
-            // Crea fragment per tutti i nuovi contenuti
-            const fragment = document.createDocumentFragment();
+            // Scorri un po' verso il basso per mostrare il messaggio
+            chatContainer.scrollTop = 20;
             
-            // Ottieni la data del primo messaggio esistente per verifica separatore
-            let lastDate = displayedMessages.length > 0 ?
-                new Date(displayedMessages[0].timestamp).toDateString() :
-                null;
-            
-            // Aggiungi un indicatore discreto per l'inizio della conversazione
-            if (startIndex === 0) {
-                const allLoadedIndicator = document.createElement('div');
-                allLoadedIndicator.className = 'date-divider start-of-conversation';
-                allLoadedIndicator.innerHTML = `<span>Beginning of conversation</span>`;
-                fragment.appendChild(allLoadedIndicator);
-            }
-            
-            // Aggiungi messaggi al fragment, raggruppati per data
-            batch.forEach(message => {
-                const messageDate = new Date(message.timestamp).toDateString();
-                
-                // Aggiungi separatore data se necessario
-                if (messageDate !== lastDate) {
-                    const divider = document.createElement('div');
-                    divider.className = 'date-divider';
-                    divider.innerHTML = `<span>${formatDate(message.timestamp)}</span>`;
-                    fragment.appendChild(divider);
-                    lastDate = messageDate;
-                }
-                
-                // Crea e aggiungi elemento messaggio
-                const messageEl = createMessageElement(message);
-                fragment.appendChild(messageEl);
-                
-                // Aggiungi ai messaggi visualizzati (all'inizio)
-                displayedMessages.unshift(message);
-            });
-            
-            // Inserisci nuovo contenuto in cima
-            if (chatContainer.firstChild) {
-                chatContainer.insertBefore(fragment, chatContainer.firstChild);
-            } else {
-                chatContainer.appendChild(fragment);
-            }
-            
-            // Incrementa conteggio caricati
-            messagesLoaded += batch.length;
-            
-            // Scorri immediatamente in cima
-            chatContainer.scrollTop = 0;
-            
-            debug("Successfully loaded more messages and scrolled to top", {
-                newTotalLoaded: messagesLoaded,
-                addedMessages: batch.length
-            });
+            debug("Checked for more messages - none found or no connection to server");
         } catch (error) {
             console.error("Error during loadMoreMessages:", error);
         } finally {

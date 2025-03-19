@@ -562,10 +562,10 @@ def register_handlers(socketio):
                     'conversationId': conversation_id,
                     'user': {
                         'id': ai_user['id'],
-                        'username': ai_user['username'],  # Rimosso il fallback
-                        'displayName': ai_user['display_name'],  # Rimosso il fallback
-                        'avatarUrl': ai_user['avatar_url'],  # Rimosso il fallback
-                        'status': ai_user['status']  # Rimosso il fallback
+                        'username': ai_user.get('username', 'AI Assistant'),
+                        'displayName': ai_user.get('display_name', 'AI Assistant'),
+                        'avatarUrl': ai_user.get('avatar_url', 'https://ui-avatars.com/api/?name=AI+Assistant'),
+                        'status': ai_user.get('status', 'online')
                     },
                     'text': ai_response,
                     'timestamp': ai_created_at.isoformat(),
