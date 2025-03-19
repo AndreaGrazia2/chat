@@ -534,210 +534,209 @@ def register_handlers(socketio):
         emit('newMessage', message_dict, room=room)
         print(f"Broadcasted message {message_id} to room {room}")
 
-        @socketio.on('directMessage')
-        def handle_direct_message(data):
-            """Handle direct message from client"""
-            print(f"Received direct message: {data}")
-            user_id = data.get('userId')
-            message_data = data.get('message', {})
+    @socketio.on('directMessage')
+    def handle_direct_message(data):
+        """Handle direct message from client"""
+        print(f"Received direct message: {data}")
+        user_id = data.get('userId')
+        message_data = data.get('message', {})
 
-            if not user_id or not message_data.get('text'):
-                return
+        if not user_id or not message_data.get('text'):
+            return
 
-            # Define room at the beginning of the function
-            room = f"dm:{user_id}"
+        # Define room at the beginning of the function
+        room = f"dm:{user_id}"
 
-            # Check if users exist
-            with get_db_cursor() as cursor:
-                cursor.execute(
-                    "SELECT id, username, display_name, avatar_url, status FROM chat_schema.users WHERE id = %s", (user_id,))
-                target_user = cursor.fetchone()
+        # Check if users exist
+        with get_db_cursor() as cursor:
+            cursor.execute(
+                "SELECT id, username, display_name, avatar_url, status FROM chat_schema.users WHERE id = %s", (user_id,))
+            target_user = cursor.fetchone()
 
-                cursor.execute(
-                    "SELECT id, username, display_name, avatar_url, status FROM chat_schema.users WHERE id = 1")
-                current_user = cursor.fetchone()
+            cursor.execute(
+                "SELECT id, username, display_name, avatar_url, status FROM chat_schema.users WHERE id = 1")
+            current_user = cursor.fetchone()
 
-            # Verifica che gli utenti esistano e abbiano dati validi
-            if not target_user or not current_user:
-                print(f"Error: User not found. Target user ID: {user_id}")
-                return
+        # Verifica che gli utenti esistano e abbiano dati validi
+        if not target_user or not current_user:
+            print(f"Error: User not found. Target user ID: {user_id}")
+            return
 
-            # Log dei dati utente per debug
-            print(f"Target user: {target_user}")
-            print(f"Current user: {current_user}")
+        # Log dei dati utente per debug
+        print(f"Target user: {target_user}")
+        print(f"Current user: {current_user}")
 
-            # Find the DM conversation between current user and specified user
-            with get_db_cursor() as cursor:
-                cursor.execute(
-                    """
-                    SELECT c.id FROM chat_schema.conversations c
-                    JOIN chat_schema.conversation_participants cp1 ON c.id = cp1.conversation_id
-                    JOIN chat_schema.conversation_participants cp2 ON c.id = cp2.conversation_id
-                    WHERE c.type = 'direct'
-                    AND cp1.user_id = 1  -- Current user
-                    AND cp2.user_id = %s
-                    """,
-                    (user_id,)
-                )
-                result = cursor.fetchone()
+        # Find the DM conversation between current user and specified user
+        with get_db_cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT c.id FROM chat_schema.conversations c
+                JOIN chat_schema.conversation_participants cp1 ON c.id = cp1.conversation_id
+                JOIN chat_schema.conversation_participants cp2 ON c.id = cp2.conversation_id
+                WHERE c.type = 'direct'
+                AND cp1.user_id = 1  -- Current user
+                AND cp2.user_id = %s
+                """,
+                (user_id,)
+            )
+            result = cursor.fetchone()
 
-            if not result:
-                # Create a new conversation if it doesn't exist
-                with get_db_cursor(commit=True) as cursor:
-                    cursor.execute(
-                        """
-                        INSERT INTO chat_schema.conversations (name, type)
-                        VALUES (%s, %s)
-                        RETURNING id
-                        """,
-                        (f"DM with user {user_id}", "direct")
-                    )
-                    conversation_id = cursor.fetchone()['id']
-
-                    # Add participants
-                    cursor.execute(
-                        """
-                        INSERT INTO chat_schema.conversation_participants (conversation_id, user_id)
-                        VALUES (%s, %s), (%s, %s)
-                        """,
-                        (conversation_id, 1, conversation_id, user_id)
-                    )
-            else:
-                conversation_id = result['id']
-
-            # Create user message
+        if not result:
+            # Create a new conversation if it doesn't exist
             with get_db_cursor(commit=True) as cursor:
                 cursor.execute(
                     """
-                    INSERT INTO chat_schema.messages 
-                    (conversation_id, user_id, reply_to_id, text, message_type, file_data, forwarded_from_id)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
-                    RETURNING id, created_at
+                    INSERT INTO chat_schema.conversations (name, type)
+                    VALUES (%s, %s)
+                    RETURNING id
                     """,
-                    (
-                        conversation_id,
-                        1,  # current user id
-                        message_data.get('replyTo'),
-                        message_data.get('text'),
-                        message_data.get('type', 'normal'),
-                        json.dumps(message_data.get('fileData')) if message_data.get(
-                            'fileData') else None,
-                        message_data.get('forwardedFrom', {}).get('id')
-                    )
+                    (f"DM with user {user_id}", "direct")
                 )
-                result = cursor.fetchone()
-                message_id = result['id']
-                created_at = result['created_at']
+                conversation_id = cursor.fetchone()['id']
 
-            # Prepara il messaggio con tutti i campi necessari
-            message_dict = {
-                'id': message_id,
+                # Add participants
+                cursor.execute(
+                    """
+                    INSERT INTO chat_schema.conversation_participants (conversation_id, user_id)
+                    VALUES (%s, %s), (%s, %s)
+                    """,
+                    (conversation_id, 1, conversation_id, user_id)
+                )
+        else:
+            conversation_id = result['id']
+
+        # Create user message
+        with get_db_cursor(commit=True) as cursor:
+            cursor.execute(
+                """
+                INSERT INTO chat_schema.messages 
+                (conversation_id, user_id, reply_to_id, text, message_type, file_data, forwarded_from_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                RETURNING id, created_at
+                """,
+                (
+                    conversation_id,
+                    1,  # current user id
+                    message_data.get('replyTo'),
+                    message_data.get('text'),
+                    message_data.get('type', 'normal'),
+                    json.dumps(message_data.get('fileData')) if message_data.get(
+                        'fileData') else None,
+                    message_data.get('forwardedFrom', {}).get('id')
+                )
+            )
+            result = cursor.fetchone()
+            message_id = result['id']
+            created_at = result['created_at']
+
+        # Prepara il messaggio con tutti i campi necessari
+        message_dict = {
+            'id': message_id,
+            'conversationId': conversation_id,
+            'user': {
+                'id': current_user['id'],
+                'username': current_user['username'],  # Rimosso il fallback
+                # Rimosso il fallback
+                'displayName': current_user['display_name'],
+                'avatarUrl': current_user['avatar_url'],  # Rimosso il fallback
+                'status': current_user['status']  # Rimosso il fallback
+            },
+            'text': message_data.get('text', ''),
+            'timestamp': created_at.isoformat(),
+            'type': message_data.get('type', 'normal'),
+            'fileData': message_data.get('fileData'),
+            'replyTo': None,  # Would need to fetch reply details
+            'forwardedFrom': None,  # Would need to fetch forwarded details
+            'metadata': message_data.get('metadata', {}),
+            'reactions': {},
+            'edited': False,
+            'editedAt': None,
+            'isOwn': True,
+            'tempId': message_data.get('tempId')
+        }
+
+        # Log del messaggio per debug
+        print(f"Sending message: {message_dict}")
+
+        # Send message to everyone in the room (including sender)
+        emit('newMessage', message_dict, room=room)
+
+        # If message is for AI Assistant (user_id=2), generate a response
+        if int(user_id) == 2:
+            # Show typing indicator
+            emit('typingIndicator', {
+                'userId': 2,
                 'conversationId': conversation_id,
-                'user': {
-                    'id': current_user['id'],
-                    'username': current_user['username'],  # Rimosso il fallback
-                    # Rimosso il fallback
-                    'displayName': current_user['display_name'],
-                    'avatarUrl': current_user['avatar_url'],  # Rimosso il fallback
-                    'status': current_user['status']  # Rimosso il fallback
-                },
-                'text': message_data.get('text', ''),
-                'timestamp': created_at.isoformat(),
-                'type': message_data.get('type', 'normal'),
-                'fileData': message_data.get('fileData'),
-                'replyTo': None,  # Would need to fetch reply details
-                'forwardedFrom': None,  # Would need to fetch forwarded details
-                'metadata': message_data.get('metadata', {}),
-                'reactions': {},
-                'edited': False,
-                'editedAt': None,
-                'isOwn': True,
-                'tempId': message_data.get('tempId')
-            }
+                'isTyping': True
+            }, room=room)
 
-            # Log del messaggio per debug
-            print(f"Sending message: {message_dict}")
+            try:
+                # Get AI response
+                ai_response = get_llm_response(message_data.get('text', ''))
 
-            # Send message to everyone in the room (including sender)
-            emit('newMessage', message_dict, room=room)
+                # Simulate typing delay
+                time.sleep(1.5)
 
-            # If message is for AI Assistant (user_id=2), generate a response
-            if int(user_id) == 2:
-                # Show typing indicator
+                # Get AI user data from database (non aggiornare qui)
+                with get_db_cursor() as cursor:
+                    cursor.execute(
+                        """
+                        SELECT id, username, display_name, avatar_url, status 
+                        FROM chat_schema.users WHERE id = 2
+                        """
+                    )
+                    ai_user = cursor.fetchone()
+                    print(f"AI user data from database: {ai_user}")
+
+                # Create response message
+                with get_db_cursor(commit=True) as cursor:
+                    cursor.execute(
+                        """
+                        INSERT INTO chat_schema.messages 
+                        (conversation_id, user_id, text, message_type)
+                        VALUES (%s, %s, %s, %s)
+                        RETURNING id, created_at
+                        """,
+                        (conversation_id, 2, ai_response, 'normal')
+                    )
+                    result = cursor.fetchone()
+                    ai_message_id = result['id']
+                    ai_created_at = result['created_at']
+
+                # Send AI response with user data from database
+                ai_message = {
+                    'id': ai_message_id,
+                    'conversationId': conversation_id,
+                    'user': {
+                        'id': ai_user['id'],
+                        'username': ai_user.get('username', 'AI Assistant'),
+                        'displayName': ai_user.get('display_name', 'AI Assistant'),
+                        'avatarUrl': ai_user.get('avatar_url', 'https://ui-avatars.com/api/?name=AI+Assistant'),
+                        'status': ai_user.get('status', 'online')
+                    },
+                    'text': ai_response,
+                    'timestamp': ai_created_at.isoformat(),
+                    'type': 'normal',
+                    'fileData': None,
+                    'replyTo': None,
+                    'forwardedFrom': None,
+                    'metadata': {},
+                    'reactions': {},
+                    'edited': False,
+                    'editedAt': None,
+                    'isOwn': False
+                }
+
+                print(
+                    f"Sending AI response with user data: {ai_message['user']}")
+                emit('newMessage', ai_message, room=room)
+            finally:
+                # Hide typing indicator
                 emit('typingIndicator', {
                     'userId': 2,
                     'conversationId': conversation_id,
-                    'isTyping': True
+                    'isTyping': False
                 }, room=room)
-
-                try:
-                    # Get AI response
-                    ai_response = get_llm_response(message_data.get('text', ''))
-
-                    # Simulate typing delay
-                    time.sleep(1.5)
-
-                    # Get AI user data from database (non aggiornare qui)
-                    with get_db_cursor() as cursor:
-                        cursor.execute(
-                            """
-                            SELECT id, username, display_name, avatar_url, status 
-                            FROM chat_schema.users WHERE id = 2
-                            """
-                        )
-                        ai_user = cursor.fetchone()
-                        print(f"AI user data from database: {ai_user}")
-
-                    # Create response message
-                    with get_db_cursor(commit=True) as cursor:
-                        cursor.execute(
-                            """
-                            INSERT INTO chat_schema.messages 
-                            (conversation_id, user_id, text, message_type)
-                            VALUES (%s, %s, %s, %s)
-                            RETURNING id, created_at
-                            """,
-                            (conversation_id, 2, ai_response, 'normal')
-                        )
-                        result = cursor.fetchone()
-                        ai_message_id = result['id']
-                        ai_created_at = result['created_at']
-
-                    # Send AI response with user data from database
-                    ai_message = {
-                        'id': ai_message_id,
-                        'conversationId': conversation_id,
-                        'user': {
-                            'id': ai_user['id'],
-                            'username': ai_user.get('username', 'AI Assistant'),
-                            'displayName': ai_user.get('display_name', 'AI Assistant'),
-                            'avatarUrl': ai_user.get('avatar_url', 'https://ui-avatars.com/api/?name=AI+Assistant'),
-                            'status': ai_user.get('status', 'online')
-                        },
-                        'text': ai_response,
-                        'timestamp': ai_created_at.isoformat(),
-                        'type': 'normal',
-                        'fileData': None,
-                        'replyTo': None,
-                        'forwardedFrom': None,
-                        'metadata': {},
-                        'reactions': {},
-                        'edited': False,
-                        'editedAt': None,
-                        'isOwn': False
-                    }
-
-                    print(
-                        f"Sending AI response with user data: {ai_message['user']}")
-                    emit('newMessage', ai_message, room=room)
-                finally:
-                    # Hide typing indicator
-                    emit('typingIndicator', {
-                        'userId': 2,
-                        'conversationId': conversation_id,
-                        'isTyping': False
-                    }, room=room)
-
 
 def ensure_channel_conversations_exist():
     """Ensure that all channels have corresponding conversations in the database"""

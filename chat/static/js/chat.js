@@ -82,7 +82,7 @@ function loadOlderMessages() {
                 // Mostra un messaggio "Non ci sono più messaggi"
                 const noMoreElement = document.createElement('div');
                 noMoreElement.className = 'date-divider';
-                noMoreElement.innerHTML = '<span>Beginning of conversation</span>';
+                noMoreElement.innerHTML = '<span>Non ci sono più messaggi da visualizzare</span>';
                 
                 if (chatMessages.firstChild) {
                     chatMessages.insertBefore(noMoreElement, chatMessages.firstChild);

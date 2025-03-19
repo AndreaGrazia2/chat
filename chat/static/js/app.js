@@ -935,6 +935,8 @@ function loadMoreMessages() {
  * @returns {HTMLElement} - Elemento DOM del messaggio
  */
 function createMessageElement(message) {
+    // All'inizio della funzione createMessageElement, aggiungi:
+    //console.log("Oggetto messaggio:", JSON.stringify(message.user, null, 2));
     // Crea prima la riga che conterrà il messaggio e il timestamp
     const messageRow = document.createElement('div');
     messageRow.className = 'message-row';
@@ -968,7 +970,7 @@ function createMessageElement(message) {
         
         quotedHtml = `
             <div class="quoted-message">
-                <div class="quoted-user">${quoteIcon} ${replyToMessage.user.name}</div>
+                <div class="quoted-user">${quoteIcon} ${replyToMessage.user.displayName}</div>
                 <div class="quoted-text">${replyToMessage.text}</div>
             </div>
         `;
@@ -979,7 +981,7 @@ function createMessageElement(message) {
     if (message.type === 'forwarded' && message.forwardedFrom) {
         forwardedHtml = `
             <div class="forwarded-header">
-                <i class="fas fa-share"></i> Forwarded from ${message.forwardedFrom.name}
+                <i class="fas fa-share"></i> Forwarded from ${message.forwardedFrom.displayName}
             </div>
         `;
     }
@@ -1019,11 +1021,11 @@ function createMessageElement(message) {
     // Costruisci l'HTML del messaggio
     messageEl.innerHTML = `
         <div class="avatar">
-            <img src="${message.user.avatar}" alt="${message.user.name}">
+            <img src="${message.user.avatarUrl}" alt="${message.user.displayName}">
         </div>
         <div class="message-content">
             <div class="message-header">
-                <div class="user-name">${message.user.name}</div>
+                <div class="user-name">${message.user.displayName}</div>
             </div>
             <div class="message-bubble ${message.type === 'forwarded' ? 'forwarded-message' : ''}">
                 ${forwardedHtml}
