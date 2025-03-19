@@ -32,6 +32,10 @@ let historyScrollLock = false;
 let lastHistoryLockTime = 0;
 let pullAttempts = 0;
 let lastPullToRefreshTime = 0;
+let isLoadingMessages = false;
+let hasMoreMessages = true;
+let currentConversationId = null;
+let oldestMessageId = null;
 
 // Dati utenti
 const users = [{
@@ -331,6 +335,140 @@ function setupScrollHandlers() {
     }, { passive: true });
 }
 
+// Funzione migliorata per caricare messaggi più vecchi
+function loadOlderMessages() {
+    if (!currentConversationId || isLoadingMessages || !hasMoreMessages) {
+        console.log("Cannot load older messages:", {
+            currentConversationId,
+            isLoadingMessages,
+            hasMoreMessages
+        });
+        return;
+    }
+    
+    console.log("Loading older messages for:", currentConversationId, "isChannel:", isChannel);
+    
+    isLoadingMessages = true;
+    
+    // Aggiungi un loader all'inizio dei messaggi
+    const loaderElement = document.createElement('div');
+    loaderElement.className = 'messages-loader';
+    loaderElement.innerHTML = '<div class="loader-spinner"></div>';
+    
+    const chatMessages = document.querySelector('.chat-messages');
+    if (chatMessages.firstChild) {
+        chatMessages.insertBefore(loaderElement, chatMessages.firstChild);
+    } else {
+        chatMessages.appendChild(loaderElement);
+    }
+    
+    // Salva l'altezza dello scroll corrente
+    const scrollHeight = chatMessages.scrollHeight;
+    
+    // Costruisci l'URL in base al tipo di conversazione
+    let url;
+    if (isChannel) {
+        url = `/chat/api/messages/channel/${currentConversationId}?before_id=${oldestMessageId || ''}&limit=20`;
+    } else {
+        url = `/chat/api/messages/dm/${currentConversationId}?before_id=${oldestMessageId || ''}&limit=20`;
+    }
+    
+    console.log("Fetching older messages from URL:", url);
+    
+    // Richiedi i messaggi più vecchi
+    fetch(url)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(messages => {
+            // Rimuovi il loader
+            loaderElement.remove();
+            
+            console.log("Received older messages:", messages.length);
+            
+            if (messages.length === 0) {
+                hasMoreMessages = false;
+                
+                // Mostra un messaggio "Non ci sono più messaggi"
+                const noMoreElement = document.createElement('div');
+                noMoreElement.className = 'date-divider';
+                noMoreElement.innerHTML = '<span>Non ci sono più messaggi da visualizzare</span>';
+                
+                if (chatMessages.firstChild) {
+                    chatMessages.insertBefore(noMoreElement, chatMessages.firstChild);
+                } else {
+                    chatMessages.appendChild(noMoreElement);
+                }
+                
+                // Non rimuovere il messaggio, è un separatore utile
+            } else {
+                // Aggiorna l'ID del messaggio più vecchio
+                if (messages.length > 0) {
+                    // Trova il messaggio con ID più piccolo (il più vecchio)
+                    const oldestMsg = messages.reduce((prev, curr) => 
+                        (prev.id < curr.id) ? prev : curr
+                    );
+                    oldestMessageId = oldestMsg.id;
+                    console.log("Updated oldestMessageId to:", oldestMessageId);
+                }
+                
+                // Prepara i messaggi (dal più vecchio al più nuovo)
+                messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                
+                // Tieni traccia delle date per i separatori
+                let lastDate = null;
+                let fragment = document.createDocumentFragment();
+                
+                // Renderizza i messaggi
+                messages.forEach(message => {
+                    // Aggiungi separatore data se necessario
+                    const messageDate = new Date(message.timestamp).toDateString();
+                    if (messageDate !== lastDate) {
+                        const divider = document.createElement('div');
+                        divider.className = 'date-divider';
+                        divider.innerHTML = `<span>${formatDate(new Date(message.timestamp))}</span>`;
+                        fragment.appendChild(divider);
+                        lastDate = messageDate;
+                    }
+                    
+                    // Crea elemento messaggio
+                    const messageEl = createMessageElement(message);
+                    fragment.appendChild(messageEl);
+                    
+                    // Aggiungi ai messaggi visualizzati (all'inizio)
+                    if (typeof displayedMessages !== 'undefined') {
+                        displayedMessages.unshift(message);
+                    }
+                });
+                
+                // Inserisci all'inizio della chat
+                if (chatMessages.firstChild) {
+                    chatMessages.insertBefore(fragment, chatMessages.firstChild);
+                } else {
+                    chatMessages.appendChild(fragment);
+                }
+                
+                // Mantieni la posizione di scorrimento
+                const newScrollHeight = chatMessages.scrollHeight;
+                chatMessages.scrollTop = newScrollHeight - scrollHeight;
+            }
+            
+            isLoadingMessages = false;
+        })
+        .catch(error => {
+            console.error('Error loading older messages:', error);
+            loaderElement.remove();
+            isLoadingMessages = false;
+            
+            // Mostra un messaggio di errore
+            showNotification('Error loading older messages: ' + error.message, true);
+        });
+}
+
+
 /**
  * Gestisce lo scroll della chat
  */
@@ -347,6 +485,9 @@ function handleScroll() {
     
     // Verifica se siamo in cima
     const isAtTop = scrollTop <= 5;
+    if (isAtTop && !isLoadingMessages && hasMoreMessages && currentConversationId) {
+        loadOlderMessages();
+    }
     const isAtBottom = scrollHeight - clientHeight <= scrollTop + 50;
     
     // Pull-to-refresh
@@ -413,6 +554,8 @@ function setActiveChannel(el, channel) {
     currentChannel = channel;
     isDirectMessage = false;
     currentUser = null;
+    currentConversationId = channel;
+    isChannel = true;    
     document.getElementById('currentChannel').textContent = channel;
     document.querySelector('.chat-title-hash').style.display = 'inline';
     
@@ -464,6 +607,8 @@ function setActiveUser(el, userName) {
     currentUser = users.find(user => user.name === userName);
     isDirectMessage = true;
     currentChannel = userName;
+    currentConversationId = currentUser.id;
+    isChannel = false;    
     document.getElementById('currentChannel').textContent = userName;
     document.querySelector('.chat-title-hash').style.display = 'none';
     
