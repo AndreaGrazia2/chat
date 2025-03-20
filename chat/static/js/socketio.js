@@ -157,8 +157,13 @@ function handleNewMessage(message) {
     // Verifica se questo messaggio è un duplicato
     let isDuplicate = false;
     
-    // Se è un messaggio nostro o con nome utente "You", controlla se è un duplicato
-    if (message.isOwn || (message.user && message.user.name === "You")) {
+    // Verifica se il messaggio esiste già in displayedMessages (controllo per ID)
+    const existingMessage = displayedMessages.find(m => m.id === message.id);
+    if (existingMessage) {
+        isDuplicate = true;
+        console.log('Messaggio duplicato rilevato per ID:', message.id);
+    } else if (message.isOwn || (message.user && message.user.name === "You")) {
+        // Se è un messaggio nostro o con nome utente "You", controlla se è un duplicato
         const recentMessages = displayedMessages.filter(m => {
             // Verifica il testo del messaggio
             const textMatch = m.text === message.text;

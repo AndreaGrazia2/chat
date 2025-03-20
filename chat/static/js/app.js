@@ -392,18 +392,16 @@ function loadOlderMessages() {
             if (messages.length === 0) {
                 hasMoreMessages = false;
                 
-                // Mostra un messaggio "Non ci sono più messaggi"
+                // Mostra un messaggio "Inizio della conversazione"
                 const noMoreElement = document.createElement('div');
-                noMoreElement.className = 'date-divider';
-                noMoreElement.innerHTML = '<span>Non ci sono più messaggi da visualizzare</span>';
+                noMoreElement.className = 'date-divider start-of-conversation';
+                noMoreElement.innerHTML = '<span>Inizio della conversazione</span>';
                 
                 if (chatMessages.firstChild) {
                     chatMessages.insertBefore(noMoreElement, chatMessages.firstChild);
                 } else {
                     chatMessages.appendChild(noMoreElement);
                 }
-                
-                // Non rimuovere il messaggio, è un separatore utile
             } else {
                 // Aggiorna l'ID del messaggio più vecchio
                 if (messages.length > 0) {
@@ -422,8 +420,15 @@ function loadOlderMessages() {
                 let lastDate = null;
                 let fragment = document.createDocumentFragment();
                 
-                // Renderizza i messaggi
+                // Renderizza i messaggi, evitando duplicati
                 messages.forEach(message => {
+                    // Verifica se il messaggio è già presente
+                    const isDuplicate = displayedMessages.some(m => m.id === message.id);
+                    if (isDuplicate) {
+                        console.log("Skipping duplicate message:", message.id);
+                        return;
+                    }
+                    
                     // Aggiungi separatore data se necessario
                     const messageDate = new Date(message.timestamp).toDateString();
                     if (messageDate !== lastDate) {
@@ -458,6 +463,7 @@ function loadOlderMessages() {
             
             isLoadingMessages = false;
         })
+        // Resto del codice rimane invariato...
         .catch(error => {
             console.error('Error loading older messages:', error);
             loaderElement.remove();
@@ -467,7 +473,6 @@ function loadOlderMessages() {
             showNotification('Error loading older messages: ' + error.message, true);
         });
 }
-
 
 /**
  * Gestisce lo scroll della chat
@@ -1016,8 +1021,12 @@ function loadInitialMessages(count) {
 /**
  * Carica altri messaggi (per scroll verso l'alto)
  */
+/**
+ * Carica altri messaggi (per scroll verso l'alto)
+ */
 function loadMoreMessages() {
-    if (loadingMore || messagesLoaded >= messages.length) {
+    // Modifica la condizione per permettere il caricamento anche quando messages è vuoto
+    if (loadingMore) {
         return;
     }
     
@@ -1038,40 +1047,71 @@ function loadMoreMessages() {
     const chatContainer = document.getElementById('chatMessages');
     chatContainer.style.scrollBehavior = 'auto';
     
-    // Se stiamo usando la connessione socket.io, le richieste saranno gestite là
-    // Altrimenti, mostriamo solo un messaggio "Loading..."
+    // Verifica se siamo connessi a socket.io
+    if (currentlyConnected && socket) {
+        // Richiedi messaggi precedenti al server
+        const oldestMessageId = displayedMessages.length > 0 ? 
+            displayedMessages[0].id : null;
+        
+        // Emetti evento per richiedere messaggi precedenti
+        socket.emit('load_previous_messages', {
+            conversationId: currentConversationId,
+            isChannel: isChannel,
+            beforeId: oldestMessageId,
+            limit: batchSize
+        });
+        
+        debug("Requested previous messages via socket.io", {
+            conversationId: currentConversationId,
+            beforeId: oldestMessageId
+        });
+        
+        // Imposta un timeout nel caso il server non risponda
+        setTimeout(() => {
+            if (loadingMore) {
+                // Se siamo ancora in caricamento dopo 5 secondi, mostra messaggio
+                showStartOfConversation();
+                
+                // Resetta stato
+                finishLoadingMore();
+            }
+        }, 5000);
+    } else {
+        // Non siamo connessi, mostra subito il messaggio di inizio conversazione
+        setTimeout(() => {
+            showStartOfConversation();
+            finishLoadingMore();
+        }, 800);
+    }
     
-    // Simula un'attesa per il caricamento di messaggi
-    setTimeout(() => {
-        try {
-            // I messaggi dovrebbero arrivare tramite socket.io
-            // Se non è arrivato nulla, mostro un messaggio
+    // Funzione per mostrare l'indicatore di inizio conversazione
+    function showStartOfConversation() {
+        // Verifica se esiste già un indicatore di inizio conversazione
+        if (!document.querySelector('.start-of-conversation')) {
             const allLoadedIndicator = document.createElement('div');
             allLoadedIndicator.className = 'date-divider start-of-conversation';
-            allLoadedIndicator.innerHTML = `<span>No more messages available</span>`;
+            allLoadedIndicator.innerHTML = `<span>Start of conversation</span>`;
             chatContainer.prepend(allLoadedIndicator);
             
             // Scorri un po' verso il basso per mostrare il messaggio
             chatContainer.scrollTop = 20;
             
-            debug("Checked for more messages - none found or no connection to server");
-        } catch (error) {
-            console.error("Error during loadMoreMessages:", error);
-        } finally {
-            // Assicurati di resettare flag di stato e UI
-            setTimeout(() => {
-                // Ripristina scrolling smooth
-                chatContainer.style.scrollBehavior = 'smooth';
-                hideLoader();
-                loadingMore = false;
-                
-                // Rilascia lock dopo un ritardo
-                setTimeout(() => {
-                    historyScrollLock = false;
-                }, 100);
-            }, 50);
+            debug("Added start of conversation indicator");
         }
-    }, 800);
+    }
+    
+    // Funzione per completare il caricamento
+    function finishLoadingMore() {
+        // Ripristina scrolling smooth
+        chatContainer.style.scrollBehavior = 'smooth';
+        hideLoader();
+        loadingMore = false;
+        
+        // Rilascia lock dopo un ritardo
+        setTimeout(() => {
+            historyScrollLock = false;
+        }, 100);
+    }
 }
 
 /**
@@ -1082,6 +1122,10 @@ function loadMoreMessages() {
 function createMessageElement(message) {
     // All'inizio della funzione createMessageElement, aggiungi:
     //console.log("Oggetto messaggio:", JSON.stringify(message.user, null, 2));
+
+    console.log("DEBUG - Oggetto messaggio completo:", message);
+    console.log("DEBUG - Proprietà user:", message.user);
+
     // Crea prima la riga che conterrà il messaggio e il timestamp
     const messageRow = document.createElement('div');
     messageRow.className = 'message-row';
@@ -1295,9 +1339,17 @@ function sendMessage() {
     if (text) {
         // Crea oggetto messaggio con ID temporaneo
         const tempId = "temp-" + Date.now();
+
+        const userObj = {
+            id: users[0].id,
+            displayName: users[0].name,      // Standardizza name -> displayName
+            avatarUrl: users[0].avatar,      // Standardizza avatar -> avatarUrl
+            status: users[0].status
+        };
+
         const newMessage = {
             id: tempId,
-            user: users[0], // "You"
+            user: userObj,                   // Usa l'oggetto utente standardizzato
             text: text,
             timestamp: new Date(),
             isOwn: true,

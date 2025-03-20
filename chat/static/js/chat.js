@@ -46,6 +46,12 @@ function loadChannelMessages(channelName, scrollToBottom = true) {
                 oldestMessageId = oldestMsg.id;
                 console.log("Set oldestMessageId to:", oldestMessageId);
                 
+                // Aggiungi indicatore di inizio conversazione
+                const startConversationIndicator = document.createElement('div');
+                startConversationIndicator.className = 'date-divider start-of-conversation';
+                startConversationIndicator.innerHTML = `<span>Inizio della conversazione</span>`;
+                chatMessages.appendChild(startConversationIndicator);
+                
                 // Renderizza i messaggi
                 renderMessages(messages);
                 
@@ -111,6 +117,12 @@ function loadDirectMessages(userId, userName, scrollToBottom = true) {
                 oldestMessageId = oldestMsg.id;
                 console.log("Set oldestMessageId to:", oldestMessageId);
                 
+                // Aggiungi indicatore di inizio conversazione
+                const startConversationIndicator = document.createElement('div');
+                startConversationIndicator.className = 'date-divider start-of-conversation';
+                startConversationIndicator.innerHTML = `<span>Inizio della conversazione</span>`;
+                chatMessages.appendChild(startConversationIndicator);
+                
                 // Renderizza i messaggi
                 renderMessages(messages);
                 
@@ -139,19 +151,40 @@ function loadDirectMessages(userId, userName, scrollToBottom = true) {
 function renderMessages(messages) {
     if (!messages || messages.length === 0) return;
     
+    console.log("Rendering messages:", messages.length);
+    
     // Ordina cronologicamente (dal più vecchio al più nuovo)
-    messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    messages.sort((a, b) => new Date(a.timestamp || a.created_at) - new Date(b.timestamp || b.created_at));
     
     const chatMessages = document.querySelector('.chat-messages');
     let lastDate = null;
     const fragment = document.createDocumentFragment();
     
     // Per tenere traccia dei messaggi visualizzati se esiste la variabile globale
-    if (typeof displayedMessages !== 'undefined') {
+    if (typeof displayedMessages !== 'undefined' && !Array.isArray(displayedMessages)) {
         displayedMessages = [];
     }
     
+    // Crea un set di ID di messaggi già visualizzati per un controllo rapido
+    const displayedMessageIds = new Set();
+    if (Array.isArray(displayedMessages)) {
+        displayedMessages.forEach(msg => {
+            if (msg && msg.id) {
+                displayedMessageIds.add(msg.id);
+            }
+        });
+    }
+    
     messages.forEach(message => {
+        // Normalizza il timestamp
+        message.timestamp = message.timestamp || message.created_at || new Date();
+        
+        // Salta i messaggi duplicati
+        if (message.id && displayedMessageIds.has(message.id)) {
+            console.log('Skipping duplicate message in renderMessages:', message.id);
+            return;
+        }
+        
         // Converti timestamp se necessario
         if (typeof message.timestamp === 'string') {
             message.timestamp = new Date(message.timestamp);
@@ -171,12 +204,14 @@ function renderMessages(messages) {
         const messageEl = createMessageElement(message);
         fragment.appendChild(messageEl);
         
-        // Aggiungi ai messaggi visualizzati
-        if (typeof displayedMessages !== 'undefined') {
+        // Aggiungi alla lista dei messaggi visualizzati
+        if (Array.isArray(displayedMessages)) {
             displayedMessages.push(message);
+            displayedMessageIds.add(message.id);
         }
     });
     
+    // Aggiungi tutti i messaggi al container
     chatMessages.appendChild(fragment);
 }
 
