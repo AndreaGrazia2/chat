@@ -40,22 +40,6 @@ import {
     sendDirectMessage
 } from './modules/socket.js';
 import {
-    toggleTheme,
-    toggleSidebar,
-    toggleSearchPanel,
-    showNotification,
-    updateChatHeaderInfo,
-    renderChannelsList,
-    renderUsersList,
-    searchMessages,
-    clearSearchResults,
-    nextSearchResult,
-    prevSearchResult,
-    initializeSearchClearButtons,
-    filterSidebarItems,
-    updateUnreadBadge,
-} from './modules/ui.js';
-import {
     handleReply,
     cancelReply,
     forwardMessage,
@@ -111,22 +95,6 @@ window.handleNewMessage = handleNewMessage;
 window.handleUserTyping = handleUserTyping;
 window.handleModelInference = handleModelInference;
 window.joinChannel = joinChannel;
-
-// UI
-window.toggleTheme = toggleTheme;
-window.toggleSidebar = toggleSidebar;
-window.toggleSearchPanel = toggleSearchPanel;
-window.showNotification = showNotification;
-window.updateChatHeaderInfo = updateChatHeaderInfo;
-window.renderChannelsList = renderChannelsList;
-window.renderUsersList = renderUsersList;
-window.searchMessages = searchMessages;
-window.clearSearchResults = clearSearchResults;
-window.nextSearchResult = nextSearchResult;
-window.prevSearchResult = prevSearchResult;
-window.initializeSearchClearButtons = initializeSearchClearButtons;
-window.filterSidebarItems = filterSidebarItems;
-window.updateUnreadBadge = updateUnreadBadge;
 
 // Message Actions
 window.handleReply = handleReply;

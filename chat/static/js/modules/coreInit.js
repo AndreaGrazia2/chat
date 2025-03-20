@@ -1,5 +1,10 @@
-import { setActiveChannel, setActiveUser }  from './ui.js';
+import { setActiveChannel, setActiveUser, updateChatHeaderInfo, toggleSidebar }  from './uiNavigation.js';
 import { deleteMessage }  from './messageActions.js';
+import { initializeSearchClearButtons, toggleSearchPanel } from './uiSearch.js';
+import { toggleTheme } from './uiTheme.js';
+import { showNotification}  from './utils.js';
+import { searchMessages } from './uiSearch.js'
+import { filterSidebarItems } from './uiNavigation.js';
 
 /**
  * coreInit.js - Initialization functions

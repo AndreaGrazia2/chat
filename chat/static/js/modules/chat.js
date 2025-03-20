@@ -1,4 +1,6 @@
 import { sendChannelMessage } from './socket.js'
+import { updateUnreadBadge}  from './uiNavigation.js';
+import { showNotification}  from './utils.js';
 
 function sendMessage() {
     const input = document.getElementById('messageInput');

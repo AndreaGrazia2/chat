@@ -1,3 +1,5 @@
+import { updateUnreadBadge}  from './uiNavigation.js';
+
 /**
  * coreScroll.js - Scroll handling functions
  * 

@@ -1,3 +1,6 @@
+import { updateUnreadBadge}  from './uiNavigation.js';
+import { showNotification}  from './utils.js';
+
 /**
  * socket.js - Gestione Socket.IO e comunicazione tempo reale
  * 

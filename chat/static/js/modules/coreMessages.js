@@ -1,3 +1,7 @@
+import { toggleSearchPanel } from './uiSearch.js';
+import { updateUnreadBadge}  from './uiNavigation.js';
+import { showNotification}  from './utils.js';
+
 /**
  * coreMessages.js - Message loading and management
  * 

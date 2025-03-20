@@ -1,4 +1,5 @@
 import { sendChannelMessage } from './socket.js'
+import { showNotification}  from './utils.js';
 
 /**
  * messageActions.js - Actions that can be performed on messages

@@ -1,3 +1,5 @@
+import { showNotification}  from './utils.js';
+
 /**
  * conversationLoader.js - Functions for loading conversations and messages
  */
