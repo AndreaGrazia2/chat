@@ -184,3 +184,8 @@ function renderMessages(messages) {
     // Aggiungi tutti i messaggi al container
     chatMessages.appendChild(fragment);
 }
+
+// Export functions
+export {
+    createMessageElement
+};

@@ -349,3 +349,18 @@ function debugSocketIO() {
 	console.log("========================");
 }
 
+// Export functions
+export {
+    initializeSocketIO,
+    setupSocketIOEvents,
+    handleSocketConnect,
+    handleSocketDisconnect,
+    handleMessageHistory,
+    handleNewMessage,
+    handleUserTyping,
+    handleModelInference,
+    joinChannel,
+    sendDirectMessage,
+    joinDirectMessage,
+    sendChannelMessage
+};

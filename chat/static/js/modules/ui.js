@@ -1,3 +1,6 @@
+import { scrollToBottom } from './coreScroll.js';
+import { showNotification }  from './utils.js';
+import { joinDirectMessage } from './socket.js'
 /**
  * ui.js - Gestione interfaccia utente
  * 
@@ -372,91 +375,6 @@ function highlightAndScrollToMessage(messageId) {
     }, 1000);
 }
 
-function showContextMenu(x, y, messageId) {
-    const message = displayedMessages.find(m => m.id == messageId);
-    if (!message) return;
-    
-    const contextMenu = document.getElementById('contextMenu');
-    
-    // Configurazione del menu in base alla proprietà del messaggio
-    const editItem = contextMenu.querySelector('[data-action="edit"]');
-    const deleteItem = contextMenu.querySelector('[data-action="delete"]');
-    
-    if (message.isOwn) {
-        // Mostra opzioni di modifica e cancellazione solo per i propri messaggi
-        editItem.style.display = 'block';
-        deleteItem.style.display = 'block';
-    } else {
-        // Nascondi opzioni di modifica e cancellazione per i messaggi altrui
-        editItem.style.display = 'none';
-        deleteItem.style.display = 'none';
-    }
-    
-    contextMenu.style.display = 'block';
-    contextMenu.style.left = `${x}px`;
-    contextMenu.style.top = `${y}px`;
-    contextMenu.dataset.messageId = messageId;
-    
-    // Assicura che il menu rimanga nel viewport
-    setTimeout(() => {
-        const menuRect = contextMenu.getBoundingClientRect();
-        
-        if (menuRect.right > window.innerWidth) {
-            contextMenu.style.left = `${window.innerWidth - menuRect.width - 10}px`;
-        }
-        
-        if (menuRect.bottom > window.innerHeight) {
-            contextMenu.style.top = `${window.innerHeight - menuRect.height - 10}px`;
-        }
-    }, 0);
-}
-
-function toggleScrollBottomButton(show) {
-    const btn = document.getElementById('scrollBottomBtn');
-    
-    if (show) {
-        btn.classList.add('visible');
-        // Se ci sono messaggi non letti, mostra il pallino
-        if (unreadMessages > 0) {
-            const badge = document.getElementById('newMessagesBadge');
-            badge.textContent = unreadMessages > 99 ? '99+' : unreadMessages;
-            badge.style.display = 'flex';
-        }
-    } else {
-        btn.classList.remove('visible');
-        // Reset conteggio non letti
-        unreadMessages = 0;
-        updateUnreadBadge();
-    }
-}
-
-function scrollToBottom(smooth = true) {
-    if (historyScrollLock) {
-        debug("Scroll to bottom prevented due to history lock");
-        return;
-    }
-    
-    const chatContainer = document.getElementById('chatMessages');
-    
-    // Forza un reflow del DOM per assicurare che scrollHeight sia aggiornato
-    // eslint-disable-next-line no-unused-expressions
-    chatContainer.scrollHeight;
-    
-    chatContainer.scrollTo({
-        top: chatContainer.scrollHeight,
-        behavior: smooth ? 'smooth' : 'auto'
-    });
-    
-    // Reset contatore messaggi non letti
-    unreadMessages = 0;
-    updateUnreadBadge();
-    
-    // Nascondi il pulsante scroll
-    toggleScrollBottomButton(false);
-    
-    debug("Scrolled to bottom", { smooth });
-}
-
 function updateUnreadBadge() {
     const badge = document.getElementById('newMessagesBadge');
     
@@ -598,3 +516,23 @@ function renderChannelsList(channels) {
     }
 }
 
+// Export functions
+export {
+    toggleTheme,
+    toggleSidebar,
+    toggleSearchPanel,
+    showNotification,
+    updateChatHeaderInfo,
+    renderChannelsList,
+    renderUsersList,
+    searchMessages,
+    clearSearchResults,
+    nextSearchResult,
+    prevSearchResult,
+    initializeSearchClearButtons,
+    filterSidebarItems,
+    updateUnreadBadge,
+    scrollToBottom,
+    setActiveChannel,
+    setActiveUser
+};

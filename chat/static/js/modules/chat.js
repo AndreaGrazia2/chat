@@ -1,3 +1,5 @@
+import { sendChannelMessage } from './socket.js'
+
 function sendMessage() {
     const input = document.getElementById('messageInput');
     const text = input.value.trim();
@@ -112,3 +114,6 @@ function getUserIdByName(name) {
     return userMap[name] || null;
 }
 
+export {
+    sendMessage
+};

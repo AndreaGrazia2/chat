@@ -100,32 +100,6 @@ function showNotification(message, isError = false) {
 	}, 1500);
 }
 
-function showConfirmDialog(message, confirmCallback) {
-	document.getElementById('confirmMessage').textContent = message;
-	const confirmDialog = document.getElementById('confirmDialog');
-	confirmDialog.style.display = 'flex';
-
-	// Button event handlers
-	const confirmBtn = document.getElementById('confirmAction');
-	const cancelBtn = document.getElementById('cancelConfirm');
-
-	// Remove old event listeners
-	const confirmClone = confirmBtn.cloneNode(true);
-	const cancelClone = cancelBtn.cloneNode(true);
-	confirmBtn.parentNode.replaceChild(confirmClone, confirmBtn);
-	cancelBtn.parentNode.replaceChild(cancelClone, cancelBtn);
-
-	// Add new event listeners
-	confirmClone.addEventListener('click', function () {
-		confirmDialog.style.display = 'none';
-		confirmCallback();
-	});
-
-	cancelClone.addEventListener('click', function () {
-		confirmDialog.style.display = 'none';
-	});
-}
-
 function diagnoseChatIssues() {
     console.group("Diagnostica Chat");
     
@@ -175,3 +149,13 @@ function diagnoseChatIssues() {
     console.log("4. Genera nuovi dati di test: fetch('/chat/api/demo/generate', { method: 'POST' })");
 }
 
+// Export functions
+export {
+    debug,
+    formatTime,
+    formatDate,
+    showLoader,
+    hideLoader,
+    linkifyText,
+    showNotification
+};

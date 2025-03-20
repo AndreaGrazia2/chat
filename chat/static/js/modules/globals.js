@@ -90,3 +90,41 @@ const fileTypes = [{
     name: 'Presentation',
     size: '2.4 MB'
 }];
+
+// Export variables
+export {
+    DEBUG,
+    darkMode,
+    sidebarVisible,
+    currentChannel,
+    isDirectMessage,
+    currentUser,
+    messages,
+    displayedMessages,
+    messagesLoaded,
+    totalMessages,
+    loadingMore,
+    historyScrollLock,
+    lastHistoryLockTime,
+    replyingTo,
+    pendingEditOperation,
+    lastScrollPosition,
+    unreadMessages,
+    searchResults,
+    currentSearchIndex,
+    lastMessageId,
+    searchOpen,
+    pullAttempts,
+    lastPullToRefreshTime,
+    isLoadingMessages,
+    hasMoreMessages,
+    currentConversationId,
+    oldestMessageId,
+    isChannel,
+    users,
+    socket,                // Added socket to exports
+    currentlyConnected,    // Added currentlyConnected
+    batchSize,             // Added batchSize
+    messageTexts,          // Added messageTexts
+    fileTypes              // Added fileTypes
+};

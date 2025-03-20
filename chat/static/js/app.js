@@ -1,16 +1,143 @@
 /**
- * app.js - Entry point dell'applicazione
+ * app.js - File bridge per rendere disponibili le funzioni dei moduli
  * 
- * Inizializza l'applicazione quando il DOM è caricato.
+ * Questo file importa tutte le funzioni dai moduli e le rende disponibili globalmente
  */
 
-// Inizializza l'app quando il DOM è caricato
-document.addEventListener('DOMContentLoaded', function() {
-    // Inizializza l'applicazione
-    if (typeof initializeApp === 'function') {
-        initializeApp();
-        console.log('Applicazione inizializzata con successo.');
-    } else {
-        console.error('Funzione initializeApp non trovata. Verifica che i moduli siano caricati correttamente.');
-    }
+// Importa le variabili globali
+import * as globals from './modules/globals.js';
+
+// Importa le funzioni dai moduli
+import { initializeApp, setupHistoryLockFailsafe, setupEventListeners } from './modules/coreInit.js';
+import { setupScrollHandlers, handleScroll, scrollToBottom } from './modules/coreScroll.js';
+import { 
+    loadOlderMessages, 
+    loadInitialMessages, 
+    loadMoreMessages, 
+    resetMessages, 
+    finishLoadingMore, 
+    showStartOfConversation 
+} from './modules/coreMessages.js';
+import {
+    debug,
+    formatTime,
+    formatDate,
+    showLoader,
+    hideLoader,
+    linkifyText
+} from './modules/utils.js';
+import { createMessageElement } from './modules/messageRenderer.js';
+import {
+    initializeSocketIO,
+    setupSocketIOEvents,
+    handleSocketConnect,
+    handleSocketDisconnect,
+    handleMessageHistory,
+    handleNewMessage,
+    handleUserTyping,
+    handleModelInference,
+    joinChannel,
+    sendDirectMessage
+} from './modules/socket.js';
+import {
+    toggleTheme,
+    toggleSidebar,
+    toggleSearchPanel,
+    showNotification,
+    updateChatHeaderInfo,
+    renderChannelsList,
+    renderUsersList,
+    searchMessages,
+    clearSearchResults,
+    nextSearchResult,
+    prevSearchResult,
+    initializeSearchClearButtons,
+    filterSidebarItems,
+    updateUnreadBadge,
+} from './modules/ui.js';
+import {
+    handleReply,
+    cancelReply,
+    forwardMessage,
+    copyMessageText,
+    editMessage,
+} from './modules/messageActions.js';
+import {
+    sendMessage
+} from './modules/chat.js';
+
+// Rendi disponibili globalmente le variabili
+Object.entries(globals).forEach(([key, value]) => {
+    window[key] = value;
+});
+
+// Rendi disponibili globalmente le funzioni
+// Core Init
+window.initializeApp = initializeApp;
+window.setupHistoryLockFailsafe = setupHistoryLockFailsafe;
+window.setupEventListeners = setupEventListeners;
+
+// Core Scroll
+window.setupScrollHandlers = setupScrollHandlers;
+window.handleScroll = handleScroll;
+window.scrollToBottom = scrollToBottom;
+
+// Core Messages
+window.loadOlderMessages = loadOlderMessages;
+window.loadInitialMessages = loadInitialMessages;
+window.loadMoreMessages = loadMoreMessages;
+window.resetMessages = resetMessages;
+window.finishLoadingMore = finishLoadingMore;
+window.showStartOfConversation = showStartOfConversation;
+
+// Utils
+window.debug = debug;
+window.formatTime = formatTime;
+window.formatDate = formatDate;
+window.showLoader = showLoader;
+window.hideLoader = hideLoader;
+window.linkifyText = linkifyText;
+
+// Message Renderer
+window.createMessageElement = createMessageElement;
+
+// Socket
+window.initializeSocketIO = initializeSocketIO;
+window.setupSocketIOEvents = setupSocketIOEvents;
+window.handleSocketConnect = handleSocketConnect;
+window.handleSocketDisconnect = handleSocketDisconnect;
+window.handleMessageHistory = handleMessageHistory;
+window.handleNewMessage = handleNewMessage;
+window.handleUserTyping = handleUserTyping;
+window.handleModelInference = handleModelInference;
+window.joinChannel = joinChannel;
+
+// UI
+window.toggleTheme = toggleTheme;
+window.toggleSidebar = toggleSidebar;
+window.toggleSearchPanel = toggleSearchPanel;
+window.showNotification = showNotification;
+window.updateChatHeaderInfo = updateChatHeaderInfo;
+window.renderChannelsList = renderChannelsList;
+window.renderUsersList = renderUsersList;
+window.searchMessages = searchMessages;
+window.clearSearchResults = clearSearchResults;
+window.nextSearchResult = nextSearchResult;
+window.prevSearchResult = prevSearchResult;
+window.initializeSearchClearButtons = initializeSearchClearButtons;
+window.filterSidebarItems = filterSidebarItems;
+window.updateUnreadBadge = updateUnreadBadge;
+
+// Message Actions
+window.handleReply = handleReply;
+window.cancelReply = cancelReply;
+window.forwardMessage = forwardMessage;
+window.copyMessageText = copyMessageText;
+window.editMessage = editMessage;
+window.sendMessage = sendMessage;
+window.sendDirectMessage = sendDirectMessage;
+
+// Inizializza l'app quando il DOM è pronto
+document.addEventListener('DOMContentLoaded', () => {
+    initializeApp();
 });
