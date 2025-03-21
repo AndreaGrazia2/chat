@@ -193,47 +193,6 @@ body {
 	align-items: center;
 }
 
-/* Media queries */
-@media (max-width: 768px) {
-	.app-container {
-		grid-template-columns: 1fr;
-		height: calc(100vh - 50px); /* Aggiornato per la navbar */
-	}
-
-	.header {
-		grid-column: 1 / 2;
-	}
-
-	.mobile-menu-button {
-		display: block;
-	}
-
-	.sidebar {
-		display: none;
-		position: fixed;
-		width: 80%;
-		height: calc(100% - 60px);
-		top: 60px;
-		left: 0;
-		z-index: 10;
-	}
-
-	.sidebar.show {
-		display: block;
-	}
-
-	.chat-area {
-		grid-column: 1 / 2;
-	}
-
-	.message-container {
-		max-width: 85%;
-	}
-}
-
-
-/* Add these styles to your existing CSS file */
-
 /* Sidebar action button */
 .sidebar-action-button {
     display: flex;
