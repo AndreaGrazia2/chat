@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, jsonify, request, send_from_directory
 from common.config import SECRET_KEY
 from chat.db_models import User, Conversation, Message
-from workflow.db.connection import get_db_cursor
+from common.db.connection import get_db_cursor
 import json
 
 # Create a Blueprint for chat

@@ -8,3 +8,4 @@ archive/
 venv/
 node_modules/
 chat/templates/chat-mockup.html
+config.py

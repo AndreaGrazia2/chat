@@ -14,7 +14,5 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('nav-calendar')?.classList.add('active');
     } else if (currentPath.includes('/dashboard/')) {
         document.getElementById('nav-dashboard')?.classList.add('active');
-    } else if (currentPath.includes('/workflow/')) {
-        document.getElementById('nav-workflow')?.classList.add('active');
     }
 });

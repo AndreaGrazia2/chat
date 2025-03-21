@@ -7,7 +7,6 @@ module.exports = {
     '<rootDir>/__tests__',
     '<rootDir>/chat/static/js',
     '<rootDir>/cal/static/js',
-    '<rootDir>/workflow/static/js',
     '<rootDir>/dashboard/static/js'
   ],
   

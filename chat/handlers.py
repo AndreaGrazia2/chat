@@ -10,7 +10,7 @@ import requests
 
 from chat.db_models import User, Conversation, Message
 from common.config import OPENROUTER_API_KEY, OPENROUTER_API_URL
-from workflow.db.connection import get_db_cursor
+from common.db.connection import get_db_cursor
 
 
 def ensure_users_exist():

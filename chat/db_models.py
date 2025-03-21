@@ -1,10 +1,7 @@
 import json
 from datetime import datetime
-# Change this line:
-# from ..workflow.db.connection import get_db_cursor
-
 # To an absolute import:
-from workflow.db.connection import get_db_cursor
+from common.db.connection import get_db_cursor
 
 class User:
     """Model representing a chat user"""

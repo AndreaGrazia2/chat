@@ -2,7 +2,7 @@
 CREATE SCHEMA IF NOT EXISTS chat_schema;
 
 -- Imposta il search_path per includere entrambi gli schemi
-SET search_path TO chat_schema, workflow_agent, public;
+SET search_path TO chat_schema, public;
 
 -- Tabella utenti
 CREATE TABLE users (
