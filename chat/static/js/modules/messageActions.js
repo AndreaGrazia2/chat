@@ -194,6 +194,16 @@ function editMessage(messageId) {
                 chatContainer.scrollTop = currentScrollTop;
             });
             
+            // Invia modifica al server
+            if (currentlyConnected && socket) {
+                socket.emit('editMessage', {
+                    messageId: messageId,
+                    newText: newText,
+                    channelName: isChannel ? currentChannel : null,
+                    userId: !isChannel && currentUser ? currentUser.id : null
+                });
+            }
+            
             // Mostra notifica
             showNotification('Message edited');
             
@@ -257,11 +267,15 @@ function deleteMessage(messageId) {
         const scrollTop = chatContainer.scrollTop;
         const isAtBottom = chatContainer.scrollHeight - chatContainer.clientHeight <= chatContainer.scrollTop + 20;
         
-        // Memorizza altezza elemento prima di modificarlo
+        // Trova l'elemento messaggio completo (message-row, non solo message-container)
         const messageEl = document.querySelector(`.message-container[data-message-id="${messageId}"]`);
         if (!messageEl) return;
         
-        const originalHeight = messageEl.offsetHeight;
+        // Trova il message-row parent che contiene sia il messaggio che il timestamp
+        const messageRow = messageEl.closest('.message-row');
+        if (!messageRow) return;
+        
+        const originalHeight = messageRow.offsetHeight;
         
         // Rimuovi dagli array
         displayedMessages.splice(messageIndex, 1);
@@ -271,16 +285,25 @@ function deleteMessage(messageId) {
             messages.splice(globalIndex, 1);
         }
         
-        // Applica transizioni
-        messageEl.style.opacity = '0';
-        messageEl.style.height = '0';
-        messageEl.style.overflow = 'hidden';
-        messageEl.style.marginBottom = '0';
-        messageEl.style.padding = '0';
+        // Applica transizioni a tutto il message-row
+        messageRow.style.opacity = '0';
+        messageRow.style.height = '0';
+        messageRow.style.overflow = 'hidden';
+        messageRow.style.marginBottom = '0';
+        messageRow.style.padding = '0';
+        
+        // Invia evento di cancellazione al server SE siamo connessi
+        if (currentlyConnected && socket) {
+            socket.emit('deleteMessage', {
+                messageId: messageId,
+                channelName: isChannel ? currentChannel : null,
+                userId: !isChannel && currentUser ? currentUser.id : null
+            });
+        }
         
         setTimeout(() => {
-            // Rimuovi l'elemento
-            messageEl.remove();
+            // Rimuovi l'intero message-row, non solo il message-container
+            messageRow.remove();
             
             // Verifica e pulisci eventuali separatori data orfani
             const dateDividers = document.querySelectorAll('.date-divider');

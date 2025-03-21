@@ -30,6 +30,8 @@ function setupSocketIOEvents() {
 	socket.on('userTyping', handleUserTyping);
 	socket.on('modelInference', handleModelInference);
 	socket.on('userStatusUpdate', handleUserStatusUpdate);
+    socket.on('messageDeleted', handleMessageDeleted); 
+    socket.on('messageEdited', handleMessageEdited);
 }
 
 function handleSocketConnect() {
@@ -216,6 +218,105 @@ function handleNewMessage(message) {
                 document.getElementById('typingIndicator').style.display = 'none';
             }
         }, 100);
+    }
+}
+
+function handleMessageDeleted(data) {
+    console.log('Message deletion event received:', data);
+    const messageId = data.messageId;
+    
+    // Trova il messaggio nel DOM
+    const messageEl = document.querySelector(`.message-container[data-message-id="${messageId}"]`);
+    if (!messageEl) {
+        console.log(`Message element with ID ${messageId} not found in DOM`);
+        return;
+    }
+    
+    // Trova il message-row (elemento padre che contiene tutto)
+    const messageRow = messageEl.closest('.message-row');
+    if (!messageRow) {
+        console.log(`Message row for message ID ${messageId} not found`);
+        return;
+    }
+    
+    // Rimuovi dagli array
+    const messageIndex = displayedMessages.findIndex(m => m.id == messageId);
+    if (messageIndex !== -1) {
+        displayedMessages.splice(messageIndex, 1);
+    }
+    
+    const globalIndex = messages.findIndex(m => m.id == messageId);
+    if (globalIndex !== -1) {
+        messages.splice(globalIndex, 1);
+    }
+    
+    // Applica transizioni e rimuovi
+    messageRow.style.opacity = '0';
+    messageRow.style.height = '0';
+    messageRow.style.overflow = 'hidden';
+    messageRow.style.marginBottom = '0';
+    messageRow.style.padding = '0';
+    
+    setTimeout(() => {
+        // Rimuovi l'elemento completo
+        messageRow.remove();
+        
+        // Verifica e pulisci eventuali separatori data orfani
+        const dateDividers = document.querySelectorAll('.date-divider');
+        
+        for (let i = 0; i < dateDividers.length; i++) {
+            const divider = dateDividers[i];
+            let nextEl = divider.nextElementSibling;
+            
+            // Se l'elemento successivo è un altro separatore o non esiste, rimuovi questo separatore
+            if (!nextEl || nextEl.classList.contains('date-divider')) {
+                divider.remove();
+            }
+        }
+    }, 300);
+}
+
+function handleMessageEdited(data) {
+    console.log('Message edit event received:', data);
+    const messageId = data.messageId;
+    const newText = data.newText;
+    const editedAt = data.editedAt;
+    
+    // Trova il messaggio nell'array
+    const message = displayedMessages.find(m => m.id == messageId);
+    if (!message) {
+        console.log(`Message with ID ${messageId} not found in displayed messages`);
+        return;
+    }
+    
+    // Aggiorna l'oggetto messaggio
+    message.text = newText;
+    message.edited = true;
+    message.editedAt = editedAt;
+    
+    // Trova l'elemento nel DOM
+    const messageEl = document.querySelector(`.message-container[data-message-id="${messageId}"]`);
+    if (!messageEl) {
+        console.log(`Message element with ID ${messageId} not found in DOM`);
+        return;
+    }
+    
+    // Aggiorna il testo del messaggio con i link processati
+    const textEl = messageEl.querySelector('.message-text');
+    if (textEl) {
+        textEl.innerHTML = linkifyText(newText);
+    }
+    
+    // Aggiungi indicatore "edited" al timestamp se non c'è già
+    const timestamp = messageEl.parentElement.querySelector('.timestamp');
+    if (timestamp && !timestamp.textContent.includes('(edited)')) {
+        const timeString = formatTime(new Date(message.timestamp));
+        const isOwn = message.isOwn;
+        
+        timestamp.innerHTML = `${timeString} (edited) `;
+        if (isOwn) {
+            timestamp.innerHTML += '<i class="fas fa-check"></i>';
+        }
     }
 }
 

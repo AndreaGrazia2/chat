@@ -738,6 +738,169 @@ def register_handlers(socketio):
                     'isTyping': False
                 }, room=room)
 
+    @socketio.on('deleteMessage')
+    def handle_delete_message(data):
+        """Handle message deletion request from client"""
+        message_id = data.get('messageId')
+        channel_name = data.get('channelName')
+        user_id = data.get('userId')
+        
+        if not message_id:
+            print("Error: Missing message ID for deletion")
+            return
+        
+        print(f"Received delete request for message ID: {message_id}")
+        
+        try:
+            # Prima verifica che il messaggio appartenga all'utente (sicurezza)
+            with get_db_cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT m.id, m.conversation_id, c.type, c.name 
+                    FROM chat_schema.messages m
+                    JOIN chat_schema.conversations c ON m.conversation_id = c.id
+                    WHERE m.id = %s AND m.user_id = 1  -- Solo messaggi dell'utente corrente
+                    """,
+                    (message_id,)
+                )
+                message_info = cursor.fetchone()
+            
+            if not message_info:
+                print(f"Error: Message {message_id} not found or not owned by current user")
+                return
+            
+            # Elimina il messaggio dal database
+            with get_db_cursor(commit=True) as cursor:
+                cursor.execute(
+                    """
+                    DELETE FROM chat_schema.messages
+                    WHERE id = %s AND user_id = 1  -- Ulteriore controllo di sicurezza
+                    """,
+                    (message_id,)
+                )
+                row_count = cursor.rowcount
+            
+            if row_count > 0:
+                # Messaggio eliminato con successo
+                print(f"Successfully deleted message {message_id} from database")
+                
+                # Determina la stanza per l'emissione dell'evento
+                if message_info['type'] == 'channel':
+                    room = f"channel:{message_info['name']}"
+                else:  # Direct message
+                    # Trova l'altro partecipante alla conversazione
+                    with get_db_cursor() as cursor:
+                        cursor.execute(
+                            """
+                            SELECT user_id FROM chat_schema.conversation_participants
+                            WHERE conversation_id = %s AND user_id != 1
+                            """,
+                            (message_info['conversation_id'],)
+                        )
+                        participant = cursor.fetchone()
+                    
+                    if participant:
+                        room = f"dm:{participant['user_id']}"
+                    else:
+                        # Fallback alla conversazione
+                        room = f"conversation:{message_info['conversation_id']}"
+                
+                # Invia evento di eliminazione a tutti nella stanza
+                emit('messageDeleted', {
+                    'messageId': message_id,
+                    'conversationId': message_info['conversation_id']
+                }, room=room)
+            else:
+                print(f"Error: Failed to delete message {message_id}")
+        
+        except Exception as e:
+            print(f"Error during message deletion: {str(e)}")          
+
+    @socketio.on('editMessage')
+    def handle_edit_message(data):
+        """Handle message edit request from client"""
+        message_id = data.get('messageId')
+        new_text = data.get('newText')
+        channel_name = data.get('channelName')
+        user_id = data.get('userId')
+        
+        if not message_id or not new_text:
+            print("Error: Missing message ID or new text for edit")
+            return
+        
+        print(f"Received edit request for message ID: {message_id}")
+        
+        try:
+            # Prima verifica che il messaggio appartenga all'utente (sicurezza)
+            with get_db_cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT m.id, m.conversation_id, c.type, c.name 
+                    FROM chat_schema.messages m
+                    JOIN chat_schema.conversations c ON m.conversation_id = c.id
+                    WHERE m.id = %s AND m.user_id = 1  -- Solo messaggi dell'utente corrente
+                    """,
+                    (message_id,)
+                )
+                message_info = cursor.fetchone()
+            
+            if not message_info:
+                print(f"Error: Message {message_id} not found or not owned by current user")
+                return
+            
+            # Aggiorna il messaggio nel database
+            with get_db_cursor(commit=True) as cursor:
+                cursor.execute(
+                    """
+                    UPDATE chat_schema.messages
+                    SET text = %s, edited = TRUE, edited_at = NOW()
+                    WHERE id = %s AND user_id = 1  -- Ulteriore controllo di sicurezza
+                    RETURNING edited_at
+                    """,
+                    (new_text, message_id)
+                )
+                result = cursor.fetchone()
+                
+                if not result:
+                    print(f"Error: Failed to update message {message_id}")
+                    return
+                    
+                edited_at = result['edited_at']
+            
+            # Determina la stanza per l'emissione dell'evento
+            if message_info['type'] == 'channel':
+                room = f"channel:{message_info['name']}"
+            else:  # Direct message
+                # Trova l'altro partecipante alla conversazione
+                with get_db_cursor() as cursor:
+                    cursor.execute(
+                        """
+                        SELECT user_id FROM chat_schema.conversation_participants
+                        WHERE conversation_id = %s AND user_id != 1
+                        """,
+                        (message_info['conversation_id'],)
+                    )
+                    participant = cursor.fetchone()
+                
+                if participant:
+                    room = f"dm:{participant['user_id']}"
+                else:
+                    # Fallback alla conversazione
+                    room = f"conversation:{message_info['conversation_id']}"
+            
+            # Invia evento di modifica a tutti nella stanza
+            emit('messageEdited', {
+                'messageId': message_id,
+                'conversationId': message_info['conversation_id'],
+                'newText': new_text,
+                'editedAt': edited_at.isoformat()
+            }, room=room)
+            
+            print(f"Successfully updated message {message_id} and broadcasted to {room}")
+        
+        except Exception as e:
+            print(f"Error during message edit: {str(e)}")              
+
 def ensure_channel_conversations_exist():
     """Ensure that all channels have corresponding conversations in the database"""
     with get_db_cursor(commit=True) as cursor:
@@ -786,3 +949,4 @@ def ensure_channel_conversations_exist():
                 )
 
                 print(f"Added welcome message to channel {channel['name']}")
+
