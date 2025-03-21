@@ -8,7 +8,7 @@ import subprocess
 import os
 import requests
 
-from chat.db_models import User, Conversation, Message, generate_demo_data
+from chat.db_models import User, Conversation, Message
 from common.config import OPENROUTER_API_KEY, OPENROUTER_API_URL
 from workflow.db.connection import get_db_cursor
 

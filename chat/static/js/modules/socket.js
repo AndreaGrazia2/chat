@@ -54,6 +54,12 @@ function handleMessageHistory(history) {
     chatContainer.innerHTML = '';
     displayedMessages = [];
 
+    // Aggiungi SEMPRE l'indicatore di inizio conversazione
+    const startConversationIndicator = document.createElement('div');
+    startConversationIndicator.className = 'date-divider start-of-conversation';
+    startConversationIndicator.innerHTML = `<span>Inizio della conversazione</span>`;
+    chatContainer.appendChild(startConversationIndicator);
+
     if (history && history.length > 0) {
         // Sort messages by timestamp
         history.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
@@ -333,36 +339,44 @@ function handleUserTyping(data) {
 }
 
 function handleModelInference(data) {
-	console.log('Model inference event:', data);
-	const typingIndicator = document.getElementById('typingIndicator');
-	const typingText = document.getElementById('typingText');
+    console.log('Model inference event:', data);
+    const typingIndicator = document.getElementById('typingIndicator');
+    const typingText = document.getElementById('typingText');
 
-	if (data.status === 'started') {
-		// Trova il nome dell'utente
-		let userName = 'Someone';
-		if (data.userId) {
-			const user = users.find(u => u.id == data.userId);
-			if (user) {
-				userName = user.name;
-			}
-		}
+    if (data.status === 'started') {
+        // Trova il nome dell'utente con gestione più robusta degli ID
+        let userName = 'Someone';
+        if (data.userId) {
+            // Cerca prima nell'array users
+            const user = users.find(u => u.id == data.userId);
+            if (user) {
+                userName = user.name;
+            } else {
+                // Fallback per altri utenti che potrebbero non essere nell'array principale
+                console.log(`Utente con ID ${data.userId} non trovato nell'array users`);
+            }
+        }
 
-		// Mostra l'indicatore di typing
-		typingText.textContent = `${userName} is typing...`;
-		typingIndicator.style.display = 'flex';
+        // Mostra l'indicatore di typing
+        typingText.textContent = `${userName} is typing...`;
+        typingIndicator.style.display = 'flex';
+        
+        // Aggiungi un timestamp all'indicatore per il controllo timeout
+        typingIndicator.dataset.startTime = Date.now();
 
-		// Assicurati che sia visibile se l'utente è al fondo della chat
-		const chatContainer = document.getElementById('chatMessages');
-		const isAtBottom = (chatContainer.scrollHeight - chatContainer.clientHeight) <= (chatContainer.scrollTop + 20);
-		if (isAtBottom) {
-			requestAnimationFrame(() => {
-				scrollToBottom();
-			});
-		}
-	} else if (data.status === 'completed') {
-		// Nascondi l'indicatore di typing
-		typingIndicator.style.display = 'none';
-	}
+        // Assicurati che sia visibile se l'utente è al fondo della chat
+        const chatContainer = document.getElementById('chatMessages');
+        const isAtBottom = (chatContainer.scrollHeight - chatContainer.clientHeight) <= (chatContainer.scrollTop + 20);
+        if (isAtBottom) {
+            requestAnimationFrame(() => {
+                scrollToBottom();
+            });
+        }
+    } else if (data.status === 'completed') {
+        // Nascondi l'indicatore di typing indipendentemente dalla posizione di scroll
+        typingIndicator.style.display = 'none';
+        delete typingIndicator.dataset.startTime;
+    }
 }
 
 function handleUserStatusUpdate(data) {
@@ -453,6 +467,24 @@ function debugSocketIO() {
 	console.log("========================");
 }
 
+function setupTypingTimeoutChecker() {
+    // Controlla ogni 10 secondi se l'indicatore di typing è bloccato
+    setInterval(() => {
+        const typingIndicator = document.getElementById('typingIndicator');
+        if (typingIndicator && typingIndicator.style.display === 'flex' && typingIndicator.dataset.startTime) {
+            const startTime = parseInt(typingIndicator.dataset.startTime);
+            const now = Date.now();
+            
+            // Se l'indicatore è visibile da più di 15 secondi, nascondilo
+            if (now - startTime > 15000) {
+                console.log('Typing indicator timeout - hiding it after 15 seconds');
+                typingIndicator.style.display = 'none';
+                delete typingIndicator.dataset.startTime;
+            }
+        }
+    }, 10000);
+}
+
 // Export functions
 export {
     initializeSocketIO,
@@ -466,5 +498,6 @@ export {
     joinChannel,
     sendDirectMessage,
     joinDirectMessage,
-    sendChannelMessage
+    sendChannelMessage,
+    setupTypingTimeoutChecker
 };

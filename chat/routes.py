@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, jsonify, request, send_from_directory
 from common.config import SECRET_KEY
-from chat.db_models import User, Conversation, Message, generate_demo_data
+from chat.db_models import User, Conversation, Message
 from workflow.db.connection import get_db_cursor
 import json
 
@@ -13,17 +13,6 @@ chat_bp = Blueprint('chat', __name__,
 @chat_bp.route('/')
 def index():
     """Render the main chat page"""
-    # Verifica se il database è vuoto e genera dati demo se necessario
-    with get_db_cursor() as cursor:
-        cursor.execute("SELECT COUNT(*) as count FROM chat_schema.users")
-        result = cursor.fetchone()
-        if result and result['count'] == 0:
-            try:
-                generate_demo_data()
-                print("Generated demo data on initial page load")
-            except Exception as e:
-                print(f"Error generating demo data: {str(e)}")
-    
     return render_template('chat.html')
 
 @chat_bp.route('/static/<path:filename>')
@@ -298,26 +287,6 @@ def get_dm_messages(user_id):
     except Exception as e:
         print(f"Error getting DM messages: {str(e)}")
         return jsonify({'error': str(e)}), 500
-
-@chat_bp.route('/api/demo/generate', methods=['POST'])
-def generate_demo():
-    """Generate demo data and save to database"""
-    try:
-        from chat.db_models import generate_demo_data
-        result = generate_demo_data()
-        return jsonify({
-            "success": True,
-            "message": f"Generated demo data successfully",
-            "data": result
-        })
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({
-            "success": False,
-            "message": f"Error generating demo data: {str(e)}"
-        }), 500
-
 
 @chat_bp.route('/api/users')
 def get_users():

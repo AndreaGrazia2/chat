@@ -532,3 +532,17 @@
 	font-size: 13px;
 	opacity: 0.6;
 }
+
+.empty-messages {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    margin: 20px 0;
+    color: var(--text-secondary, #999);
+    font-style: italic;
+    text-align: center;
+    background-color: var(--bg-secondary, #f9f9f9);
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}

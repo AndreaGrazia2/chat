@@ -311,3 +311,10 @@ body {
 .load-more-messages:hover {
     background-color: var(--secondary-bg);
 }
+
+.empty-conversation {
+    text-align: center;
+    margin: 20px 0;
+    color: var(--text-secondary);
+    font-style: italic;
+}

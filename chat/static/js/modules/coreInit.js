@@ -1,10 +1,11 @@
 import { setActiveChannel, setActiveUser, updateChatHeaderInfo, toggleSidebar }  from './uiNavigation.js';
 import { deleteMessage }  from './messageActions.js';
-import { initializeSearchClearButtons, toggleSearchPanel } from './uiSearch.js';
+import { initializeSearchClearButtons, toggleSearchPanel, nextSearchResult, prevSearchResult } from './uiSearch.js';
 import { toggleTheme } from './uiTheme.js';
 import { showNotification}  from './utils.js';
-import { searchMessages } from './uiSearch.js'
+import { searchMessages } from './uiSearch.js';
 import { filterSidebarItems } from './uiNavigation.js';
+import { setupTypingTimeoutChecker } from './socket.js';
 
 /**
  * coreInit.js - Initialization functions
@@ -33,6 +34,8 @@ function initializeApp() {
     
     // Inizializza Socket.IO
     initializeSocketIO();
+
+    setupTypingTimeoutChecker();
     
     debug("Chat initialization complete");
 }

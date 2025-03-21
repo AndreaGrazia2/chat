@@ -267,7 +267,7 @@ function showStartOfConversation() {
     if (!document.querySelector('.start-of-conversation')) {
         const allLoadedIndicator = document.createElement('div');
         allLoadedIndicator.className = 'date-divider start-of-conversation';
-        allLoadedIndicator.innerHTML = `<span>Start of conversation</span>`;
+        allLoadedIndicator.innerHTML = `<span>Inizio della conversazione</span>`;
         chatContainer.prepend(allLoadedIndicator);
         
         // Scorri un po' verso il basso per mostrare il messaggio

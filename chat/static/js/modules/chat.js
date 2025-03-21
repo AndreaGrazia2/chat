@@ -62,7 +62,8 @@ function sendMessage() {
             text: text,
             type: 'normal',
             replyTo: replyingTo,
-            tempId: tempId // Invia l'ID temporaneo per il riconoscimento
+            tempId: tempId, // Invia l'ID temporaneo per il riconoscimento
+            requestInference: true // Flag per richiedere l'inferenza del modello
         };
         
         // Se è un messaggio diretto, mostra subito l'indicatore di digitazione
@@ -71,6 +72,7 @@ function sendMessage() {
             const typingText = document.getElementById('typingText');
             typingText.textContent = `${currentUser.name} is typing...`;
             typingIndicator.style.display = 'flex';
+            typingIndicator.dataset.startTime = Date.now(); // Aggiungi timestamp
         }
         
         // Invia al server (se connesso)
@@ -84,6 +86,9 @@ function sendMessage() {
             } catch (error) {
                 console.error("Errore nell'invio del messaggio:", error);
                 showNotification("Errore nell'invio del messaggio", true);
+                
+                // Nascondi l'indicatore se c'è un errore
+                document.getElementById('typingIndicator').style.display = 'none';
             }
         }
         

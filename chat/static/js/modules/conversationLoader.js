@@ -37,6 +37,12 @@ function loadChannelMessages(channelName, scrollToBottom = true) {
             // IMPORTANTE: Nascondi il loader qui, senza condizioni
             hideLoader();
             
+            // Aggiungi SEMPRE l'indicatore di inizio conversazione
+            const startConversationIndicator = document.createElement('div');
+            startConversationIndicator.className = 'date-divider start-of-conversation';
+            startConversationIndicator.innerHTML = `<span>Inizio della conversazione</span>`;
+            chatMessages.appendChild(startConversationIndicator);
+            
             if (messages.length > 0) {
                 // Trova il messaggio con ID più piccolo (il più vecchio)
                 const oldestMsg = messages.reduce((prev, curr) => 
@@ -44,12 +50,6 @@ function loadChannelMessages(channelName, scrollToBottom = true) {
                 );
                 oldestMessageId = oldestMsg.id;
                 console.log("Set oldestMessageId to:", oldestMessageId);
-                
-                // Aggiungi indicatore di inizio conversazione
-                const startConversationIndicator = document.createElement('div');
-                startConversationIndicator.className = 'date-divider start-of-conversation';
-                startConversationIndicator.innerHTML = `<span>Inizio della conversazione</span>`;
-                chatMessages.appendChild(startConversationIndicator);
                 
                 // Renderizza i messaggi
                 renderMessages(messages);
@@ -131,8 +131,8 @@ function loadDirectMessages(userId, userName, scrollToBottom = true) {
             } else {
                 // Mostra un messaggio se non ci sono messaggi
                 const emptyElement = document.createElement('div');
-                emptyElement.className = 'empty-messages';
-                emptyElement.textContent = 'No messages yet. Start the conversation!';
+                emptyElement.className = 'date-divider empty-conversation';
+                emptyElement.innerHTML = '<span>No messages yet. Start the conversation!</span>';
                 chatMessages.appendChild(emptyElement);
             }
         })
