@@ -16,8 +16,8 @@ body {
 }
 
 body.dark {
-	background-color: #121212;
-	color: #f5f5f5;
+	background-color: #1d2229;
+	color: #e0e0e0;
 }
 
 /* Layout */
@@ -40,7 +40,7 @@ body.dark {
 }
 
 body.dark .header {
-	background-color: #1e1e1e;
+	background-color: #2f343d;
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
@@ -214,7 +214,7 @@ body.dark .user-menu-divider {
 }
 
 body.dark .sidebar {
-	background-color: #1e1e1e;
+	background-color: #2f343d;
 	box-shadow: 2px 0 4px rgba(0, 0, 0, 0.3);
 }
 
@@ -264,12 +264,12 @@ body.dark .sidebar-menu-item:hover {
 
 .sidebar-menu-item.active {
 	background-color: #e8f0fe;
-	color: #1a73e8;
+	color: #1d74f5;
 }
 
 body.dark .sidebar-menu-item.active {
-	background-color: #333;
-	color: #8ab4f8;
+	background-color: #383d48;
+	color: #1d74f5;
 }
 
 .overlay {
@@ -350,7 +350,7 @@ body.dark .sidebar-menu-item.active {
 }
 
 body.dark .card {
-	background-color: #1e1e1e;
+	background-color: #2f343d;
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 

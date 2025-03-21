@@ -23,23 +23,6 @@
 <body class="dark-theme">
 	{% include 'navbar.html' %}
 	<div class="app-container">
-		<header class="header">
-			<div class="header-left">
-				<button class="mobile-menu-button" id="mobileSidebarToggle">
-					☰
-				</button>
-				<span class="header-title">
-					<i class="fas fa-robot"></i>
-					xbe.at AI Chatbot
-				</span>
-			</div>
-			<div class="header-actions">
-				<button class="theme-toggle tooltip" id="themeToggleBtn" data-tooltip="Toggle theme">
-					🌙
-				</button>
-			</div>
-		</header>
-
 		<!-- Telegram-style search panel -->
 		<div class="search-panel" id="searchPanel">
 			<i class="fas fa-search search-panel-icon"></i>
@@ -132,11 +115,11 @@
 					<button class="action-button tooltip" id="searchBtn" data-tooltip="Search">
 						<i class="fas fa-search"></i>
 					</button>
-					<button class="action-button tooltip" data-tooltip="Call">
-						<i class="fas fa-phone"></i>
+					<button class="theme-toggle tooltip" id="themeToggleBtn" data-tooltip="Toggle theme">
+						🌙
 					</button>
-					<button class="action-button tooltip" data-tooltip="Info">
-						<i class="fas fa-info-circle"></i>
+					<button class="mobile-menu-button" id="mobileSidebarToggle">
+						☰
 					</button>
 				</div>
 			</div>

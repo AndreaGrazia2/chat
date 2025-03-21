@@ -4,9 +4,9 @@
 
 /* Variabili di colore e tema */
 :root {
-	--bg-light: #ffffff;
+	--bg-light: #f5f5f5;
 	--bg-dark: #1d2229;
-	--sidebar-light: #f3f3f3;
+	--sidebar-light: #ebebeb;
 	--sidebar-dark: #2f343d;
 	--text-light: #333333;
 	--text-dark: #e0e0e0;
@@ -31,14 +31,14 @@
 	--event-health: #34A853;
 	
 	/* Colori UI */
-	--primary: #1a73e8;
+	--primary: #1d74f5;
 	--hover-bg: rgba(0, 0, 0, 0.05);
-	--today-bg: rgba(26, 115, 232, 0.1);
+	--today-bg: rgba(29, 116, 232, 0.1);
 	
 	/* Colori per la navigazione */
 	--nav-text: #333333;
 	--nav-bg: #f5f5f5;
-	--nav-active: #1a73e8;
+	--nav-active: #1d74f5;
 	--nav-active-text: #ffffff;
 	
 	--today-light: #2b7cce;
@@ -64,12 +64,12 @@
 	
 	/* Colori UI */
 	--hover-bg: rgba(255, 255, 255, 0.1);
-	--today-bg: rgba(26, 115, 232, 0.2);
+	--today-bg: rgba(29, 116, 232, 0.2);
 	
 	/* Colori per la navigazione */
 	--nav-text: #e0e0e0;
 	--nav-bg: #2d2d2d;
-	--nav-active: #1a73e8;
+	--nav-active: #1d74f5;
 	--nav-active-text: #ffffff;
 }
 

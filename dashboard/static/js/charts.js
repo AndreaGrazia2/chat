@@ -121,7 +121,7 @@ export function updateChartTheme(darkMode, charts) {
 	// Usa i grafici passati dal dashboard.js invece di window.dashboardCharts
 	if (!charts) return;
 
-	const textColor = darkMode ? '#f5f5f5' : '#333';
+	const textColor = darkMode ? '#e0e0e0' : '#333333';
 	const gridColor = darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
 
 	// Aggiorna le opzioni per tutti i grafici
