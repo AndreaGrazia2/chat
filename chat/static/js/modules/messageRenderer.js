@@ -1,3 +1,5 @@
+import { formatDate, formatTime, linkifyText }  from './utils.js';
+
 /**
  * messageRenderer.js - Functions for rendering messages
  */

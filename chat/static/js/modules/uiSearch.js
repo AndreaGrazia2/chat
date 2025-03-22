@@ -245,5 +245,4 @@ export {
     updateSearchCounter,
     highlightAndScrollToMessage,
     initializeSearchClearButtons,
-    searchOpen
 };

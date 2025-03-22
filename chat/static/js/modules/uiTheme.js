@@ -3,7 +3,7 @@
  */
 
 // Variabile di stato per il tema
-darkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+window.darkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 
 function toggleTheme() {
     darkMode = !darkMode;
@@ -50,6 +50,5 @@ document.addEventListener('DOMContentLoaded', initializeTheme);
 
 export {
     toggleTheme,
-    initializeTheme,
-    darkMode
+    initializeTheme    
 }

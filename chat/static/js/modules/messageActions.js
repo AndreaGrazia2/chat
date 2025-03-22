@@ -1,5 +1,5 @@
 import { sendChannelMessage } from './socket.js'
-import { showNotification}  from './utils.js';
+import { showNotification, formatTime, linkifyText }  from './utils.js';
 import { scrollToBottom } from './coreScroll.js';
 import { sendDirectMessage } from './socket.js'
 
