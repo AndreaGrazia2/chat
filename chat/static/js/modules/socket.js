@@ -1,6 +1,6 @@
 import { updateUnreadBadge}  from './uiNavigation.js';
 import { showNotification}  from './utils.js';
-
+import { handleMessageReactionUpdate } from './chat.js';
 /**
  * socket.js - Gestione Socket.IO e comunicazione tempo reale
  * 
@@ -20,18 +20,21 @@ function initializeSocketIO() {
 }
 
 function setupSocketIOEvents() {
-	// Eventi di connessione
-	socket.on('connect', handleSocketConnect);
-	socket.on('disconnect', handleSocketDisconnect);
+    // Eventi di connessione
+    socket.on('connect', handleSocketConnect);
+    socket.on('disconnect', handleSocketDisconnect);
 
-	// Eventi per i messaggi
-	socket.on('messageHistory', handleMessageHistory);
-	socket.on('newMessage', handleNewMessage);
-	socket.on('userTyping', handleUserTyping);
-	socket.on('modelInference', handleModelInference);
-	socket.on('userStatusUpdate', handleUserStatusUpdate);
+    // Eventi per i messaggi
+    socket.on('messageHistory', handleMessageHistory);
+    socket.on('newMessage', handleNewMessage);
+    socket.on('userTyping', handleUserTyping);
+    socket.on('modelInference', handleModelInference);
+    socket.on('userStatusUpdate', handleUserStatusUpdate);
+    
+    // Aggiunti nuovi eventi per gestire le features mancanti
     socket.on('messageDeleted', handleMessageDeleted); 
     socket.on('messageEdited', handleMessageEdited);
+    socket.on('messageReactionUpdate', handleMessageReactionUpdate);
 }
 
 function handleSocketConnect() {
@@ -48,6 +51,7 @@ function handleSocketDisconnect() {
 	showNotification('Connessione al server persa', true);
 }
 
+// Funzione migliorata per gestire la cronologia dei messaggi
 function handleMessageHistory(history) {
     console.log(`Ricevuti ${history.length} messaggi storici`);
     const chatContainer = document.getElementById('chatMessages');
@@ -61,28 +65,49 @@ function handleMessageHistory(history) {
     chatContainer.appendChild(startConversationIndicator);
 
     if (history && history.length > 0) {
-        // Sort messages by timestamp
+        // Ordina i messaggi per timestamp
         history.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-        // Process and display messages
+        // Processa e visualizza i messaggi
         let lastDate = null;
         const fragment = document.createDocumentFragment();
 
         history.forEach(message => {
-            // Convert timestamp string to Date object if needed
+            // Converti la stringa timestamp in oggetto Date se necessario
             if (typeof message.timestamp === 'string') {
                 message.timestamp = new Date(message.timestamp);
             }
             
-            // Assicurati che il messaggio replyTo sia valido
+            // Assicurati che i campi fileData, reactions e replyTo siano correttamente inizializzati
+            if (message.fileData && typeof message.fileData === 'string') {
+                try {
+                    message.fileData = JSON.parse(message.fileData);
+                } catch (e) {
+                    console.error(`Errore nel parsing di fileData per il messaggio ${message.id}:`, e);
+                    message.fileData = null;
+                }
+            }
+            
+            if (message.reactions && typeof message.reactions === 'string') {
+                try {
+                    message.reactions = JSON.parse(message.reactions);
+                } catch (e) {
+                    console.error(`Errore nel parsing delle reactions per il messaggio ${message.id}:`, e);
+                    message.reactions = {};
+                }
+            } else if (!message.reactions) {
+                message.reactions = {};
+            }
+            
+            // Gestisci i messaggi replyTo
             if (message.replyTo && typeof message.replyTo === 'object') {
-                // Se è un'oggetto vuoto, impostiamo a null
+                // Se è un oggetto vuoto, impostiamo a null
                 if (Object.keys(message.replyTo).length === 0) {
                     message.replyTo = null;
                 }
             }
 
-            // Add date divider if needed
+            // Aggiungi separatore di data se necessario
             const messageDate = message.timestamp.toDateString();
             if (messageDate !== lastDate) {
                 const divider = document.createElement('div');
@@ -92,11 +117,11 @@ function handleMessageHistory(history) {
                 lastDate = messageDate;
             }
 
-            // Create and add message element
+            // Crea e aggiungi l'elemento del messaggio
             const messageEl = createMessageElement(message);
             fragment.appendChild(messageEl);
 
-            // Add to displayed messages array
+            // Aggiungi all'array dei messaggi visualizzati
             displayedMessages.push(message);
         });
 
@@ -105,25 +130,26 @@ function handleMessageHistory(history) {
         // Aggiungi un messaggio se non ci sono messaggi nella cronologia
         const emptyElement = document.createElement('div');
         emptyElement.className = 'empty-messages';
-        emptyElement.textContent = 'No messages yet. Start the conversation!';
+        emptyElement.textContent = 'Nessun messaggio. Inizia la conversazione!';
         chatContainer.appendChild(emptyElement);
     }
 
-    // Hide loader - assicurati che venga sempre nascosto
+    // Nascondi il loader - assicurati che venga sempre nascosto
     hideLoader();
 
-    // Scroll to bottom
+    // Scorri in fondo
     scrollToBottom(false);
 
-    // Reset unread count
+    // Reset del contatore messaggi non letti
     unreadMessages = 0;
     updateUnreadBadge();
 }
 
+// Funzione migliorata per gestire nuovi messaggi
 function handleNewMessage(message) {
     console.log('Nuovo messaggio ricevuto:', message);
 
-    // Converti timestamp se necessario
+    // Converti timestamp in oggetto Date se necessario
     if (typeof message.timestamp === 'string') {
         message.timestamp = new Date(message.timestamp);
     }
@@ -183,6 +209,35 @@ function handleNewMessage(message) {
     // Calcola se siamo vicini al fondo (entro 50px invece di 2px)
     const isNearBottom = (currentScrollHeight - clientHeight - currentScrollTop) <= 50;
     
+    // Assicurati che fileData, reactions e replyTo siano correttamente inizializzati
+    if (message.fileData && typeof message.fileData === 'string') {
+        try {
+            message.fileData = JSON.parse(message.fileData);
+        } catch (e) {
+            console.error(`Errore nel parsing di fileData per il messaggio ${message.id}:`, e);
+            message.fileData = null;
+        }
+    }
+    
+    if (message.reactions && typeof message.reactions === 'string') {
+        try {
+            message.reactions = JSON.parse(message.reactions);
+        } catch (e) {
+            console.error(`Errore nel parsing delle reactions per il messaggio ${message.id}:`, e);
+            message.reactions = {};
+        }
+    } else if (!message.reactions) {
+        message.reactions = {};
+    }
+    
+    // Gestisci i messaggi replyTo
+    if (message.replyTo && typeof message.replyTo === 'object') {
+        // Se è un oggetto vuoto, impostiamo a null
+        if (Object.keys(message.replyTo).length === 0) {
+            message.replyTo = null;
+        }
+    }
+    
     // Aggiungi ai messaggi
     messages.push(message);
     displayedMessages.push(message);
@@ -207,9 +262,7 @@ function handleNewMessage(message) {
     // Aggiorna variabili globali
     if (!isNearBottom) {
         unreadMessages++;
-        const badge = document.getElementById('newMessagesBadge');
-        badge.textContent = unreadMessages > 99 ? '99+' : unreadMessages;
-        badge.style.display = 'flex';
+        updateUnreadBadge();
         
         // Forza la visualizzazione del pulsante scrollBottom
         const scrollBtn = document.getElementById('scrollBottomBtn');

@@ -121,6 +121,198 @@ function getUserIdByName(name) {
     return userMap[name] || null;
 }
 
+// Funzione per aggiungere un reaction a un messaggio
+function addReaction(messageId, emoji) {
+    if (!messageId || !emoji) return;
+    
+    console.log(`Adding reaction ${emoji} to message ${messageId}`);
+    
+    if (currentlyConnected) {
+        socket.emit('addReaction', {
+            messageId: messageId,
+            emoji: emoji
+        });
+    }
+}
+
+// Funzione per rimuovere un reaction da un messaggio
+function removeReaction(messageId, emoji) {
+    if (!messageId || !emoji) return;
+    
+    console.log(`Removing reaction ${emoji} from message ${messageId}`);
+    
+    if (currentlyConnected) {
+        socket.emit('removeReaction', {
+            messageId: messageId,
+            emoji: emoji
+        });
+    }
+}
+
+// Gestore per l'evento di aggiornamento delle reaction a un messaggio
+function handleMessageReactionUpdate(data) {
+    console.log('Reaction update received:', data);
+    
+    // Trova il messaggio nell'array
+    const message = displayedMessages.find(m => m.id == data.messageId);
+    if (!message) {
+        console.log(`Message with ID ${data.messageId} not found`);
+        return;
+    }
+    
+    // Aggiorna le reactions nel messaggio
+    message.reactions = data.reactions;
+    
+    // Aggiorna la visualizzazione delle reactions nel DOM
+    const messageEl = document.querySelector(`.message-container[data-message-id="${data.messageId}"]`);
+    if (!messageEl) {
+        console.log(`Message element with ID ${data.messageId} not found in DOM`);
+        return;
+    }
+    
+    // Trova il container delle reactions o creane uno nuovo
+    let reactionsContainer = messageEl.querySelector('.message-reactions');
+    if (reactionsContainer) {
+        reactionsContainer.remove();
+    }
+    
+    // Se ci sono reactions, crea un nuovo container
+    if (data.reactions && Object.keys(data.reactions).length > 0) {
+        reactionsContainer = document.createElement('div');
+        reactionsContainer.className = 'message-reactions';
+        
+        for (const [emoji, users] of Object.entries(data.reactions)) {
+            if (Array.isArray(users) && users.length > 0) {
+                const reactionEl = document.createElement('span');
+                reactionEl.className = 'reaction';
+                if (users.includes('1')) { // Assume user ID 1 is current user
+                    reactionEl.classList.add('user-reacted');
+                }
+                reactionEl.dataset.emoji = emoji;
+                reactionEl.dataset.users = users.join(',');
+                reactionEl.title = `${users.length} reaction${users.length > 1 ? 's' : ''}`;
+                reactionEl.innerHTML = `${emoji} <span class="reaction-count">${users.length}</span>`;
+                
+                // Aggiungi evento click per toggle reaction
+                reactionEl.addEventListener('click', function() {
+                    if (users.includes('1')) {
+                        removeReaction(data.messageId, emoji);
+                    } else {
+                        addReaction(data.messageId, emoji);
+                    }
+                });
+                
+                reactionsContainer.appendChild(reactionEl);
+            }
+        }
+        
+        // Inserisci il container delle reactions nel messaggio
+        const messageBubble = messageEl.querySelector('.message-bubble');
+        const messageText = messageEl.querySelector('.message-text');
+        messageBubble.insertBefore(reactionsContainer, messageText.nextSibling);
+    }
+}
+
+// Inizializza il pannello delle reaction
+function initReactionPanel() {
+    // Crea un pannello per selezionare le emoji per le reactions
+    const reactionPanel = document.createElement('div');
+    reactionPanel.className = 'reaction-panel';
+    reactionPanel.style.display = 'none';
+    
+    // Aggiungi le emoji più comuni
+    const commonEmojis = ['👍', '❤️', '😊', '😂', '🎉', '👏', '🔥', '✅', '❓', '👎'];
+    
+    commonEmojis.forEach(emoji => {
+        const emojiButton = document.createElement('span');
+        emojiButton.className = 'emoji-button';
+        emojiButton.textContent = emoji;
+        emojiButton.addEventListener('click', function() {
+            const messageId = reactionPanel.dataset.messageId;
+            addReaction(messageId, emoji);
+            reactionPanel.style.display = 'none';
+        });
+        
+        reactionPanel.appendChild(emojiButton);
+    });
+    
+    document.body.appendChild(reactionPanel);
+    
+    // Funzione per mostrare il pannello delle reaction
+    window.showReactionPanel = function(messageId, x, y) {
+        reactionPanel.dataset.messageId = messageId;
+        reactionPanel.style.left = `${x}px`;
+        reactionPanel.style.top = `${y}px`;
+        reactionPanel.style.display = 'flex';
+    };
+    
+    // Nascondi il pannello quando si clicca altrove
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.reaction-panel') && !e.target.closest('.add-reaction-button')) {
+            reactionPanel.style.display = 'none';
+        }
+    });
+}
+
+// Aggiungi opzione per reactions nel menu contestuale dei messaggi
+function extendContextMenu() {
+    const contextMenu = document.getElementById('contextMenu');
+    if (contextMenu) {
+        // Aggiungi voce di menu per le reactions dopo "Reply"
+        const replyItem = contextMenu.querySelector('[data-action="reply"]');
+        if (replyItem) {
+            const reactionItem = document.createElement('div');
+            reactionItem.className = 'menu-item';
+            reactionItem.dataset.action = 'react';
+            reactionItem.textContent = 'Add reaction';
+            
+            // Inserisci dopo "Reply"
+            replyItem.parentNode.insertBefore(reactionItem, replyItem.nextSibling);
+        }
+        
+        // Aggiorna handler degli eventi del menu contestuale
+        contextMenu.addEventListener('click', function(e) {
+            if (e.target.dataset.action === 'react') {
+                const messageId = this.dataset.messageId;
+                const rect = e.target.getBoundingClientRect();
+                showReactionPanel(messageId, rect.right, rect.top);
+            }
+        });
+    }
+}
+
+// Inizializza tutto ciò che riguarda le reactions
+function initReactions() {
+    // Crea il pannello delle reactions
+    initReactionPanel();
+    
+    // Estendi il menu contestuale
+    extendContextMenu();
+    
+    // Aggiungi eventi a reactions esistenti
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.reaction')) {
+            const reactionEl = e.target.closest('.reaction');
+            const messageEl = reactionEl.closest('.message-container');
+            if (messageEl) {
+                const messageId = messageEl.dataset.messageId;
+                const emoji = reactionEl.dataset.emoji;
+                const users = reactionEl.dataset.users.split(',');
+                
+                if (users.includes('1')) { // Assume user ID 1 is current user
+                    removeReaction(messageId, emoji);
+                } else {
+                    addReaction(messageId, emoji);
+                }
+            }
+        }
+    });
+    
+    // Registra l'handler per l'evento di aggiornamento delle reaction
+    socket.on('messageReactionUpdate', handleMessageReactionUpdate);
+}
+
 export {
-    sendMessage
+    sendMessage,
+    handleMessageReactionUpdate
 };

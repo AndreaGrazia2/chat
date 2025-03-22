@@ -138,10 +138,10 @@ def get_channel_messages(channel_name):
                     'timestamp': msg['created_at'].isoformat(),
                     'type': msg['message_type'],
                     'fileData': json.loads(msg['file_data']) if msg['file_data'] else None,
-                    'replyTo': reply_to,
-                    'forwardedFrom': forwarded_from,
-                    'metadata': json.loads(msg['metadata']) if msg['metadata'] else None,
-                    'reactions': json.loads(msg['reactions']) if msg['reactions'] else None,
+                    'replyTo': reply_to,  # Già gestito nel codice originale
+                    'forwardedFrom': forwarded_from,  # Già gestito nel codice originale
+                    'metadata': json.loads(msg['metadata']) if msg['metadata'] else {},
+                    'reactions': json.loads(msg['reactions']) if msg['reactions'] else {},
                     'edited': msg['edited'],
                     'editedAt': msg['edited_at'].isoformat() if msg['edited_at'] else None,
                     'isOwn': msg['user_id'] == 1  # Assume current user is ID 1
@@ -266,14 +266,10 @@ def get_dm_messages(user_id):
                     'timestamp': msg['created_at'].isoformat(),
                     'type': msg['message_type'],
                     'fileData': json.loads(msg['file_data']) if msg['file_data'] else None,
-                    'replyTo': {
-                        'id': msg['reply_to_id'],
-                        'text': reply_result['text'] if reply_user else None,
-                        'user': reply_user
-                    } if msg['reply_to_id'] else None,
-                    'forwardedFrom': forwarded_user,
-                    'metadata': json.loads(msg['metadata']) if msg['metadata'] else None,
-                    'reactions': json.loads(msg['reactions']) if msg['reactions'] else None,
+                    'replyTo': reply_to,  # Già gestito nel codice originale
+                    'forwardedFrom': forwarded_from,  # Già gestito nel codice originale
+                    'metadata': json.loads(msg['metadata']) if msg['metadata'] else {},
+                    'reactions': json.loads(msg['reactions']) if msg['reactions'] else {},
                     'edited': msg['edited'],
                     'editedAt': msg['edited_at'].isoformat() if msg['edited_at'] else None,
                     'isOwn': msg['user_id'] == 1  # Assume current user is ID 1
@@ -628,3 +624,101 @@ def search():
     except Exception as e:
         print(f"Error searching: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+@chat_bp.route('/api/messages/<int:message_id>/reactions', methods=['POST'])
+def add_reaction(message_id):
+    """Add a reaction to a message"""
+    try:
+        data = request.json
+        emoji = data.get('emoji')
+        user_id = 1  # Assume current user
+        
+        if not emoji:
+            return jsonify({"error": "Emoji required"}), 400
+            
+        with get_db_cursor() as cursor:
+            # Get existing reactions
+            cursor.execute(
+                """
+                SELECT reactions FROM chat_schema.messages
+                WHERE id = %s
+                """,
+                (message_id,)
+            )
+            result = cursor.fetchone()
+            
+            if not result:
+                return jsonify({"error": "Message not found"}), 404
+                
+            reactions = json.loads(result['reactions']) if result['reactions'] else {}
+            
+            # Add reaction
+            if emoji not in reactions:
+                reactions[emoji] = []
+            
+            if str(user_id) not in reactions[emoji]:
+                reactions[emoji].append(str(user_id))
+            
+            # Update message
+            with get_db_cursor(commit=True) as cursor:
+                cursor.execute(
+                    """
+                    UPDATE chat_schema.messages
+                    SET reactions = %s
+                    WHERE id = %s
+                    RETURNING id
+                    """,
+                    (json.dumps(reactions), message_id)
+                )
+                
+            return jsonify({"success": True, "reactions": reactions})
+    except Exception as e:
+        print(f"Error adding reaction: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@chat_bp.route('/api/messages/<int:message_id>/reactions/<path:emoji>', methods=['DELETE'])
+def remove_reaction(message_id, emoji):
+    """Remove a reaction from a message"""
+    try:
+        user_id = 1  # Assume current user
+        
+        with get_db_cursor() as cursor:
+            # Get existing reactions
+            cursor.execute(
+                """
+                SELECT reactions FROM chat_schema.messages
+                WHERE id = %s
+                """,
+                (message_id,)
+            )
+            result = cursor.fetchone()
+            
+            if not result:
+                return jsonify({"error": "Message not found"}), 404
+                
+            reactions = json.loads(result['reactions']) if result['reactions'] else {}
+            
+            # Remove reaction
+            if emoji in reactions and str(user_id) in reactions[emoji]:
+                reactions[emoji].remove(str(user_id))
+                
+                # Remove emoji entry if no users left
+                if not reactions[emoji]:
+                    del reactions[emoji]
+            
+            # Update message
+            with get_db_cursor(commit=True) as cursor:
+                cursor.execute(
+                    """
+                    UPDATE chat_schema.messages
+                    SET reactions = %s
+                    WHERE id = %s
+                    RETURNING id
+                    """,
+                    (json.dumps(reactions), message_id)
+                )
+                
+            return jsonify({"success": True, "reactions": reactions})
+    except Exception as e:
+        print(f"Error removing reaction: {str(e)}")
+        return jsonify({"error": str(e)}), 500        
