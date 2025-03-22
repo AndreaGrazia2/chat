@@ -65,19 +65,19 @@ window.users = [{
 document.addEventListener('DOMContentLoaded', () => {
     initializeApp();
 
-    // Get the close sidebar button
-    const sidebar = document.getElementById('sidebar');
+    // Get the sidebar and overlay elements
+    const sidebar = document.querySelector('.sidebar');
     const closeSidebarBtn = document.getElementById('closeSidebar');
     const mobileSidebarToggle = document.getElementById('mobileSidebarToggle');
     const overlay = document.getElementById('overlay');
     
-    // Open sidebar
+    // Open sidebar - usa .active invece di .show
     mobileSidebarToggle.addEventListener('click', function() {
         sidebar.classList.add('active');
         if (overlay) overlay.classList.add('active');
     });
     
-    // Close sidebar
+    // Close sidebar - usa .active invece di .show
     closeSidebarBtn.addEventListener('click', function() {
         sidebar.classList.remove('active');
         if (overlay) overlay.classList.remove('active');

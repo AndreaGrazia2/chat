@@ -129,19 +129,52 @@ body {
 
 /* Sidebar */
 .sidebar {
-	grid-column: 1 / 2;
-	grid-row: 2 / 3;
-	background-color: var(--bg-sidebar);
-	border-right: 1px solid var(--border-color);
-	overflow-y: auto;
-	display: flex;
-	flex-direction: column;
-    transform: translateX(0); /* Hidden by default */
-    transition: transform 0.3s ease;	
+    grid-column: 1 / 2;
+    grid-row: 2 / 3;
+    background-color: var(--bg-sidebar);
+    border-right: 1px solid var(--border-color);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    width: 260px;
+    height: 100%;
+    position: relative;
+    z-index: 5;
+    transition: transform 0.3s ease;
 }
 
-.sidebar.active {
-    transform: translateX(0); /* Visible when active */
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 4;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Per dispositivi mobili */
+@media (max-width: 768px) {
+    .sidebar {
+        position: fixed;
+        top: 50px; /* Altezza della navbar */
+        left: 0;
+        transform: translateX(-100%); /* Fuori schermo per default */
+        height: calc(100% - 50px); /* Sottraiamo l'altezza della navbar */
+        z-index: 10;
+    }
+    
+    .sidebar.active {
+        transform: translateX(0); /* Visibile quando attivo */
+    }
 }
 
 .sidebar-header {

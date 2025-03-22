@@ -28,7 +28,8 @@ function setActiveChannel(el, channel) {
     // Chiudi sidebar su mobile
     if (window.innerWidth <= 768) {
         sidebarVisible = false;
-        document.querySelector('.sidebar').classList.remove('show');
+        document.querySelector('.sidebar').classList.remove('active');
+        document.getElementById('overlay').classList.remove('active');
     }
     
     // Mostra loader durante il caricamento dei messaggi
@@ -76,7 +77,8 @@ function setActiveUser(el, userName) {
     // Chiudi sidebar su mobile
     if (window.innerWidth <= 768) {
         sidebarVisible = false;
-        document.querySelector('.sidebar').classList.remove('show');
+        document.querySelector('.sidebar').classList.remove('active');
+        document.getElementById('overlay').classList.remove('active');
     }
     
     // Mostra loader durante il caricamento dei messaggi
@@ -170,8 +172,16 @@ function updateUnreadBadge() {
 }
 
 function toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.getElementById('overlay');
+    
     sidebarVisible = !sidebarVisible;
-    document.querySelector('.sidebar').classList.toggle('show', sidebarVisible);
+    
+    // Usa sempre .active invece di .show
+    sidebar.classList.toggle('active', sidebarVisible);
+    if (overlay) {
+        overlay.classList.toggle('active', sidebarVisible);
+    }
 }
 
 function renderUsersList(users) {
