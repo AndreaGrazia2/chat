@@ -33,7 +33,6 @@ def serve_static(filename):
     """Serve static files for chat"""
     return send_from_directory('chat/static', filename)
 
-# Modifica nella funzione get_channel_messages in routes.py
 @chat_bp.route('/api/messages/channel/<channel_name>')
 def get_channel_messages(channel_name):
     """Get messages for a channel"""
@@ -63,6 +62,7 @@ def get_channel_messages(channel_name):
                 SELECT 
                     m.id, m.conversation_id, m.user_id, m.text, 
                     m.created_at, m.message_type, m.file_data,
+                    m.reply_to_id, m.forwarded_from_id,
                     u.username, u.display_name, u.avatar_url, u.status
                 FROM chat_schema.messages m
                 JOIN chat_schema.users u ON m.user_id = u.id
@@ -81,14 +81,60 @@ def get_channel_messages(channel_name):
             params.append(limit)
             
             # Debug per vedere la query
-            print(f"Executing query for channel {channel_name}, conversation_id={conversation_id}: {query}")
-            print(f"With params: {params}")
+            #print(f"Executing query for channel {channel_name}, conversation_id={conversation_id}: {query}")
+            #print(f"With params: {params}")
             
             cursor.execute(query, params)
             messages = cursor.fetchall()
             
             # Converti in formato per il frontend
             message_list = []
+            
+            # Crea un dizionario per tenere traccia dei messaggi per riferimento
+            reply_messages = {}
+            reply_ids = [msg['reply_to_id'] for msg in messages if msg['reply_to_id']]
+            
+            # Carica tutti i messaggi citati in un'unica query (per performance)
+            if reply_ids:
+                placeholders = ', '.join(['%s'] * len(reply_ids))
+                cursor.execute(
+                    f"""
+                    SELECT m.id, m.text, m.message_type, m.file_data,
+                           u.id as user_id, u.username, u.display_name, u.avatar_url, u.status
+                    FROM chat_schema.messages m
+                    JOIN chat_schema.users u ON m.user_id = u.id
+                    WHERE m.id IN ({placeholders})
+                    """,
+                    reply_ids
+                )
+                reply_results = cursor.fetchall()
+                for reply in reply_results:
+                    # Prepara il messaggio di risposta per il riferimento
+                    file_data = None
+                    if reply['file_data']:
+                        if isinstance(reply['file_data'], dict):
+                            file_data = reply['file_data']
+                        else:
+                            try:
+                                file_data = json.loads(reply['file_data'])
+                            except (json.JSONDecodeError, TypeError):
+                                print(f"Error parsing file_data for replied message {reply['id']}")
+                                file_data = None
+                                
+                    reply_messages[reply['id']] = {
+                        'id': reply['id'],
+                        'text': reply['text'],
+                        'message_type': reply['message_type'],
+                        'fileData': file_data,
+                        'user': {
+                            'id': reply['user_id'],
+                            'username': reply['username'],
+                            'displayName': reply['display_name'],
+                            'avatarUrl': reply['avatar_url'],
+                            'status': reply['status']
+                        }
+                    }
+            
             for msg in messages:
                 try:
                     # CORREZIONE: gestione più robusta di file_data
@@ -102,6 +148,11 @@ def get_channel_messages(channel_name):
                             except (json.JSONDecodeError, TypeError):
                                 print(f"Error parsing file_data for message {msg['id']}")
                                 file_data = None
+                    
+                    # Gestisce il messaggio di risposta
+                    reply_to = None
+                    if msg['reply_to_id'] and msg['reply_to_id'] in reply_messages:
+                        reply_to = reply_messages[msg['reply_to_id']]
                     
                     # Costruisci un dizionario base con valori di default
                     message_dict = {
@@ -118,8 +169,8 @@ def get_channel_messages(channel_name):
                         'timestamp': msg['created_at'].isoformat() if msg['created_at'] else None,
                         'type': msg['message_type'] or 'normal',
                         'fileData': file_data,
-                        'replyTo': None,
-                        'forwardedFrom': None,
+                        'replyTo': reply_to,
+                        'forwardedFrom': None,  # Si potrebbe espandere anche questo se necessario
                         'metadata': {},
                         'edited': False,
                         'editedAt': None,
@@ -204,30 +255,53 @@ def get_dm_messages(user_id):
             cursor.execute(query, params)
             messages = cursor.fetchall()
             
+            # Carica tutti i messaggi di risposta in un'unica query per migliorare le performance
+            reply_ids = [msg['reply_to_id'] for msg in messages if msg['reply_to_id']]
+            reply_messages = {}
+            
+            if reply_ids:
+                placeholders = ', '.join(['%s'] * len(reply_ids))
+                cursor.execute(
+                    f"""
+                    SELECT m.id, m.text, m.message_type, m.file_data,
+                           u.id as user_id, u.username, u.display_name, u.avatar_url, u.status
+                    FROM chat_schema.messages m
+                    JOIN chat_schema.users u ON m.user_id = u.id
+                    WHERE m.id IN ({placeholders})
+                    """,
+                    reply_ids
+                )
+                reply_results = cursor.fetchall()
+                for reply in reply_results:
+                    # Parse file_data for reply
+                    file_data = None
+                    if reply['file_data']:
+                        if isinstance(reply['file_data'], dict):
+                            file_data = reply['file_data'] 
+                        else:
+                            try:
+                                file_data = json.loads(reply['file_data'])
+                            except (json.JSONDecodeError, TypeError):
+                                print(f"Error parsing file_data for replied message {reply['id']}")
+                                file_data = None
+                                
+                    reply_messages[reply['id']] = {
+                        'id': reply['id'],
+                        'text': reply['text'],
+                        'message_type': reply['message_type'],
+                        'fileData': file_data,
+                        'user': {
+                            'id': reply['user_id'],
+                            'username': reply['username'],
+                            'displayName': reply['display_name'],
+                            'avatarUrl': reply['avatar_url'],
+                            'status': reply['status']
+                        }
+                    }
+            
             # Convert to frontend format
             message_list = []
             for msg in messages:
-                # Get reply user data (if present)
-                reply_user = None
-                if msg['reply_to_id']:
-                    cursor.execute(
-                        """
-                        SELECT m.id, m.text, u.id as user_id, u.username, u.display_name, u.avatar_url
-                        FROM chat_schema.messages m
-                        JOIN chat_schema.users u ON m.user_id = u.id
-                        WHERE m.id = %s
-                        """,
-                        (msg['reply_to_id'],)
-                    )
-                    reply_result = cursor.fetchone()
-                    if reply_result:
-                        reply_user = {
-                            'id': reply_result['user_id'],
-                            'username': reply_result['username'],
-                            'displayName': reply_result['display_name'],
-                            'avatarUrl': reply_result['avatar_url']
-                        }
-                
                 # Get forwarded user data (if present)
                 forwarded_user = None
                 if msg['forwarded_from_id']:
@@ -248,15 +322,12 @@ def get_dm_messages(user_id):
                             'avatarUrl': forward_result['avatar_url']
                         }
                 
-                # Create reply_to and forwarded_from objects
+                # Get reply_to from cached results
                 reply_to = None
-                if reply_user:
-                    reply_to = {
-                        'id': msg['reply_to_id'],
-                        'text': reply_result['text'],
-                        'user': reply_user
-                    }
+                if msg['reply_to_id'] and msg['reply_to_id'] in reply_messages:
+                    reply_to = reply_messages[msg['reply_to_id']]
                 
+                # Create forwarded_from object  
                 forwarded_from = None
                 if forwarded_user:
                     forwarded_from = {
@@ -319,7 +390,6 @@ def get_dm_messages(user_id):
     except Exception as e:
         print(f"Error getting DM messages: {str(e)}")
         return jsonify({'error': str(e)}), 500
-
 
 @chat_bp.route('/api/users')
 def get_users():

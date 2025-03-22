@@ -199,7 +199,6 @@ def register_handlers(socketio):
     def handle_disconnect(reason=None):
         print(f'Client disconnected: {reason}')
 
-    # Modifica il gestore del messaggio di canale
     @socketio.on('joinChannel')
     def handle_join_channel(data):
         """Handle client joining a channel"""
@@ -261,6 +260,54 @@ def register_handlers(socketio):
                 (conversation_id,)
             )
             messages = cursor.fetchall()
+            
+            # Fetch all reply messages in a single query
+            reply_ids = [msg['reply_to_id'] for msg in messages if msg['reply_to_id'] is not None]
+            reply_messages = {}
+            
+            if reply_ids:
+                # Create placeholders for SQL IN clause
+                placeholders = ', '.join(['%s'] * len(reply_ids))
+                cursor.execute(
+                    f"""
+                    SELECT m.id, m.text, m.message_type, m.file_data,
+                        u.id as user_id, u.username, u.display_name, u.avatar_url, u.status
+                    FROM chat_schema.messages m
+                    JOIN chat_schema.users u ON m.user_id = u.id
+                    WHERE m.id IN ({placeholders})
+                    """,
+                    reply_ids
+                )
+                reply_results = cursor.fetchall()
+                
+                # Process reply messages
+                for reply in reply_results:
+                    # Parse file_data for reply
+                    reply_file_data = None
+                    if reply['file_data']:
+                        if isinstance(reply['file_data'], dict):
+                            reply_file_data = reply['file_data']
+                        else:
+                            try:
+                                reply_file_data = json.loads(reply['file_data'])
+                            except (json.JSONDecodeError, TypeError):
+                                print(f"Error parsing file_data for reply message {reply['id']}")
+                                reply_file_data = None
+                    
+                    # Build reply message object
+                    reply_messages[reply['id']] = {
+                        'id': reply['id'],
+                        'text': reply['text'],
+                        'message_type': reply['message_type'],
+                        'fileData': reply_file_data,
+                        'user': {
+                            'id': reply['user_id'],
+                            'username': reply['username'],
+                            'displayName': reply['display_name'],
+                            'avatarUrl': reply['avatar_url'],
+                            'status': reply['status']
+                        }
+                    }
 
         # Convert to dictionary format
         message_list = []
@@ -278,6 +325,11 @@ def register_handlers(socketio):
                         print(f"Error parsing file_data for message {msg['id']}")
                         file_data = None
 
+            # Get reply_to from cached results
+            reply_to = None
+            if msg['reply_to_id'] and msg['reply_to_id'] in reply_messages:
+                reply_to = reply_messages[msg['reply_to_id']]
+
             message_list.append({
                 'id': msg['id'],
                 'conversationId': msg['conversation_id'],
@@ -292,7 +344,7 @@ def register_handlers(socketio):
                 'timestamp': msg['created_at'].isoformat(),
                 'type': msg['message_type'],
                 'fileData': file_data,
-                'replyTo': None,
+                'replyTo': reply_to,
                 'forwardedFrom': None,
                 'metadata': json.loads(msg['metadata']) if msg['metadata'] and not isinstance(msg['metadata'], dict) else msg['metadata'] or {},
                 'edited': msg['edited'],
@@ -372,6 +424,54 @@ def register_handlers(socketio):
                 (conversation_id,)
             )
             messages = cursor.fetchall()
+            
+            # Fetch all reply messages in a single query
+            reply_ids = [msg['reply_to_id'] for msg in messages if msg['reply_to_id'] is not None]
+            reply_messages = {}
+            
+            if reply_ids:
+                # Create placeholders for SQL IN clause
+                placeholders = ', '.join(['%s'] * len(reply_ids))
+                cursor.execute(
+                    f"""
+                    SELECT m.id, m.text, m.message_type, m.file_data,
+                        u.id as user_id, u.username, u.display_name, u.avatar_url, u.status
+                    FROM chat_schema.messages m
+                    JOIN chat_schema.users u ON m.user_id = u.id
+                    WHERE m.id IN ({placeholders})
+                    """,
+                    reply_ids
+                )
+                reply_results = cursor.fetchall()
+                
+                # Process reply messages
+                for reply in reply_results:
+                    # Parse file_data for reply
+                    reply_file_data = None
+                    if reply['file_data']:
+                        if isinstance(reply['file_data'], dict):
+                            reply_file_data = reply['file_data']
+                        else:
+                            try:
+                                reply_file_data = json.loads(reply['file_data'])
+                            except (json.JSONDecodeError, TypeError):
+                                print(f"Error parsing file_data for reply message {reply['id']}")
+                                reply_file_data = None
+                    
+                    # Build reply message object
+                    reply_messages[reply['id']] = {
+                        'id': reply['id'],
+                        'text': reply['text'],
+                        'message_type': reply['message_type'],
+                        'fileData': reply_file_data,
+                        'user': {
+                            'id': reply['user_id'],
+                            'username': reply['username'],
+                            'displayName': reply['display_name'],
+                            'avatarUrl': reply['avatar_url'],
+                            'status': reply['status']
+                        }
+                    }
 
         # Convert to dictionary format
         message_list = []
@@ -403,6 +503,11 @@ def register_handlers(socketio):
             else:
                 metadata = {}
 
+            # Get reply_to from cached results
+            reply_to = None
+            if msg['reply_to_id'] and msg['reply_to_id'] in reply_messages:
+                reply_to = reply_messages[msg['reply_to_id']]
+
             message_list.append({
                 'id': msg['id'],
                 'conversationId': msg['conversation_id'],
@@ -417,7 +522,7 @@ def register_handlers(socketio):
                 'timestamp': msg['created_at'].isoformat(),
                 'type': msg['message_type'],
                 'fileData': file_data,
-                'replyTo': None,  # Would need additional query to get reply details
+                'replyTo': reply_to,  # Now using the full reply object
                 'forwardedFrom': None,  # Would need additional query to get forwarded details
                 'metadata': metadata,
                 'edited': msg['edited'],
@@ -430,6 +535,7 @@ def register_handlers(socketio):
 
         # Send DM history using prepare_for_socketio to ensure proper serialization
         emit('messageHistory', prepare_for_socketio(message_list))
+
 
     @socketio.on('channelMessage')
     def handle_channel_message(data):
