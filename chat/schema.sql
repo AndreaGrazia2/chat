@@ -43,7 +43,6 @@ CREATE TABLE messages (
     file_data JSONB,
     forwarded_from_id INTEGER REFERENCES messages(id) ON DELETE SET NULL,
     metadata JSONB,
-    reactions JSONB DEFAULT '{}',
     edited BOOLEAN DEFAULT FALSE,
     edited_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -262,10 +261,6 @@ INSERT INTO messages (conversation_id, user_id, text, message_type, created_at) 
 (5, 1, 'Annuncio importante: lanceremo il nuovo prodotto il prossimo mese!', 'normal', '2024-03-01 12:00:00'),
 (5, 1, 'Il lavoro di tutti è stato fondamentale per raggiungere questo traguardo.', 'normal', '2024-03-01 12:05:00'),
 (5, 1, 'Ci sarà un bonus per tutti nel prossimo stipendio come ringraziamento.', 'normal', '2024-03-03 09:00:00');
-
--- Reazioni ai messaggi (usando JSONB)
-UPDATE messages SET reactions = '{"👍": ["2", "3"], "❤️": ["1", "4"]}' WHERE id = 43;
-UPDATE messages SET reactions = '{"🎉": ["1", "2", "3", "4", "5"]}' WHERE id = 45;
 
 -- Canale Private Team: discussioni riservate
 INSERT INTO messages (conversation_id, user_id, text, message_type, created_at) VALUES

@@ -2,7 +2,7 @@
  * messageRenderer.js - Functions for rendering messages
  */
 
-// Aggiorna la funzione createMessageElement per gestire correttamente allegati, reactions ed edited
+// Aggiorna la funzione createMessageElement per gestire correttamente allegati ed edited
 function createMessageElement(message) {
     // Crea prima la riga che conterrà il messaggio e il timestamp
     const messageRow = document.createElement('div');
@@ -77,25 +77,6 @@ function createMessageElement(message) {
       `;
     }
 
-    // Gestisce visualizzazione reazioni
-    let reactionsHtml = '';
-    if (message.reactions && Object.keys(message.reactions).length > 0) {
-        reactionsHtml = '<div class="message-reactions">';
-
-        for (const [emoji, users] of Object.entries(message.reactions)) {
-            if (Array.isArray(users) && users.length > 0) {
-                reactionsHtml += `
-                <span class="reaction" data-emoji="${emoji}" data-users="${users.join(',')}" 
-                      title="${users.length} reaction${users.length > 1 ? 's' : ''}">
-                  ${emoji} <span class="reaction-count">${users.length}</span>
-                </span>
-              `;
-            }
-        }
-
-        reactionsHtml += '</div>';
-    }
-
     // Aggiungi spunte per messaggi propri con stato
     let statusIndicator = '';
     if (message.isOwn) {
@@ -129,8 +110,7 @@ function createMessageElement(message) {
           ${quotedHtml}
           <div class="message-text">${processedText}</div>
           ${fileHtml}
-          ${reactionsHtml}
-        </div>
+         </div>
         <div class="message-actions">
           <button class="reply-button" data-message-id="${message.id}">↩️ Reply</button>
           <button class="menu-button" data-message-id="${message.id}">⋮</button>

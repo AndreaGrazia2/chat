@@ -242,7 +242,7 @@ def register_handlers(socketio):
                 """
                 SELECT m.id, m.conversation_id, m.user_id, m.reply_to_id, 
                     m.text, m.message_type, m.file_data, m.forwarded_from_id,
-                    m.metadata, m.reactions, m.edited, m.edited_at, m.created_at,
+                    m.metadata, m.edited, m.edited_at, m.created_at,
                     u.username, u.display_name, u.avatar_url, u.status
                 FROM chat_schema.messages m
                 JOIN chat_schema.users u ON m.user_id = u.id
@@ -274,7 +274,6 @@ def register_handlers(socketio):
                 'replyTo': None,  # Would need additional query to get reply details
                 'forwardedFrom': None,  # Would need additional query to get forwarded details
                 'metadata': json.loads(msg['metadata']) if msg['metadata'] else None,
-                'reactions': json.loads(msg['reactions']) if msg['reactions'] else None,
                 'edited': msg['edited'],
                 'editedAt': msg['edited_at'].isoformat() if msg['edited_at'] else None,
                 'isOwn': msg['user_id'] == 1  # Assume current user is ID 1
@@ -361,7 +360,7 @@ def register_handlers(socketio):
                 """
                 SELECT m.id, m.conversation_id, m.user_id, m.reply_to_id, 
                        m.text, m.message_type, m.file_data, m.forwarded_from_id,
-                       m.metadata, m.reactions, m.edited, m.edited_at, m.created_at,
+                       m.metadata, m.edited, m.edited_at, m.created_at,
                        u.username, u.display_name, u.avatar_url, u.status
                 FROM chat_schema.messages m
                 JOIN chat_schema.users u ON m.user_id = u.id
@@ -393,7 +392,6 @@ def register_handlers(socketio):
                 'replyTo': None,  # Would need additional query to get reply details
                 'forwardedFrom': None,  # Would need additional query to get forwarded details
                 'metadata': json.loads(msg['metadata']) if msg['metadata'] else None,
-                'reactions': json.loads(msg['reactions']) if msg['reactions'] else None,
                 'edited': msg['edited'],
                 'editedAt': msg['edited_at'].isoformat() if msg['edited_at'] else None,
                 'isOwn': msg['user_id'] == 1  # Assume current user is ID 1
@@ -522,7 +520,6 @@ def register_handlers(socketio):
             'replyTo': None,  # Would need to fetch reply details
             'forwardedFrom': None,  # Would need to fetch forwarded details
             'metadata': message_data.get('metadata'),
-            'reactions': {},
             'edited': False,
             'editedAt': None,
             'isOwn': True,  # Mark as own message for sender
@@ -648,7 +645,6 @@ def register_handlers(socketio):
             'replyTo': None,  # Would need to fetch reply details
             'forwardedFrom': None,  # Would need to fetch forwarded details
             'metadata': message_data.get('metadata', {}),
-            'reactions': {},
             'edited': False,
             'editedAt': None,
             'isOwn': True,
@@ -721,7 +717,7 @@ def register_handlers(socketio):
                     'replyTo': None,
                     'forwardedFrom': None,
                     'metadata': {},
-                    'reactions': {},
+
                     'edited': False,
                     'editedAt': None,
                     'isOwn': False
@@ -900,178 +896,6 @@ def register_handlers(socketio):
         
         except Exception as e:
             print(f"Error during message edit: {str(e)}")              
-
-    @socketio.on('addReaction')
-    def handle_add_reaction(data):
-        """Handle message reaction from client"""
-        message_id = data.get('messageId')
-        emoji = data.get('emoji')
-        
-        try:
-            # Trova il messaggio
-            with get_db_cursor() as cursor:
-                cursor.execute(
-                    """
-                    SELECT m.id, m.conversation_id, m.reactions 
-                    FROM chat_schema.messages m
-                    WHERE m.id = %s
-                    """,
-                    (message_id,)
-                )
-                message = cursor.fetchone()
-                
-            if not message:
-                return
-                
-            conversation_id = message['conversation_id']
-            
-            # Get existing reactions or create new ones
-            reactions = json.loads(message['reactions']) if message['reactions'] else {}
-            
-            # Add the reaction
-            if emoji not in reactions:
-                reactions[emoji] = []
-            
-            # Add user to the reaction if not already there
-            if "1" not in reactions[emoji]:  # "1" is the current user ID as string
-                reactions[emoji].append("1")
-            
-            # Update the message
-            with get_db_cursor(commit=True) as cursor:
-                cursor.execute(
-                    """
-                    UPDATE chat_schema.messages
-                    SET reactions = %s
-                    WHERE id = %s
-                    RETURNING id
-                    """,
-                    (json.dumps(reactions), message_id)
-                )
-            
-            # Find the chat room to broadcast to
-            with get_db_cursor() as cursor:
-                cursor.execute(
-                    """
-                    SELECT c.name, c.type FROM chat_schema.conversations c
-                    WHERE c.id = %s
-                    """,
-                    (conversation_id,)
-                )
-                conversation = cursor.fetchone()
-                
-            if conversation['type'] == 'channel':
-                room = f"channel:{conversation['name']}"
-            else:
-                # For DMs, find the other participant
-                with get_db_cursor() as cursor:
-                    cursor.execute(
-                        """
-                        SELECT user_id FROM chat_schema.conversation_participants
-                        WHERE conversation_id = %s AND user_id != 1
-                        """,
-                        (conversation_id,)
-                    )
-                    participant = cursor.fetchone()
-                    
-                if participant:
-                    room = f"dm:{participant['user_id']}"
-                else:
-                    room = f"conversation:{conversation_id}"
-            
-            # Emit reaction update to everyone in the room
-            emit('messageReactionUpdate', {
-                'messageId': message_id,
-                'reactions': reactions
-            }, room=room)
-            
-        except Exception as e:
-            print(f"Error handling reaction: {str(e)}")
-
-    @socketio.on('removeReaction')
-    def handle_remove_reaction(data):
-        """Handle message reaction removal from client"""
-        message_id = data.get('messageId')
-        emoji = data.get('emoji')
-        
-        try:
-            # Trova il messaggio
-            with get_db_cursor() as cursor:
-                cursor.execute(
-                    """
-                    SELECT m.id, m.conversation_id, m.reactions 
-                    FROM chat_schema.messages m
-                    WHERE m.id = %s
-                    """,
-                    (message_id,)
-                )
-                message = cursor.fetchone()
-                
-            if not message:
-                return
-                
-            conversation_id = message['conversation_id']
-            
-            # Get existing reactions
-            reactions = json.loads(message['reactions']) if message['reactions'] else {}
-            
-            # Remove user from the reaction if present
-            if emoji in reactions and "1" in reactions[emoji]:
-                reactions[emoji].remove("1")
-                
-                # Remove emoji entry if no users left
-                if not reactions[emoji]:
-                    del reactions[emoji]
-            
-            # Update the message
-            with get_db_cursor(commit=True) as cursor:
-                cursor.execute(
-                    """
-                    UPDATE chat_schema.messages
-                    SET reactions = %s
-                    WHERE id = %s
-                    RETURNING id
-                    """,
-                    (json.dumps(reactions), message_id)
-                )
-            
-            # Find the chat room to broadcast to
-            with get_db_cursor() as cursor:
-                cursor.execute(
-                    """
-                    SELECT c.name, c.type FROM chat_schema.conversations c
-                    WHERE c.id = %s
-                    """,
-                    (conversation_id,)
-                )
-                conversation = cursor.fetchone()
-                
-            if conversation['type'] == 'channel':
-                room = f"channel:{conversation['name']}"
-            else:
-                # For DMs, find the other participant
-                with get_db_cursor() as cursor:
-                    cursor.execute(
-                        """
-                        SELECT user_id FROM chat_schema.conversation_participants
-                        WHERE conversation_id = %s AND user_id != 1
-                        """,
-                        (conversation_id,)
-                    )
-                    participant = cursor.fetchone()
-                    
-                if participant:
-                    room = f"dm:{participant['user_id']}"
-                else:
-                    room = f"conversation:{conversation_id}"
-            
-            # Emit reaction update to everyone in the room
-            emit('messageReactionUpdate', {
-                'messageId': message_id,
-                'reactions': reactions
-            }, room=room)
-            
-        except Exception as e:
-            print(f"Error removing reaction: {str(e)}")
 
 def ensure_channel_conversations_exist():
     """Ensure that all channels have corresponding conversations in the database"""

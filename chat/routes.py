@@ -39,16 +39,18 @@ def get_channel_messages(channel_name):
             result = cursor.fetchone()
             
             if not result:
+                # Ritorna una lista vuota invece di provocare un errore
+                print(f"Warning: No conversation found for channel {channel_name}")
                 return jsonify([])
                 
             conversation_id = result['id']
             
-            # Costruisci la query per ottenere i messaggi
+            # Semplifica la query per ridurre la possibilità di errori
             query = """
-                SELECT m.id, m.conversation_id, m.user_id, m.reply_to_id, 
-                       m.text, m.message_type, m.file_data, m.forwarded_from_id,
-                       m.metadata, m.reactions, m.edited, m.edited_at, m.created_at,
-                       u.username, u.display_name, u.avatar_url, u.status
+                SELECT 
+                    m.id, m.conversation_id, m.user_id, m.text, 
+                    m.created_at, m.message_type, 
+                    u.username, u.display_name, u.avatar_url, u.status
                 FROM chat_schema.messages m
                 JOIN chat_schema.users u ON m.user_id = u.id
                 WHERE m.conversation_id = %s
@@ -56,7 +58,7 @@ def get_channel_messages(channel_name):
             
             params = [conversation_id]
             
-            # Aggiungi filtro per paginazione se specificato
+            # Aggiunta filtro paginazione
             if before_id:
                 query += " AND m.id < %s"
                 params.append(before_id)
@@ -65,96 +67,58 @@ def get_channel_messages(channel_name):
             query += " ORDER BY m.created_at DESC LIMIT %s"
             params.append(limit)
             
+            # Debug per vedere la query
+            print(f"Executing query for channel {channel_name}, conversation_id={conversation_id}: {query}")
+            print(f"With params: {params}")
+            
             cursor.execute(query, params)
             messages = cursor.fetchall()
             
-            # Converti in formato per il frontend
+            # Converti in formato per il frontend - ma in modo più difensivo
             message_list = []
             for msg in messages:
-                # Gestisci messaggio a cui si risponde
-                reply_to = None
-                if msg['reply_to_id']:
-                    try:
-                        cursor.execute(
-                            """
-                            SELECT m.id, m.text, u.id as user_id, u.username, u.display_name, u.avatar_url
-                            FROM chat_schema.messages m
-                            JOIN chat_schema.users u ON m.user_id = u.id
-                            WHERE m.id = %s
-                            """,
-                            (msg['reply_to_id'],)
-                        )
-                        reply_result = cursor.fetchone()
-                        if reply_result:
-                            reply_to = {
-                                'id': msg['reply_to_id'],
-                                'text': reply_result['text'],
-                                'user': {
-                                    'id': reply_result['user_id'],
-                                    'username': reply_result['username'],
-                                    'displayName': reply_result['display_name'],
-                                    'avatarUrl': reply_result['avatar_url']
-                                }
-                            }
-                    except Exception as e:
-                        print(f"Error retrieving reply_to message: {e}")
-                        reply_to = None
-                
-                # Gestisci messaggio inoltrato
-                forwarded_from = None
-                if msg['forwarded_from_id']:
-                    try:
-                        cursor.execute(
-                            """
-                            SELECT id, username, display_name, avatar_url
-                            FROM chat_schema.users
-                            WHERE id = %s
-                            """,
-                            (msg['forwarded_from_id'],)
-                        )
-                        forward_result = cursor.fetchone()
-                        if forward_result:
-                            forwarded_from = {
-                                'id': forward_result['id'],
-                                'username': forward_result['username'],
-                                'displayName': forward_result['display_name'],
-                                'avatarUrl': forward_result['avatar_url']
-                            }
-                    except Exception as e:
-                        print(f"Error retrieving forwarded_from user: {e}")
-                        forwarded_from = None
-                
-                message_list.append({
-                    'id': msg['id'],
-                    'conversationId': msg['conversation_id'],
-                    'user': {
-                        'id': msg['user_id'],
-                        'username': msg['username'],
-                        'displayName': msg['display_name'],
-                        'avatarUrl': msg['avatar_url'],
-                        'status': msg['status']
-                    },
-                    'text': msg['text'],
-                    'timestamp': msg['created_at'].isoformat(),
-                    'type': msg['message_type'],
-                    'fileData': json.loads(msg['file_data']) if msg['file_data'] else None,
-                    'replyTo': reply_to,  # Già gestito nel codice originale
-                    'forwardedFrom': forwarded_from,  # Già gestito nel codice originale
-                    'metadata': json.loads(msg['metadata']) if msg['metadata'] else {},
-                    'reactions': json.loads(msg['reactions']) if msg['reactions'] else {},
-                    'edited': msg['edited'],
-                    'editedAt': msg['edited_at'].isoformat() if msg['edited_at'] else None,
-                    'isOwn': msg['user_id'] == 1  # Assume current user is ID 1
-                })
+                try:
+                    # Costruisci un dizionario base con valori di default
+                    message_dict = {
+                        'id': msg['id'],
+                        'conversationId': msg['conversation_id'],
+                        'user': {
+                            'id': msg['user_id'],
+                            'username': msg['username'] or 'unknown',
+                            'displayName': msg['display_name'] or 'Unknown User',
+                            'avatarUrl': msg['avatar_url'] or 'https://ui-avatars.com/api/?name=Unknown',
+                            'status': msg['status'] or 'offline'
+                        },
+                        'text': msg['text'] or '',
+                        'timestamp': msg['created_at'].isoformat() if msg['created_at'] else None,
+                        'type': msg['message_type'] or 'normal',
+                        'fileData': None,
+                        'replyTo': None,
+                        'forwardedFrom': None,
+                        'metadata': {},
+                         'edited': False,
+                        'editedAt': None,
+                        'isOwn': msg['user_id'] == 1
+                    }
+                    message_list.append(message_dict)
+                except Exception as field_error:
+                    print(f"Error processing message {msg['id']} for channel {channel_name}: {str(field_error)}")
+                    # Continua con il prossimo messaggio invece di far fallire tutto
+                    continue
             
-            # Inverti l'ordine per mostrare i messaggi più vecchi prima
+            # Inverti per mostrare i messaggi più vecchi prima
             message_list.reverse()
             
             return jsonify(message_list)
             
     except Exception as e:
-        print(f"Error getting channel messages: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        print(f"Error getting channel messages for {channel_name}: {str(e)}")
+        # Ritorna un errore più amichevole e informativo
+        return jsonify({
+            'error': 'Could not load messages',
+            'details': str(e),
+            'channel': channel_name
+        }), 500
 
 @chat_bp.route('/api/messages/dm/<int:user_id>')
 def get_dm_messages(user_id):
@@ -187,7 +151,7 @@ def get_dm_messages(user_id):
             query = """
                 SELECT m.id, m.conversation_id, m.user_id, m.reply_to_id, 
                        m.text, m.message_type, m.file_data, m.forwarded_from_id,
-                       m.metadata, m.reactions, m.edited, m.edited_at, m.created_at,
+                       m.metadata, m.edited, m.edited_at, m.created_at,
                        u.username, u.display_name, u.avatar_url, u.status
                 FROM chat_schema.messages m
                 JOIN chat_schema.users u ON m.user_id = u.id
@@ -269,7 +233,6 @@ def get_dm_messages(user_id):
                     'replyTo': reply_to,  # Già gestito nel codice originale
                     'forwardedFrom': forwarded_from,  # Già gestito nel codice originale
                     'metadata': json.loads(msg['metadata']) if msg['metadata'] else {},
-                    'reactions': json.loads(msg['reactions']) if msg['reactions'] else {},
                     'edited': msg['edited'],
                     'editedAt': msg['edited_at'].isoformat() if msg['edited_at'] else None,
                     'isOwn': msg['user_id'] == 1  # Assume current user is ID 1
@@ -625,100 +588,4 @@ def search():
         print(f"Error searching: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-@chat_bp.route('/api/messages/<int:message_id>/reactions', methods=['POST'])
-def add_reaction(message_id):
-    """Add a reaction to a message"""
-    try:
-        data = request.json
-        emoji = data.get('emoji')
-        user_id = 1  # Assume current user
-        
-        if not emoji:
-            return jsonify({"error": "Emoji required"}), 400
-            
-        with get_db_cursor() as cursor:
-            # Get existing reactions
-            cursor.execute(
-                """
-                SELECT reactions FROM chat_schema.messages
-                WHERE id = %s
-                """,
-                (message_id,)
-            )
-            result = cursor.fetchone()
-            
-            if not result:
-                return jsonify({"error": "Message not found"}), 404
-                
-            reactions = json.loads(result['reactions']) if result['reactions'] else {}
-            
-            # Add reaction
-            if emoji not in reactions:
-                reactions[emoji] = []
-            
-            if str(user_id) not in reactions[emoji]:
-                reactions[emoji].append(str(user_id))
-            
-            # Update message
-            with get_db_cursor(commit=True) as cursor:
-                cursor.execute(
-                    """
-                    UPDATE chat_schema.messages
-                    SET reactions = %s
-                    WHERE id = %s
-                    RETURNING id
-                    """,
-                    (json.dumps(reactions), message_id)
-                )
-                
-            return jsonify({"success": True, "reactions": reactions})
-    except Exception as e:
-        print(f"Error adding reaction: {str(e)}")
-        return jsonify({"error": str(e)}), 500
-
-@chat_bp.route('/api/messages/<int:message_id>/reactions/<path:emoji>', methods=['DELETE'])
-def remove_reaction(message_id, emoji):
-    """Remove a reaction from a message"""
-    try:
-        user_id = 1  # Assume current user
-        
-        with get_db_cursor() as cursor:
-            # Get existing reactions
-            cursor.execute(
-                """
-                SELECT reactions FROM chat_schema.messages
-                WHERE id = %s
-                """,
-                (message_id,)
-            )
-            result = cursor.fetchone()
-            
-            if not result:
-                return jsonify({"error": "Message not found"}), 404
-                
-            reactions = json.loads(result['reactions']) if result['reactions'] else {}
-            
-            # Remove reaction
-            if emoji in reactions and str(user_id) in reactions[emoji]:
-                reactions[emoji].remove(str(user_id))
-                
-                # Remove emoji entry if no users left
-                if not reactions[emoji]:
-                    del reactions[emoji]
-            
-            # Update message
-            with get_db_cursor(commit=True) as cursor:
-                cursor.execute(
-                    """
-                    UPDATE chat_schema.messages
-                    SET reactions = %s
-                    WHERE id = %s
-                    RETURNING id
-                    """,
-                    (json.dumps(reactions), message_id)
-                )
-                
-            return jsonify({"success": True, "reactions": reactions})
-    except Exception as e:
-        print(f"Error removing reaction: {str(e)}")
-        return jsonify({"error": str(e)}), 500        
+      

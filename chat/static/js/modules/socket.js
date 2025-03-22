@@ -1,6 +1,6 @@
 import { updateUnreadBadge}  from './uiNavigation.js';
 import { showNotification}  from './utils.js';
-import { handleMessageReactionUpdate } from './chat.js';
+
 /**
  * socket.js - Gestione Socket.IO e comunicazione tempo reale
  * 
@@ -34,15 +34,20 @@ function setupSocketIOEvents() {
     // Aggiunti nuovi eventi per gestire le features mancanti
     socket.on('messageDeleted', handleMessageDeleted); 
     socket.on('messageEdited', handleMessageEdited);
-    socket.on('messageReactionUpdate', handleMessageReactionUpdate);
 }
 
 function handleSocketConnect() {
-	console.log('Connesso al server Socket.IO');
-	currentlyConnected = true;
+    console.log('Connesso al server Socket.IO');
+    currentlyConnected = true;
 
-	// Entra nel canale default
-	joinChannel('general');
+    // Aggiungi un gestore di timeout globale per tutte le operazioni Socket.IO
+    socket.io.on("error", (error) => {
+        console.error("Socket.IO connection error:", error);
+        hideLoader(); // Nascondi sempre il loader in caso di errore di connessione
+    });
+
+    // Entra nel canale default
+    joinChannel('general');
 }
 
 function handleSocketDisconnect() {
@@ -78,7 +83,7 @@ function handleMessageHistory(history) {
                 message.timestamp = new Date(message.timestamp);
             }
             
-            // Assicurati che i campi fileData, reactions e replyTo siano correttamente inizializzati
+            // Assicurati che i campi fileData e replyTo siano correttamente inizializzati
             if (message.fileData && typeof message.fileData === 'string') {
                 try {
                     message.fileData = JSON.parse(message.fileData);
@@ -87,18 +92,8 @@ function handleMessageHistory(history) {
                     message.fileData = null;
                 }
             }
-            
-            if (message.reactions && typeof message.reactions === 'string') {
-                try {
-                    message.reactions = JSON.parse(message.reactions);
-                } catch (e) {
-                    console.error(`Errore nel parsing delle reactions per il messaggio ${message.id}:`, e);
-                    message.reactions = {};
-                }
-            } else if (!message.reactions) {
-                message.reactions = {};
-            }
-            
+ 
+           
             // Gestisci i messaggi replyTo
             if (message.replyTo && typeof message.replyTo === 'object') {
                 // Se è un oggetto vuoto, impostiamo a null
@@ -209,7 +204,7 @@ function handleNewMessage(message) {
     // Calcola se siamo vicini al fondo (entro 50px invece di 2px)
     const isNearBottom = (currentScrollHeight - clientHeight - currentScrollTop) <= 50;
     
-    // Assicurati che fileData, reactions e replyTo siano correttamente inizializzati
+    // Assicurati che fileData e replyTo siano correttamente inizializzati
     if (message.fileData && typeof message.fileData === 'string') {
         try {
             message.fileData = JSON.parse(message.fileData);
@@ -217,17 +212,6 @@ function handleNewMessage(message) {
             console.error(`Errore nel parsing di fileData per il messaggio ${message.id}:`, e);
             message.fileData = null;
         }
-    }
-    
-    if (message.reactions && typeof message.reactions === 'string') {
-        try {
-            message.reactions = JSON.parse(message.reactions);
-        } catch (e) {
-            console.error(`Errore nel parsing delle reactions per il messaggio ${message.id}:`, e);
-            message.reactions = {};
-        }
-    } else if (!message.reactions) {
-        message.reactions = {};
     }
     
     // Gestisci i messaggi replyTo
@@ -445,9 +429,30 @@ function handleUserStatusUpdate(data) {
 }
 
 function joinChannel(channelName) {
-	if (currentlyConnected) {
-		socket.emit('joinChannel', channelName);
-	}
+    if (currentlyConnected) {
+        showLoader(); // Mostra il loader quando si inizia a caricare
+        
+        // Imposta un timeout di sicurezza
+        setTimeout(() => {
+            // Se dopo 5 secondi il loader è ancora visibile, forzalo a nascondersi
+            const loader = document.getElementById('messagesLoader');
+            if (loader && loader.classList.contains('active')) {
+                console.warn(`Timeout nel caricamento dei messaggi per il canale: ${channelName}`);
+                hideLoader();
+                
+                // Mostra un messaggio di errore nella chat
+                const chatContainer = document.getElementById('chatMessages');
+                if (chatContainer.children.length === 0) {
+                    const errorElement = document.createElement('div');
+                    errorElement.className = 'empty-messages';
+                    errorElement.textContent = `Errore nel caricamento dei messaggi per ${channelName}. Riprova più tardi.`;
+                    chatContainer.appendChild(errorElement);
+                }
+            }
+        }, 5000);
+        
+        socket.emit('joinChannel', channelName);
+    }
 }
 
 function joinDirectMessage(userId) {
