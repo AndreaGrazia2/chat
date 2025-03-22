@@ -1,4 +1,6 @@
-import { updateUnreadBadge}  from './uiNavigation.js';
+import {updateUnreadBadge}  from './uiNavigation.js';
+import {loadOlderMessages, loadMoreMessages} from './coreMessages.js';
+import {debug} from './utils.js';
 
 /**
  * coreScroll.js - Scroll handling functions

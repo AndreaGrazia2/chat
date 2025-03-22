@@ -3,7 +3,6 @@
  */
 import { showLoader } from './utils.js';
 import { joinDirectMessage, joinChannel } from './socket.js';
-import { debug } from './utils.js';
 
 function setActiveChannel(el, channel) {
     // Aggiorna stato attivo
@@ -259,30 +258,6 @@ function renderChannelsList(channels) {
     }
 }
 
-function initializeSidebarSearchButton() {
-    // Pulsante cancellazione ricerca sidebar
-    const sidebarSearch = document.getElementById('sidebarSearch');
-    const sidebarClear = document.getElementById('sidebarSearchClear');
-    
-    if (sidebarSearch && sidebarClear) {
-        // Mostra/nascondi pulsante cancellazione in base al contenuto input
-        sidebarSearch.addEventListener('input', function() {
-            sidebarClear.classList.toggle('visible', this.value.length > 0);
-        });
-        
-        // Cancella input quando si clicca il pulsante
-        sidebarClear.addEventListener('click', function() {
-            sidebarSearch.value = '';
-            sidebarClear.classList.remove('visible');
-            // Trigger evento input per aggiornare elementi filtrati
-            sidebarSearch.dispatchEvent(new Event('input'));
-            sidebarSearch.focus();
-        });
-    }
-    
-    debug("Sidebar search button initialized");
-}
-
 export {
     setActiveChannel,
     setActiveUser,
@@ -292,5 +267,4 @@ export {
     toggleSidebar,
     renderUsersList,
     renderChannelsList,
-    initializeSidebarSearchButton
 };

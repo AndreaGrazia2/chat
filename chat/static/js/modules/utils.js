@@ -100,55 +100,6 @@ function showNotification(message, isError = false) {
 	}, 1500);
 }
 
-function diagnoseChatIssues() {
-    console.group("Diagnostica Chat");
-    
-    console.log("Socket.IO stato:", {
-        socketExists: typeof socket !== 'undefined',
-        connected: typeof socket !== 'undefined' ? socket.connected : false,
-        currentlyConnected
-    });
-    
-    console.log("Contesto chat:", {
-        currentChannel,
-        isDirectMessage,
-        currentUser,
-        historyScrollLock,
-        loadingMore,
-        isLoadingMessages
-    });
-    
-    console.log("Messaggi:", {
-        totalInMessages: typeof messages !== 'undefined' ? messages.length : 'N/A',
-        totalDisplayed: typeof displayedMessages !== 'undefined' ? displayedMessages.length : 'N/A',
-        messagesLoaded
-    });
-    
-    // Controlla lo stato del loader
-    const loader = document.getElementById('messagesLoader');
-    console.log("Loader stato:", {
-        element: loader,
-        isActive: loader ? loader.classList.contains('active') : false
-    });
-    
-    // Controlla le conversazioni canale nel DOM
-    const channelItems = document.querySelectorAll('.channel-item');
-    const channelsInfo = Array.from(channelItems).map(el => ({
-        name: el.textContent.trim(),
-        active: el.classList.contains('active')
-    }));
-    console.log("Canali UI:", channelsInfo);
-    
-    console.groupEnd();
-    
-    // Suggerimenti per il debug
-    console.log("Per risolvere problemi comuni:");
-    console.log("1. Forza reset loader: hideLoader()");
-    console.log("2. Riconnetti socket: socket.connect()");
-    console.log("3. Ricarica messaggi canale corrente: loadChannelMessages(currentChannel)");
-    console.log("4. Genera nuovi dati di test: fetch('/chat/api/demo/generate', { method: 'POST' })");
-}
-
 // Export functions
 export {
     debug,

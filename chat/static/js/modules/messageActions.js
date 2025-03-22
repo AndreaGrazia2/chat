@@ -1,5 +1,7 @@
 import { sendChannelMessage } from './socket.js'
 import { showNotification}  from './utils.js';
+import { scrollToBottom } from './coreScroll.js';
+import { sendDirectMessage } from './socket.js'
 
 /**
  * messageActions.js - Actions that can be performed on messages

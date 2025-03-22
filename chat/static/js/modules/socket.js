@@ -1,5 +1,8 @@
 import { updateUnreadBadge}  from './uiNavigation.js';
 import { showNotification}  from './utils.js';
+import { scrollToBottom } from './coreScroll.js';
+import { createMessageElement } from './messageRenderer.js';
+import { formatDate, showLoader, hideLoader } from './utils.js';
 
 /**
  * socket.js - Gestione Socket.IO e comunicazione tempo reale
@@ -499,32 +502,6 @@ function sendDirectMessage(userId, messageData) {
 			message: messageData
 		});
 	}
-}
-
-function sendTypingEvent(userId, channelName, isTyping) {
-	if (currentlyConnected) {
-		if (channelName) {
-			socket.emit('typing', {
-				channelName: channelName,
-				isTyping: isTyping
-			});
-		} else if (userId) {
-			socket.emit('typing', {
-				userId: userId,
-				isTyping: isTyping
-			});
-		}
-	}
-}
-
-function debugSocketIO() {
-	console.log("=== Socket.IO Debug ===");
-	console.log("Connected:", socket.connected);
-	console.log("Current channel:", currentChannel);
-	console.log("Is direct message:", isDirectMessage);
-	console.log("Current user:", currentUser);
-	console.log("Displayed messages:", displayedMessages.length);
-	console.log("========================");
 }
 
 function setupTypingTimeoutChecker() {

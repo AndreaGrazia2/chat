@@ -6,7 +6,11 @@ import { showNotification}  from './utils.js';
 import { searchMessages } from './uiSearch.js';
 import { filterSidebarItems } from './uiNavigation.js';
 import { setupTypingTimeoutChecker } from './socket.js';
-
+import { setupScrollHandlers, scrollToBottom } from './coreScroll.js';
+import { debug, hideLoader } from './utils.js';
+import { initializeSocketIO } from './socket.js';
+import { handleReply, forwardMessage, copyMessageText, editMessage } from './messageActions.js';
+import { sendMessage } from './chat.js';
 /**
  * coreInit.js - Initialization functions
  * 

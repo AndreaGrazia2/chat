@@ -1,6 +1,8 @@
 import { toggleSearchPanel } from './uiSearch.js';
 import { updateUnreadBadge}  from './uiNavigation.js';
 import { showNotification}  from './utils.js';
+import { debug, formatDate, showLoader, hideLoader } from './utils.js';
+import { createMessageElement } from './messageRenderer.js';
 
 /**
  * coreMessages.js - Message loading and management
