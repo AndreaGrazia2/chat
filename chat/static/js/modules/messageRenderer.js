@@ -29,10 +29,48 @@ function createMessageElement(message) {
         let quoteIcon = '';
         const replyToMessage = message.replyTo;
 
+        // Processa il testo del messaggio citato con linkify per mantenere i link
+        const processedReplyText = typeof linkifyText === 'function' ?
+            linkifyText(replyToMessage.text || '') :
+            (replyToMessage.text || '');
+
         if (replyToMessage && replyToMessage.type === 'file') {
             quoteIcon = `<i class="fas fa-file"></i>`;
         } else if (replyToMessage && replyToMessage.type === 'forwarded') {
             quoteIcon = `<i class="fas fa-share"></i>`;
+        }
+
+        // Gestisci visualizzazione allegato nel messaggio citato
+        let replyFileHtml = '';
+        if (replyToMessage && replyToMessage.fileData) {
+            const file = replyToMessage.fileData;
+            
+            // Verifica che tutte le proprietà necessarie esistano
+            if (file && file.icon && file.name && file.ext && file.size) {
+                replyFileHtml = `
+                <div class="file-attachment quoted-file">
+                  <div class="file-icon">
+                    <i class="fas ${file.icon}"></i>
+                  </div>
+                  <div class="file-info">
+                    <div class="file-name">${file.name}.${file.ext}</div>
+                    <div class="file-size">${file.size}</div>
+                  </div>
+                </div>
+              `;
+            } else {
+                // Fallback semplice se mancano proprietà
+                replyFileHtml = `
+                <div class="file-attachment quoted-file">
+                  <div class="file-icon">
+                    <i class="fas fa-file"></i>
+                  </div>
+                  <div class="file-info">
+                    <div class="file-name">File allegato</div>
+                  </div>
+                </div>
+              `;
+            }
         }
 
         // Controlla che replyToMessage e user siano definiti
@@ -40,7 +78,8 @@ function createMessageElement(message) {
             quotedHtml = `
           <div class="quoted-message">
             <div class="quoted-user">${quoteIcon} ${replyToMessage.user.displayName || replyToMessage.user.name}</div>
-            <div class="quoted-text">${replyToMessage.text || ''}</div>
+            <div class="quoted-text">${processedReplyText}</div>
+            ${replyFileHtml}
           </div>
         `;
         }
