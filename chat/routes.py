@@ -407,6 +407,9 @@ def user_settings():
                     )
                     settings = cursor.fetchone()
             
+            # Add debug logging to see what theme is being returned
+            print(f"Getting user settings, theme = {settings['theme']}")
+            
             return jsonify({
                 "theme": settings['theme'],
                 "notificationEnabled": settings['notification_enabled'],
@@ -422,6 +425,9 @@ def user_settings():
     elif request.method == 'PUT':
         try:
             data = request.json
+            
+            # Add debug logging to see what theme is being saved
+            print(f"Updating user settings, theme = {data.get('theme', 'light')}")
             
             with get_db_cursor(commit=True) as cursor:
                 cursor.execute(
@@ -449,6 +455,9 @@ def user_settings():
                     )
                 )
                 settings = cursor.fetchone()
+            
+            # Verify the theme was properly saved
+            print(f"Theme saved as: {settings['theme']}")
             
             return jsonify({
                 "theme": settings['theme'],
