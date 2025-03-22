@@ -6,7 +6,6 @@ import { formatTime, debug } from './utils.js';
 // Variabili di stato per la ricerca
 let searchResults = [];
 let currentSearchIndex = -1;
-let searchOpen = false;
 
 function toggleSearchPanel() {
     const searchPanel = document.getElementById('searchPanel');

@@ -139,7 +139,7 @@ function editMessage(messageId) {
     textEl.appendChild(editArea);
     
     // Memorizza operazione di modifica corrente per evitare conflitti
-    pendingEditOperation = {
+    let pendingEditOperation = {
         messageId: messageId,
         originalText: originalText
     };

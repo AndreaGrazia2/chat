@@ -3,7 +3,7 @@
  */
 
 // Variabile di stato per il tema
-let darkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+darkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 
 function toggleTheme() {
     darkMode = !darkMode;
