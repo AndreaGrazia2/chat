@@ -2,6 +2,9 @@ import {updateUnreadBadge}  from './uiNavigation.js';
 import {loadOlderMessages, loadMoreMessages} from './coreMessages.js';
 import {debug} from './utils.js';
 
+let pullAttempts = 0;
+let lastPullToRefreshTime = 0;
+
 /**
  * coreScroll.js - Scroll handling functions
  * 

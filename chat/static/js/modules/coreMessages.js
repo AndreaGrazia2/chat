@@ -4,6 +4,8 @@ import { showNotification}  from './utils.js';
 import { debug, formatDate, showLoader, hideLoader } from './utils.js';
 import { createMessageElement } from './messageRenderer.js';
 
+const batchSize = 15;
+
 /**
  * coreMessages.js - Message loading and management
  * 
