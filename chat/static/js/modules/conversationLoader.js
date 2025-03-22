@@ -37,11 +37,8 @@ function loadChannelMessages(channelName, scrollToBottom = true) {
             // IMPORTANTE: Nascondi il loader qui, senza condizioni
             hideLoader();
             
-            // Aggiungi SEMPRE l'indicatore di inizio conversazione
-            const startConversationIndicator = document.createElement('div');
-            startConversationIndicator.className = 'date-divider start-of-conversation';
-            startConversationIndicator.innerHTML = `<span>Inizio della conversazione</span>`;
-            chatMessages.appendChild(startConversationIndicator);
+            // NON aggiungere automaticamente l'indicatore di inizio conversazione qui
+            // Sarà gestito correttamente quando si raggiunge l'inizio effettivo
             
             if (messages.length > 0) {
                 // Trova il messaggio con ID più piccolo (il più vecchio)
@@ -60,6 +57,14 @@ function loadChannelMessages(channelName, scrollToBottom = true) {
                 }
             } else {
                 console.log(`No messages found for channel ${channelName}`);
+                // Non ci sono messaggi, questo è effettivamente l'inizio della conversazione
+                if (!document.querySelector('.start-of-conversation')) {
+                    const startConversationIndicator = document.createElement('div');
+                    startConversationIndicator.className = 'date-divider start-of-conversation';
+                    startConversationIndicator.innerHTML = `<span>Inizio della conversazione</span>`;
+                    chatMessages.appendChild(startConversationIndicator);
+                }
+                
                 // Mostra un messaggio se non ci sono messaggi
                 const emptyElement = document.createElement('div');
                 emptyElement.className = 'empty-messages';
@@ -115,12 +120,7 @@ function loadDirectMessages(userId, userName, scrollToBottom = true) {
                 oldestMessageId = oldestMsg.id;
                 console.log("Set oldestMessageId to:", oldestMessageId);
                 
-                // Aggiungi indicatore di inizio conversazione
-                const startConversationIndicator = document.createElement('div');
-                startConversationIndicator.className = 'date-divider start-of-conversation';
-                startConversationIndicator.innerHTML = `<span>Inizio della conversazione</span>`;
-                chatMessages.appendChild(startConversationIndicator);
-                
+                // NON aggiungere automaticamente l'indicatore di inizio conversazione qui
                 // Renderizza i messaggi
                 renderMessages(messages);
                 
@@ -129,6 +129,14 @@ function loadDirectMessages(userId, userName, scrollToBottom = true) {
                     chatMessages.scrollTop = chatMessages.scrollHeight;
                 }
             } else {
+                // Non ci sono messaggi, questo è effettivamente l'inizio della conversazione
+                if (!document.querySelector('.start-of-conversation')) {
+                    const startConversationIndicator = document.createElement('div');
+                    startConversationIndicator.className = 'date-divider start-of-conversation';
+                    startConversationIndicator.innerHTML = `<span>Inizio della conversazione</span>`;
+                    chatMessages.appendChild(startConversationIndicator);
+                }
+                
                 // Mostra un messaggio se non ci sono messaggi
                 const emptyElement = document.createElement('div');
                 emptyElement.className = 'date-divider empty-conversation';

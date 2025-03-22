@@ -64,15 +64,17 @@ function loadOlderMessages() {
             if (messages.length === 0) {
                 hasMoreMessages = false;
                 
-                // Mostra un messaggio "Inizio della conversazione"
-                const noMoreElement = document.createElement('div');
-                noMoreElement.className = 'date-divider start-of-conversation';
-                noMoreElement.innerHTML = '<span>Inizio della conversazione</span>';
-                
-                if (chatMessages.firstChild) {
-                    chatMessages.insertBefore(noMoreElement, chatMessages.firstChild);
-                } else {
-                    chatMessages.appendChild(noMoreElement);
+                // Mostra l'indicatore "Inizio della conversazione" solo se non esiste già
+                if (!document.querySelector('.start-of-conversation')) {
+                    const noMoreElement = document.createElement('div');
+                    noMoreElement.className = 'date-divider start-of-conversation';
+                    noMoreElement.innerHTML = '<span>Inizio della conversazione</span>';
+                    
+                    if (chatMessages.firstChild) {
+                        chatMessages.insertBefore(noMoreElement, chatMessages.firstChild);
+                    } else {
+                        chatMessages.appendChild(noMoreElement);
+                    }
                 }
             } else {
                 // Aggiorna l'ID del messaggio più vecchio

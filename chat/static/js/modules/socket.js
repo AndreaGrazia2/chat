@@ -63,11 +63,13 @@ function handleMessageHistory(history) {
     chatContainer.innerHTML = '';
     displayedMessages = [];
 
-    // Aggiungi SEMPRE l'indicatore di inizio conversazione
-    const startConversationIndicator = document.createElement('div');
-    startConversationIndicator.className = 'date-divider start-of-conversation';
-    startConversationIndicator.innerHTML = `<span>Inizio della conversazione</span>`;
-    chatContainer.appendChild(startConversationIndicator);
+    // Aggiungi l'indicatore di inizio conversazione SOLO se non ne esiste già uno
+    if (!document.querySelector('.start-of-conversation')) {
+        const startConversationIndicator = document.createElement('div');
+        startConversationIndicator.className = 'date-divider start-of-conversation';
+        startConversationIndicator.innerHTML = `<span>Inizio della conversazione</span>`;
+        chatContainer.appendChild(startConversationIndicator);
+    }
 
     if (history && history.length > 0) {
         // Ordina i messaggi per timestamp
