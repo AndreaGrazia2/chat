@@ -3,6 +3,19 @@ from common.config import SECRET_KEY
 from chat.db_models import User, Conversation, Message
 from common.db.connection import get_db_cursor
 import json
+from datetime import datetime
+
+# Custom JSON encoder to handle special types
+class CustomJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        # Add other special type handling here if needed
+        return super().default(obj)
+
+# Function to safely convert data to JSON
+def safe_json(data):
+    return json.dumps(data, cls=CustomJSONEncoder)
 
 # Create a Blueprint for chat
 chat_bp = Blueprint('chat', __name__, 
@@ -20,6 +33,7 @@ def serve_static(filename):
     """Serve static files for chat"""
     return send_from_directory('chat/static', filename)
 
+# Modifica nella funzione get_channel_messages in routes.py
 @chat_bp.route('/api/messages/channel/<channel_name>')
 def get_channel_messages(channel_name):
     """Get messages for a channel"""
@@ -45,11 +59,10 @@ def get_channel_messages(channel_name):
                 
             conversation_id = result['id']
             
-            # Semplifica la query per ridurre la possibilità di errori
             query = """
                 SELECT 
                     m.id, m.conversation_id, m.user_id, m.text, 
-                    m.created_at, m.message_type, 
+                    m.created_at, m.message_type, m.file_data,
                     u.username, u.display_name, u.avatar_url, u.status
                 FROM chat_schema.messages m
                 JOIN chat_schema.users u ON m.user_id = u.id
@@ -74,10 +87,22 @@ def get_channel_messages(channel_name):
             cursor.execute(query, params)
             messages = cursor.fetchall()
             
-            # Converti in formato per il frontend - ma in modo più difensivo
+            # Converti in formato per il frontend
             message_list = []
             for msg in messages:
                 try:
+                    # CORREZIONE: gestione più robusta di file_data
+                    file_data = None
+                    if msg['file_data']:
+                        if isinstance(msg['file_data'], dict):
+                            file_data = msg['file_data']
+                        else:
+                            try:
+                                file_data = json.loads(msg['file_data'])
+                            except (json.JSONDecodeError, TypeError):
+                                print(f"Error parsing file_data for message {msg['id']}")
+                                file_data = None
+                    
                     # Costruisci un dizionario base con valori di default
                     message_dict = {
                         'id': msg['id'],
@@ -92,24 +117,31 @@ def get_channel_messages(channel_name):
                         'text': msg['text'] or '',
                         'timestamp': msg['created_at'].isoformat() if msg['created_at'] else None,
                         'type': msg['message_type'] or 'normal',
-                        'fileData': None,
+                        'fileData': file_data,
                         'replyTo': None,
                         'forwardedFrom': None,
                         'metadata': {},
-                         'edited': False,
+                        'edited': False,
                         'editedAt': None,
                         'isOwn': msg['user_id'] == 1
                     }
                     message_list.append(message_dict)
                 except Exception as field_error:
                     print(f"Error processing message {msg['id']} for channel {channel_name}: {str(field_error)}")
+                    print(f"Message data: {msg}")
                     # Continua con il prossimo messaggio invece di far fallire tutto
                     continue
             
             # Inverti per mostrare i messaggi più vecchi prima
             message_list.reverse()
-            
-            return jsonify(message_list)
+      
+            try:
+                # Serializza e poi deserializza per garantire compatibilità JSON
+                serialized_data = safe_json(message_list)
+                return jsonify(json.loads(serialized_data))
+            except Exception as json_error:
+                print(f"Error serializing messages for channel {channel_name}: {str(json_error)}")
+                return jsonify([])
             
     except Exception as e:
         print(f"Error getting channel messages for {channel_name}: {str(e)}")
@@ -127,7 +159,7 @@ def get_dm_messages(user_id):
     limit = int(request.args.get('limit', 50))
     
     try:
-        # Trova la conversazione DM
+        # Find the DM conversation
         with get_db_cursor() as cursor:
             cursor.execute(
                 """
@@ -135,7 +167,7 @@ def get_dm_messages(user_id):
                 JOIN chat_schema.conversation_participants cp1 ON c.id = cp1.conversation_id
                 JOIN chat_schema.conversation_participants cp2 ON c.id = cp2.conversation_id
                 WHERE c.type = 'direct'
-                AND cp1.user_id = 1  -- Utente corrente
+                AND cp1.user_id = 1  -- Current user
                 AND cp2.user_id = %s
                 """,
                 (user_id,)
@@ -147,7 +179,7 @@ def get_dm_messages(user_id):
                 
             conversation_id = result['id']
             
-            # Costruisci la query per ottenere i messaggi
+            # Build query to get messages
             query = """
                 SELECT m.id, m.conversation_id, m.user_id, m.reply_to_id, 
                        m.text, m.message_type, m.file_data, m.forwarded_from_id,
@@ -160,22 +192,22 @@ def get_dm_messages(user_id):
             
             params = [conversation_id]
             
-            # Aggiungi filtro per paginazione se specificato
+            # Add pagination filter if specified
             if before_id:
                 query += " AND m.id < %s"
                 params.append(before_id)
                 
-            # Ordina e limita
+            # Order and limit
             query += " ORDER BY m.created_at DESC LIMIT %s"
             params.append(limit)
             
             cursor.execute(query, params)
             messages = cursor.fetchall()
             
-            # Converti in formato per il frontend
+            # Convert to frontend format
             message_list = []
             for msg in messages:
-                # Ottieni i dati dell'utente che ha risposto (se presente)
+                # Get reply user data (if present)
                 reply_user = None
                 if msg['reply_to_id']:
                     cursor.execute(
@@ -196,7 +228,7 @@ def get_dm_messages(user_id):
                             'avatarUrl': reply_result['avatar_url']
                         }
                 
-                # Ottieni i dati dell'utente che ha inoltrato (se presente)
+                # Get forwarded user data (if present)
                 forwarded_user = None
                 if msg['forwarded_from_id']:
                     cursor.execute(
@@ -216,6 +248,46 @@ def get_dm_messages(user_id):
                             'avatarUrl': forward_result['avatar_url']
                         }
                 
+                # Create reply_to and forwarded_from objects
+                reply_to = None
+                if reply_user:
+                    reply_to = {
+                        'id': msg['reply_to_id'],
+                        'text': reply_result['text'],
+                        'user': reply_user
+                    }
+                
+                forwarded_from = None
+                if forwarded_user:
+                    forwarded_from = {
+                        'id': msg['forwarded_from_id'],
+                        'user': forwarded_user
+                    }
+                
+                # FIXED: Properly handle file_data field
+                file_data = None
+                if msg['file_data']:
+                    if isinstance(msg['file_data'], dict):
+                        file_data = msg['file_data']
+                    else:
+                        try:
+                            file_data = json.loads(msg['file_data'])
+                        except (json.JSONDecodeError, TypeError):
+                            print(f"Error parsing file_data for message {msg['id']}")
+                            file_data = None
+                
+                # FIXED: Properly handle metadata field
+                metadata = {}
+                if msg['metadata']:
+                    if isinstance(msg['metadata'], dict):
+                        metadata = msg['metadata']
+                    else:
+                        try:
+                            metadata = json.loads(msg['metadata'])
+                        except (json.JSONDecodeError, TypeError):
+                            print(f"Error parsing metadata for message {msg['id']}")
+                            metadata = {}
+                
                 message_list.append({
                     'id': msg['id'],
                     'conversationId': msg['conversation_id'],
@@ -229,23 +301,25 @@ def get_dm_messages(user_id):
                     'text': msg['text'],
                     'timestamp': msg['created_at'].isoformat(),
                     'type': msg['message_type'],
-                    'fileData': json.loads(msg['file_data']) if msg['file_data'] else None,
-                    'replyTo': reply_to,  # Già gestito nel codice originale
-                    'forwardedFrom': forwarded_from,  # Già gestito nel codice originale
-                    'metadata': json.loads(msg['metadata']) if msg['metadata'] else {},
+                    'fileData': file_data,
+                    'replyTo': reply_to,
+                    'forwardedFrom': forwarded_from,
+                    'metadata': metadata,
                     'edited': msg['edited'],
                     'editedAt': msg['edited_at'].isoformat() if msg['edited_at'] else None,
                     'isOwn': msg['user_id'] == 1  # Assume current user is ID 1
                 })
             
-            # Inverti l'ordine per mostrare i messaggi più vecchi prima
+            # Reverse order to show oldest messages first
             message_list.reverse()
             
-            return jsonify(message_list)
+            # Use safe_json to ensure all data is properly serialized
+            return jsonify(json.loads(safe_json(message_list)))
             
     except Exception as e:
         print(f"Error getting DM messages: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
 
 @chat_bp.route('/api/users')
 def get_users():

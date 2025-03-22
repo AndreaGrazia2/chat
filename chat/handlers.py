@@ -11,7 +11,14 @@ import requests
 from chat.db_models import User, Conversation, Message
 from common.config import OPENROUTER_API_KEY, OPENROUTER_API_URL
 from common.db.connection import get_db_cursor
+from chat.routes import safe_json, CustomJSONEncoder  # Importa la funzione safe_json
 
+# Dopo gli import
+
+def prepare_for_socketio(data):
+    """Prepara i dati per essere inviati tramite Socket.IO"""
+    # Serializza e deserializza per garantire che tutti gli oggetti siano JSON-compatibili
+    return json.loads(safe_json(data))
 
 def ensure_users_exist():
     """Ensure that basic users exist in the database with proper data"""
@@ -162,11 +169,12 @@ def register_handlers(socketio):
     # per assicurarti che le conversazioni dei canali esistano
     ensure_channel_conversations_exist()
 
+    # In handle_connect
     @socketio.on('connect')
     def handle_connect():
         print('Client connected')
         # Send initial data with app configuration
-        emit('initialData', {
+        emit('initialData', prepare_for_socketio({
             'users': get_users_data(),
             'channels': get_channels_data(),
             'currentUser': {
@@ -176,7 +184,7 @@ def register_handlers(socketio):
                 'avatarUrl': 'https://ui-avatars.com/api/?name=Owner&background=27AE60&color=fff',
                 'status': 'online'
             }
-        })
+        }))
 
         # Send app configuration
         emit('appConfig', {
@@ -191,6 +199,7 @@ def register_handlers(socketio):
     def handle_disconnect(reason=None):
         print(f'Client disconnected: {reason}')
 
+    # Modifica il gestore del messaggio di canale
     @socketio.on('joinChannel')
     def handle_join_channel(data):
         """Handle client joining a channel"""
@@ -200,8 +209,7 @@ def register_handlers(socketio):
         elif isinstance(data, dict):
             channel_name = data.get('channel')
         else:
-            print(
-                f"Error: unexpected data type for joinChannel: {type(data)}: {data}")
+            print(f"Error: unexpected data type for joinChannel: {type(data)}: {data}")
             return
 
         if not channel_name:
@@ -257,6 +265,19 @@ def register_handlers(socketio):
         # Convert to dictionary format
         message_list = []
         for msg in messages:
+            # CORREZIONE: gestione coerente di file_data
+            file_data = None
+            if msg['file_data']:
+                # Se è già un dict, usalo così com'è, altrimenti prova a deserializzare
+                if isinstance(msg['file_data'], dict):
+                    file_data = msg['file_data']
+                else:
+                    try:
+                        file_data = json.loads(msg['file_data'])
+                    except (json.JSONDecodeError, TypeError):
+                        print(f"Error parsing file_data for message {msg['id']}")
+                        file_data = None
+
             message_list.append({
                 'id': msg['id'],
                 'conversationId': msg['conversation_id'],
@@ -270,10 +291,10 @@ def register_handlers(socketio):
                 'text': msg['text'],
                 'timestamp': msg['created_at'].isoformat(),
                 'type': msg['message_type'],
-                'fileData': json.loads(msg['file_data']) if msg['file_data'] else None,
-                'replyTo': None,  # Would need additional query to get reply details
-                'forwardedFrom': None,  # Would need additional query to get forwarded details
-                'metadata': json.loads(msg['metadata']) if msg['metadata'] else None,
+                'fileData': file_data,
+                'replyTo': None,
+                'forwardedFrom': None,
+                'metadata': json.loads(msg['metadata']) if msg['metadata'] and not isinstance(msg['metadata'], dict) else msg['metadata'] or {},
                 'edited': msg['edited'],
                 'editedAt': msg['edited_at'].isoformat() if msg['edited_at'] else None,
                 'isOwn': msg['user_id'] == 1  # Assume current user is ID 1
@@ -282,46 +303,26 @@ def register_handlers(socketio):
         # Reverse to show oldest messages first
         message_list.reverse()
 
-        # Send channel history
-        emit('messageHistory', message_list)
-
-        """Handle client joining a channel"""
-        # Gestisci sia stringhe che dizionari
-        if isinstance(data, str):
-            channel_name = data
-        elif isinstance(data, dict):
-            channel_name = data.get('channel')
-        else:
-            print(
-                f"Error: unexpected data type for joinChannel: {type(data)}: {data}")
-            return
-
-        if not channel_name:
-            return
-
-        print(f"Client joining channel: {channel_name}")
-
-        # Join the room for this channel
-        room = f"channel:{channel_name}"
-        join_room(room)
-
-        # Notify other users that someone joined
-        emit('userJoined', {
-            'channel': channel_name,
-            'user': 'You'  # In a real app, this would be the actual user
-        }, room=room, include_self=False)
+        try:
+            # Prima serializza in JSON, poi deserializza per garantire che sia valido
+            serialized_data = json.dumps(message_list, cls=CustomJSONEncoder)
+            deserialized_data = json.loads(serialized_data)
+            # Send channel history
+            emit('messageHistory', deserialized_data)
+        except Exception as e:
+            print(f"Error preparing message history for Socket.IO: {str(e)}")
+            emit('messageHistory', [])  # Invia una lista vuota in caso di errore
 
     @socketio.on('joinDirectMessage')
     def handle_join_dm(data):
         """Handle client joining a direct message conversation"""
-        # Gestisci sia interi che dizionari
+        # Handle both integers and dictionaries
         if isinstance(data, int):
             user_id = data
         elif isinstance(data, dict):
             user_id = data.get('userId')
         else:
-            print(
-                f"Error: unexpected data type for joinDirectMessage: {type(data)}: {data}")
+            print(f"Error: unexpected data type for joinDirectMessage: {type(data)}: {data}")
             return
 
         if not user_id:
@@ -359,9 +360,9 @@ def register_handlers(socketio):
             cursor.execute(
                 """
                 SELECT m.id, m.conversation_id, m.user_id, m.reply_to_id, 
-                       m.text, m.message_type, m.file_data, m.forwarded_from_id,
-                       m.metadata, m.edited, m.edited_at, m.created_at,
-                       u.username, u.display_name, u.avatar_url, u.status
+                    m.text, m.message_type, m.file_data, m.forwarded_from_id,
+                    m.metadata, m.edited, m.edited_at, m.created_at,
+                    u.username, u.display_name, u.avatar_url, u.status
                 FROM chat_schema.messages m
                 JOIN chat_schema.users u ON m.user_id = u.id
                 WHERE m.conversation_id = %s
@@ -375,6 +376,33 @@ def register_handlers(socketio):
         # Convert to dictionary format
         message_list = []
         for msg in messages:
+            # FIXED: Consistent handling of file_data
+            file_data = None
+            if msg['file_data']:
+                # If it's already a dict, use it as is, otherwise try to deserialize
+                if isinstance(msg['file_data'], dict):
+                    file_data = msg['file_data']
+                else:
+                    try:
+                        file_data = json.loads(msg['file_data'])
+                    except (json.JSONDecodeError, TypeError):
+                        print(f"Error parsing file_data for message {msg['id']}")
+                        file_data = None
+
+            # FIXED: Consistent handling of metadata
+            metadata = None
+            if msg['metadata']:
+                if isinstance(msg['metadata'], dict):
+                    metadata = msg['metadata']
+                else:
+                    try:
+                        metadata = json.loads(msg['metadata'])
+                    except (json.JSONDecodeError, TypeError):
+                        print(f"Error parsing metadata for message {msg['id']}")
+                        metadata = {}
+            else:
+                metadata = {}
+
             message_list.append({
                 'id': msg['id'],
                 'conversationId': msg['conversation_id'],
@@ -388,10 +416,10 @@ def register_handlers(socketio):
                 'text': msg['text'],
                 'timestamp': msg['created_at'].isoformat(),
                 'type': msg['message_type'],
-                'fileData': json.loads(msg['file_data']) if msg['file_data'] else None,
+                'fileData': file_data,
                 'replyTo': None,  # Would need additional query to get reply details
                 'forwardedFrom': None,  # Would need additional query to get forwarded details
-                'metadata': json.loads(msg['metadata']) if msg['metadata'] else None,
+                'metadata': metadata,
                 'edited': msg['edited'],
                 'editedAt': msg['edited_at'].isoformat() if msg['edited_at'] else None,
                 'isOwn': msg['user_id'] == 1  # Assume current user is ID 1
@@ -400,8 +428,8 @@ def register_handlers(socketio):
         # Reverse to show oldest messages first
         message_list.reverse()
 
-        # Send DM history
-        emit('messageHistory', message_list)
+        # Send DM history using prepare_for_socketio to ensure proper serialization
+        emit('messageHistory', prepare_for_socketio(message_list))
 
     @socketio.on('channelMessage')
     def handle_channel_message(data):
@@ -528,7 +556,7 @@ def register_handlers(socketio):
 
         # Broadcast to channel
         room = f"channel:{channel_name}"
-        emit('newMessage', message_dict, room=room)
+        emit('newMessage', prepare_for_socketio(message_dict), room=room)
         print(f"Broadcasted message {message_id} to room {room}")
 
     @socketio.on('directMessage')
@@ -554,12 +582,12 @@ def register_handlers(socketio):
                 "SELECT id, username, display_name, avatar_url, status FROM chat_schema.users WHERE id = 1")
             current_user = cursor.fetchone()
 
-        # Verifica che gli utenti esistano e abbiano dati validi
+        # Verify users exist and have valid data
         if not target_user or not current_user:
             print(f"Error: User not found. Target user ID: {user_id}")
             return
 
-        # Log dei dati utente per debug
+        # Log user data for debugging
         print(f"Target user: {target_user}")
         print(f"Current user: {current_user}")
 
@@ -602,6 +630,20 @@ def register_handlers(socketio):
         else:
             conversation_id = result['id']
 
+        # Process file data if present
+        file_data_str = None
+        if message_data.get('fileData'):
+            try:
+                if isinstance(message_data['fileData'], dict):
+                    file_data_str = json.dumps(message_data['fileData'])
+                else:
+                    # Ensure it's valid JSON before storing
+                    file_data = json.loads(json.dumps(message_data['fileData']))
+                    file_data_str = json.dumps(file_data)
+            except (TypeError, json.JSONDecodeError) as e:
+                print(f"Error processing file data: {e}")
+                file_data_str = None
+
         # Create user message
         with get_db_cursor(commit=True) as cursor:
             cursor.execute(
@@ -614,29 +656,27 @@ def register_handlers(socketio):
                 (
                     conversation_id,
                     1,  # current user id
-                    message_data.get('replyTo'),
-                    message_data.get('text'),
+                    message_data.get('replyTo', {}).get('id') if isinstance(message_data.get('replyTo'), dict) else message_data.get('replyTo'),
+                    message_data.get('text', ''),
                     message_data.get('type', 'normal'),
-                    json.dumps(message_data.get('fileData')) if message_data.get(
-                        'fileData') else None,
-                    message_data.get('forwardedFrom', {}).get('id')
+                    file_data_str,
+                    message_data.get('forwardedFrom', {}).get('id') if isinstance(message_data.get('forwardedFrom'), dict) else message_data.get('forwardedFrom')
                 )
             )
             result = cursor.fetchone()
             message_id = result['id']
             created_at = result['created_at']
 
-        # Prepara il messaggio con tutti i campi necessari
+        # Prepare the message with all necessary fields
         message_dict = {
             'id': message_id,
             'conversationId': conversation_id,
             'user': {
                 'id': current_user['id'],
-                'username': current_user['username'],  # Rimosso il fallback
-                # Rimosso il fallback
+                'username': current_user['username'],
                 'displayName': current_user['display_name'],
-                'avatarUrl': current_user['avatar_url'],  # Rimosso il fallback
-                'status': current_user['status']  # Rimosso il fallback
+                'avatarUrl': current_user['avatar_url'],
+                'status': current_user['status']
             },
             'text': message_data.get('text', ''),
             'timestamp': created_at.isoformat(),
@@ -651,11 +691,11 @@ def register_handlers(socketio):
             'tempId': message_data.get('tempId')
         }
 
-        # Log del messaggio per debug
+        # Log the message for debugging
         print(f"Sending message: {message_dict}")
 
         # Send message to everyone in the room (including sender)
-        emit('newMessage', message_dict, room=room)
+        emit('newMessage', prepare_for_socketio(message_dict), room=room)
 
         # If message is for AI Assistant (user_id=2), generate a response
         if int(user_id) == 2:
@@ -673,7 +713,7 @@ def register_handlers(socketio):
                 # Simulate typing delay
                 time.sleep(1.5)
 
-                # Get AI user data from database (non aggiornare qui)
+                # Get AI user data from database
                 with get_db_cursor() as cursor:
                     cursor.execute(
                         """
@@ -723,9 +763,8 @@ def register_handlers(socketio):
                     'isOwn': False
                 }
 
-                print(
-                    f"Sending AI response with user data: {ai_message['user']}")
-                emit('newMessage', ai_message, room=room)
+                print(f"Sending AI response with user data: {ai_message['user']}")
+                emit('newMessage', prepare_for_socketio(ai_message), room=room)
             finally:
                 # Hide typing indicator
                 emit('typingIndicator', {
