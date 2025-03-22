@@ -65,29 +65,43 @@ window.users = [{
 document.addEventListener('DOMContentLoaded', () => {
     initializeApp();
 
-    // Get the sidebar and overlay elements
+    // Elementi sidebar
     const sidebar = document.querySelector('.sidebar');
     const closeSidebarBtn = document.getElementById('closeSidebar');
     const mobileSidebarToggle = document.getElementById('mobileSidebarToggle');
     const overlay = document.getElementById('overlay');
     
-    // Open sidebar - usa .active invece di .show
-    mobileSidebarToggle.addEventListener('click', function() {
+    // Funzione per aprire la sidebar
+    function openSidebar() {
+        console.log('Opening sidebar');
         sidebar.classList.add('active');
-        if (overlay) overlay.classList.add('active');
-    });
-    
-    // Close sidebar - usa .active invece di .show
-    closeSidebarBtn.addEventListener('click', function() {
-        sidebar.classList.remove('active');
-        if (overlay) overlay.classList.remove('active');
-    });
-    
-    // Close when clicking overlay
-    if (overlay) {
-        overlay.addEventListener('click', function() {
-            sidebar.classList.remove('active');
-            overlay.classList.remove('active');
-        });
+        overlay.classList.add('active');
     }
+    
+    // Funzione per chiudere la sidebar
+    function closeSidebar() {
+        console.log('Closing sidebar');
+        sidebar.classList.remove('active');
+        overlay.classList.remove('active');
+    }
+    
+    // Event listeners
+    mobileSidebarToggle.addEventListener('click', openSidebar);
+    closeSidebarBtn.addEventListener('click', closeSidebar);
+    overlay.addEventListener('click', closeSidebar);
+    
+    // Chiudi la sidebar quando la finestra viene ridimensionata oltre 768px
+    window.addEventListener('resize', function() {
+        if (window.innerWidth > 768) {
+            closeSidebar();
+        }
+    });
+    
+    // Debug - verifica che gli elementi esistano
+    console.log({
+        sidebar: !!sidebar,
+        closeSidebarBtn: !!closeSidebarBtn,
+        mobileSidebarToggle: !!mobileSidebarToggle,
+        overlay: !!overlay
+    });
 });

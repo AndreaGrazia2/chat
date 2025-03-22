@@ -175,13 +175,20 @@ function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
     const overlay = document.getElementById('overlay');
     
-    sidebarVisible = !sidebarVisible;
-    
-    // Usa sempre .active invece di .show
-    sidebar.classList.toggle('active', sidebarVisible);
-    if (overlay) {
-        overlay.classList.toggle('active', sidebarVisible);
+    // Toggle visibility
+    if (sidebar.classList.contains('active')) {
+        // Chiudi sidebar
+        sidebar.classList.remove('active');
+        overlay.classList.remove('active');
+        sidebarVisible = false;
+    } else {
+        // Apri sidebar
+        sidebar.classList.add('active');
+        overlay.classList.add('active');
+        sidebarVisible = true;
     }
+    
+    console.log('Sidebar toggled, visible:', sidebarVisible);
 }
 
 function renderUsersList(users) {

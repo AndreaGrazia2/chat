@@ -217,13 +217,27 @@
 }
 
 /* Button dimensions */
-.action-button, .theme-toggle, .mobile-menu-button {
+.action-button, .theme-toggle {
     width: 40px; /* Exactly match calendar button width */
     height: 40px; /* Exactly match calendar button height */
     background: none;
     border: none;
     cursor: pointer;
     display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: var(--text-color);
+    position: relative; /* Needed for proper hover effect */
+}
+
+.mobile-menu-button {
+    width: 40px; /* Exactly match calendar button width */
+    height: 40px; /* Exactly match calendar button height */
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: none;
     align-items: center;
     justify-content: center;
     border-radius: 50%;
@@ -250,6 +264,11 @@
     background-color: rgba(0, 0, 0, 0.05);
 }
 
+@media (max-width: 768px) {
+	.mobile-menu-button {
+		display: flex;
+	}
+}
 /* Remove tooltip styling if not needed */
 .tooltip:hover::after {
     display: none;
@@ -492,55 +511,6 @@
 	color: var(--text-color);
 	font-size: 16px;
 }
-
-.mobile-menu-button {
-	display: none;
-	background: none;
-	border: none;
-	color: var(--text-color);
-	font-size: 24px;
-	cursor: pointer;
-}
-
-/* Media queries */
-@media (max-width: 768px) {
-	.app-container {
-		grid-template-columns: 1fr;
-		height: calc(100vh - 50px);
-		/* Aggiornato per la navbar */
-	}
-
-	.header {
-		grid-column: 1 / 2;
-	}
-
-	.mobile-menu-button {
-		display: block;
-	}
-
-	.sidebar {
-		display: none;
-		position: fixed;
-		width: 80%;
-		height: calc(100% - 60px);
-		top: 114px;
-		left: 0;
-		z-index: 10;
-	}
-
-	.sidebar.show {
-		display: block;
-	}
-
-	.chat-area {
-		grid-column: 1 / 2;
-	}
-
-	.message-container {
-		max-width: 85%;
-	}
-}
-
 
 .options-button {
 	background: none;
