@@ -118,7 +118,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (savedDarkMode === 'enabled') {
         darkMode = true;
         body.classList.add('dark');
-        darkModeToggle.innerHTML = '☀️';
+        darkModeToggle.innerHTML = '<i class="fas fa-sun"></i>'; // Icona sole per tema scuro
+    } else {
+        darkMode = false;
+        body.classList.remove('dark');
+        darkModeToggle.innerHTML = '<i class="fas fa-moon"></i>'; // Icona luna per tema chiaro
     }
 
     // Inizializza i grafici

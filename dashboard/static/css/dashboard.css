@@ -72,8 +72,12 @@ body.dark .header {
 	width: 36px;
 	height: 36px;
 	transition: background-color 0.2s;
+	color: #0e0e0e;
 }
 
+.dark .btn {
+	color: #e0e0e0;
+}
 .btn:hover {
 	background-color: #f0f0f0;
 }
@@ -83,7 +87,7 @@ body.dark .btn:hover {
 }
 
 .btn-menu {
-	display: none;
+	display: block;
 }
 
 /* User menu */
@@ -656,10 +660,6 @@ body.dark .pagination-page:hover {
 
 /* Responsive adjustments */
 @media (max-width: 767px) {
-	.btn-menu {
-		display: block;
-	}
-
 	.user-name {
 		display: none;
 	}
