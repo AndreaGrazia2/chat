@@ -4,6 +4,8 @@
 import { showLoader } from './utils.js';
 import { joinDirectMessage, joinChannel } from './socket.js';
 
+let sidebarVisible = false;
+
 function setActiveChannel(el, channel) {
     // Aggiorna stato attivo
     document.querySelectorAll('.channel-item.active, .user-item.active').forEach(item => {

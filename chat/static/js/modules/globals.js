@@ -10,7 +10,6 @@ const DEBUG = true;
 
 // Variabili globali principali
 let darkMode = true;
-let sidebarVisible = false;
 let currentChannel = 'general';
 let isDirectMessage = false;
 let currentUser = null;
@@ -73,7 +72,6 @@ const batchSize = 15;
 export {
     DEBUG,
     darkMode,
-    sidebarVisible,
     currentChannel,
     isDirectMessage,
     currentUser,
