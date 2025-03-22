@@ -113,7 +113,7 @@ nextPageBtn.addEventListener('click', () => {
 // Inizializzazione
 document.addEventListener('DOMContentLoaded', () => {
     // Carica preferenza Dark Mode all'avvio
-    const savedDarkMode = localStorage.getItem('darkMode');
+    const savedDarkMode = localStorage.getItem('dashboardDarkMode');
 
     if (savedDarkMode === 'enabled') {
         darkMode = true;

@@ -320,6 +320,23 @@ function deleteMessage(messageId) {
                 }
             }
             
+            // Controlla se non ci sono più messaggi
+            if (displayedMessages.length === 0) {
+                // Non ci sono più messaggi, aggiungi "Inizio della conversazione" e "Nessun messaggio"
+                
+                // Primo, aggiungiamo l'indicatore di inizio conversazione
+                const startConversationIndicator = document.createElement('div');
+                startConversationIndicator.className = 'date-divider start-of-conversation';
+                startConversationIndicator.innerHTML = `<span>Inizio della conversazione</span>`;
+                chatContainer.appendChild(startConversationIndicator);
+                
+                // Poi, aggiungiamo il messaggio che indica che non ci sono messaggi
+                const emptyElement = document.createElement('div');
+                emptyElement.className = 'empty-messages';
+                emptyElement.textContent = 'No messages yet. Start the conversation!';
+                chatContainer.appendChild(emptyElement);
+            }
+            
             // Mantieni posizione scroll
             requestAnimationFrame(() => {
                 if (isAtBottom) {

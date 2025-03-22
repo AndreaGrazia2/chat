@@ -145,7 +145,8 @@ function handleMessageHistory(history) {
     updateUnreadBadge();
 }
 
-// Funzione migliorata per gestire nuovi messaggi
+// Funzione per gestire nuovi messaggi
+// Modifica a handleNewMessage() in socket.js
 function handleNewMessage(message) {
     console.log('Nuovo messaggio ricevuto:', message);
 
@@ -227,6 +228,12 @@ function handleNewMessage(message) {
         }
     }
     
+    // Rimuovi il messaggio "empty-messages" se esiste
+    const emptyMessages = document.querySelector('.empty-messages, .empty-conversation');
+    if (emptyMessages) {
+        emptyMessages.remove();
+    }
+    
     // Aggiungi ai messaggi
     messages.push(message);
     displayedMessages.push(message);
@@ -260,12 +267,18 @@ function handleNewMessage(message) {
         // Se siamo vicini al fondo, scorriamo giù
         setTimeout(() => {
             scrollToBottom(true);
-            
-            // Nascondi l'indicatore di digitazione
-            if (!message.isOwn) {
-                document.getElementById('typingIndicator').style.display = 'none';
-            }
         }, 100);
+    }
+    
+    // Nascondi l'indicatore di digitazione quando arriva un messaggio
+    // Aggiungiamo questa logica per gestire sia messaggi di canale che diretti
+    const typingIndicator = document.getElementById('typingIndicator');
+    if (typingIndicator) {
+        // Se il messaggio è da un altro utente (non nostro), nascondiamo l'indicatore
+        if (!message.isOwn) {
+            typingIndicator.style.display = 'none';
+            delete typingIndicator.dataset.startTime;
+        }
     }
 }
 
@@ -415,9 +428,10 @@ function handleModelInference(data) {
             });
         }
     } else if (data.status === 'completed') {
-        // Nascondi l'indicatore di typing indipendentemente dalla posizione di scroll
+        // Nascondi l'indicatore di typing quando l'inferenza è completata
         typingIndicator.style.display = 'none';
         delete typingIndicator.dataset.startTime;
+        console.log('Typing indicator hidden after model inference completed');
     }
 }
 

@@ -10,6 +10,12 @@ function sendMessage() {
     const text = input.value.trim();
     
     if (text) {
+        // Rimuovi il messaggio "empty-messages" se esiste
+        const emptyMessages = document.querySelector('.empty-messages, .empty-conversation');
+        if (emptyMessages) {
+            emptyMessages.remove();
+        }
+        
         // Crea oggetto messaggio con ID temporaneo
         const tempId = "temp-" + Date.now();
 
@@ -64,8 +70,8 @@ function sendMessage() {
             requestInference: true // Flag per richiedere l'inferenza del modello
         };
         
-        // Se è un messaggio diretto, mostra subito l'indicatore di digitazione
-        if (isDirectMessage && currentUser) {
+        // Se è un messaggio diretto E l'utente è John Doe (ID 2), mostra l'indicatore di digitazione
+        if (isDirectMessage && currentUser && currentUser.id === 2) {
             const typingIndicator = document.getElementById('typingIndicator');
             const typingText = document.getElementById('typingText');
             typingText.textContent = `${currentUser.displayName} is typing...`;
@@ -101,24 +107,7 @@ function sendMessage() {
     }
 }
 
-function getUserIdByName(name) {
-    // Cerca prima nelle variabili globali se disponibili
-    if (typeof users !== 'undefined') {
-        const user = users.find(u => u.displayName === name);
-        if (user) return user.id;
-    }
-    
-    // Altrimenti, usa una mappatura hardcoded
-    const userMap = {
-        'John Doe': 2,
-        'Jane Smith': 3,
-        'Mike Johnson': 4,
-        'Emma Davis': 5
-    };
-    
-    return userMap[name] || null;
-}
-
+// Export functions
 export {
     sendMessage
 };

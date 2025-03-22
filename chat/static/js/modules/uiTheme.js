@@ -11,7 +11,7 @@ function toggleTheme() {
     document.querySelector('.theme-toggle').textContent = darkMode ? '☀️' : '🌙';
     
     // Salva la preferenza dell'utente
-    localStorage.setItem('darkMode', darkMode);
+    localStorage.setItem('chatDarkMode', darkMode);
     
     // Non tentare di sincronizzare con il server se l'endpoint non esiste
     // saveThemePreference(darkMode ? 'dark' : 'light');
@@ -21,7 +21,7 @@ function initializeTheme() {
     console.log('Initializing theme...');
     
     // Usa direttamente le impostazioni locali invece di tentare di contattare il server
-    const savedDarkMode = localStorage.getItem('darkMode');
+    const savedDarkMode = localStorage.getItem('chatDarkMode');
     
     if (savedDarkMode !== null) {
         // Usa la preferenza salvata

@@ -13,7 +13,7 @@ export function toggleDarkMode(darkMode, body, darkModeToggle, updateChartTheme)
 	}
 
 	// Salva preferenza
-	localStorage.setItem('darkMode', newDarkMode ? 'enabled' : 'disabled');
+	localStorage.setItem('dashboardDarkMode', newDarkMode ? 'enabled' : 'disabled');
 
 	// Aggiorna i grafici per il tema scuro/chiaro
 	updateChartTheme(newDarkMode);
