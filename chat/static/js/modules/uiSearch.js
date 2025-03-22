@@ -92,7 +92,7 @@ function updateSearchResultsPanel(query) {
             
             resultItem.innerHTML = `
                 <div class="search-result-header">
-                    <div class="search-result-name">${result.message.user.name}</div>
+                    <div class="search-result-name">${result.message.user.displayName}</div>
                     <div class="search-result-date">${formatTime(result.message.timestamp)}</div>
                 </div>
                 <div class="search-result-text">${highlightedText}</div>

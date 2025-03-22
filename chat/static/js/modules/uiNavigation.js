@@ -60,7 +60,7 @@ function setActiveUser(el, userName) {
     el.classList.add('active');
     
     // Aggiorna utente corrente
-    currentUser = users.find(user => user.name === userName);
+    currentUser = users.find(user => user.displayName === userName);
     isDirectMessage = true;
     currentChannel = userName;
     currentConversationId = currentUser.id;
@@ -105,7 +105,7 @@ function updateChatHeaderInfo() {
     const statusEl = document.getElementById('currentStatus');
     
     if (isDirectMessage && currentUser) {
-        avatarEl.src = currentUser.avatar;
+        avatarEl.src = currentUser.avatarUrl;
         statusEl.textContent = `${currentUser.status} • Last seen recently`;
     } else {
         // Usa un avatar di default per i canali

@@ -77,7 +77,7 @@ function createMessageElement(message) {
         if (replyToMessage && replyToMessage.user) {
             quotedHtml = `
           <div class="quoted-message">
-            <div class="quoted-user">${quoteIcon} ${replyToMessage.user.displayName || replyToMessage.user.name}</div>
+            <div class="quoted-user">${quoteIcon} ${replyToMessage.user.displayName}</div>
             <div class="quoted-text">${processedReplyText}</div>
             ${replyFileHtml}
           </div>
@@ -88,7 +88,7 @@ function createMessageElement(message) {
     // Gestisce visualizzazione messaggio inoltrato
     let forwardedHtml = '';
     if (message.type === 'forwarded' && message.forwardedFrom) {
-        const displayName = message.forwardedFrom.displayName || message.forwardedFrom.name;
+        const displayName = message.forwardedFrom.displayName;
         forwardedHtml = `
         <div class="forwarded-header">
           <i class="fas fa-share"></i> Forwarded from ${displayName}
@@ -132,8 +132,8 @@ function createMessageElement(message) {
         (message.text || '');
 
     // Get user display name
-    const displayName = message.user.displayName || message.user.name;
-    const avatarUrl = message.user.avatarUrl || message.user.avatar;
+    const displayName = message.user.displayName;
+    const avatarUrl = message.user.avatarUrl;
 
     // Costruisci l'HTML del messaggio
     messageEl.innerHTML = `

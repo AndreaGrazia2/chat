@@ -162,7 +162,7 @@ function handleNewMessage(message) {
     if (existingMessage) {
         isDuplicate = true;
         console.log('Messaggio duplicato rilevato per ID:', message.id);
-    } else if (message.isOwn || (message.user && message.user.name === "You")) {
+    } else if (message.isOwn || (message.user && message.user.displayName === "You")) {
         // Se è un messaggio nostro o con nome utente "You", controlla se è un duplicato
         const recentMessages = displayedMessages.filter(m => {
             // Verifica il testo del messaggio
@@ -392,7 +392,7 @@ function handleModelInference(data) {
             // Cerca prima nell'array users
             const user = users.find(u => u.id == data.userId);
             if (user) {
-                userName = user.name;
+                userName = user.displayName;
             } else {
                 // Fallback per altri utenti che potrebbero non essere nell'array principale
                 console.log(`Utente con ID ${data.userId} non trovato nell'array users`);

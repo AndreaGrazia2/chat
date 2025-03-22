@@ -29,7 +29,7 @@ function handleReply(messageId) {
     const replyPreview = document.createElement('div');
     replyPreview.className = 'reply-preview';
     replyPreview.innerHTML = `
-        <div class="reply-text">${typeIcon} Replying to ${message.user.displayName || message.user.name}: "${message.text.substring(0, 30)}${message.text.length > 30 ? '...' : ''}"</div>
+        <div class="reply-text">${typeIcon} Replying to ${message.user.displayName}: "${message.text.substring(0, 30)}${message.text.length > 30 ? '...' : ''}"</div>
         <button class="cancel-reply">✕</button>
     `;
     

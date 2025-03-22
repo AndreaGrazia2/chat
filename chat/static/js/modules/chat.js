@@ -13,12 +13,7 @@ function sendMessage() {
         // Crea oggetto messaggio con ID temporaneo
         const tempId = "temp-" + Date.now();
 
-        const userObj = {
-            id: users[0].id,
-            displayName: users[0].name,      // Standardizza name -> displayName
-            avatarUrl: users[0].avatar,      // Standardizza avatar -> avatarUrl
-            status: users[0].status
-        };
+        const userObj = users[0];
 
         const newMessage = {
             id: tempId,
@@ -73,7 +68,7 @@ function sendMessage() {
         if (isDirectMessage && currentUser) {
             const typingIndicator = document.getElementById('typingIndicator');
             const typingText = document.getElementById('typingText');
-            typingText.textContent = `${currentUser.name} is typing...`;
+            typingText.textContent = `${currentUser.displayName} is typing...`;
             typingIndicator.style.display = 'flex';
             typingIndicator.dataset.startTime = Date.now(); // Aggiungi timestamp
         }
@@ -109,7 +104,7 @@ function sendMessage() {
 function getUserIdByName(name) {
     // Cerca prima nelle variabili globali se disponibili
     if (typeof users !== 'undefined') {
-        const user = users.find(u => u.name === name);
+        const user = users.find(u => u.displayName === name);
         if (user) return user.id;
     }
     
