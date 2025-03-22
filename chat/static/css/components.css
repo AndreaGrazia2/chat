@@ -168,25 +168,91 @@
 	object-fit: cover;
 }
 
+/* Updated CSS to make chat buttons match calendar style exactly */
+
+/* Chat actions container spacing */
 .chat-actions {
-	display: flex;
-	gap: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-.action-button {
-	background: none;
-	border: none;
-	color: var(--text-color);
-	opacity: 0.7;
-	cursor: pointer;
-	font-size: 16px;
-	padding: 4px;
-	border-radius: 4px;
+/* Button dimensions and base styles */
+.action-button, .theme-toggle, .mobile-menu-button {
+    width: 36px; /* Match calendar button size */
+    height: 36px; /* Match calendar button size */
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%; /* Circular buttons like calendar */
+    color: var(--text-color);
+    font-size: 16px;
+    padding: 0; /* Remove any padding */
+    transition: background-color 0.2s, color 0.2s; /* Match calendar transition */
+    opacity: 1; /* Full opacity by default */
 }
 
-.action-button:hover {
-	opacity: 1;
-	background-color: var(--secondary-bg);
+/* Hover effect exactly like calendar */
+.action-button:hover, .theme-toggle:hover, .mobile-menu-button:hover {
+    background-color: var(--hover-bg); /* Use the hover background from calendar */
+    opacity: 1;
+}
+
+/* Add styles for a primary button (like the blue + button) */
+.action-button.primary {
+    background-color: var(--primary);
+    color: white;
+}
+
+.action-button.primary:hover {
+    background-color: #1a68d9;
+}
+
+/* Match exact icon dimensions from calendar */
+.action-button i, .theme-toggle i, .mobile-menu-button i {
+    font-size: 18px; /* Increase icon size to match calendar */
+}
+
+/* Button dimensions */
+.action-button, .theme-toggle, .mobile-menu-button {
+    width: 40px; /* Exactly match calendar button width */
+    height: 40px; /* Exactly match calendar button height */
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: var(--text-color);
+    position: relative; /* Needed for proper hover effect */
+}
+
+/* Fix the hover effect to match calendar exactly */
+.action-button:hover, .theme-toggle:hover, .mobile-menu-button:hover {
+    background-color: rgba(255, 255, 255, 0.1); /* Explicit value to ensure it works */
+}
+
+/* Dark theme specific hover */
+.dark-theme .action-button:hover, 
+.dark-theme .theme-toggle:hover, 
+.dark-theme .mobile-menu-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Light theme specific hover */
+.light-theme .action-button:hover, 
+.light-theme .theme-toggle:hover, 
+.light-theme .mobile-menu-button:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Remove tooltip styling if not needed */
+.tooltip:hover::after {
+    display: none;
 }
 
 /* ===== MESSAGGI ===== */
@@ -457,7 +523,7 @@
 		position: fixed;
 		width: 80%;
 		height: calc(100% - 60px);
-		top: 117px;
+		top: 114px;
 		left: 0;
 		z-index: 10;
 	}

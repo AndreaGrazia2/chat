@@ -220,10 +220,6 @@
 		display: none;
 	}
 
-	.header-actions {
-		gap: 4px;
-	}
-
 	.btn-text {
 		padding: 6px 8px;
 		font-size: 12px;

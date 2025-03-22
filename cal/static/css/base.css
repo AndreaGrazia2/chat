@@ -342,3 +342,7 @@ body {
     border-color: rgba(29, 116, 245, 0.2);
     border-left-color: var(--primary);
 }
+
+.newEvent {
+	font-size: 13px!important;
+}

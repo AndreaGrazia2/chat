@@ -6,10 +6,10 @@ export function toggleDarkMode(darkMode, body, darkModeToggle, updateChartTheme)
 
 	if (newDarkMode) {
 		body.classList.add('dark');
-		darkModeToggle.innerHTML = '☀️';
+		darkModeToggle.innerHTML = '<i class="fas fa-sun"></i>';
 	} else {
 		body.classList.remove('dark');
-		darkModeToggle.innerHTML = '🌙';
+		darkModeToggle.innerHTML = '<i class="fas fa-moon"></i>';
 	}
 
 	// Salva preferenza

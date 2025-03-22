@@ -64,4 +64,30 @@ window.users = [{
 // Inizializza l'app quando il DOM è pronto
 document.addEventListener('DOMContentLoaded', () => {
     initializeApp();
+
+    // Get the close sidebar button
+    const sidebar = document.getElementById('sidebar');
+    const closeSidebarBtn = document.getElementById('closeSidebar');
+    const mobileSidebarToggle = document.getElementById('mobileSidebarToggle');
+    const overlay = document.getElementById('overlay');
+    
+    // Open sidebar
+    mobileSidebarToggle.addEventListener('click', function() {
+        sidebar.classList.add('active');
+        if (overlay) overlay.classList.add('active');
+    });
+    
+    // Close sidebar
+    closeSidebarBtn.addEventListener('click', function() {
+        sidebar.classList.remove('active');
+        if (overlay) overlay.classList.remove('active');
+    });
+    
+    // Close when clicking overlay
+    if (overlay) {
+        overlay.addEventListener('click', function() {
+            sidebar.classList.remove('active');
+            overlay.classList.remove('active');
+        });
+    }
 });

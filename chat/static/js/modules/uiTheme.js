@@ -8,7 +8,7 @@ window.darkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme:
 function toggleTheme() {
     darkMode = !darkMode;
     document.body.className = darkMode ? 'dark-theme' : 'light-theme';
-    document.querySelector('.theme-toggle').textContent = darkMode ? '☀️' : '🌙';
+    document.querySelector('.theme-toggle').innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
     
     // Salva la preferenza dell'utente
     localStorage.setItem('chatDarkMode', darkMode);
@@ -41,8 +41,14 @@ function applyTheme() {
     document.body.className = darkMode ? 'dark-theme' : 'light-theme';
     const themeToggle = document.querySelector('.theme-toggle');
     if (themeToggle) {
-        themeToggle.textContent = darkMode ? '☀️' : '🌙';
+        themeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
     }
+    
+    // Ensure consistent icon sizing for fa-bars to match calendar
+    const menuIcons = document.querySelectorAll('.fas.fa-bars');
+    menuIcons.forEach(icon => {
+        icon.classList.add('calendar-icon-size');
+    });
 }
 
 // Auto-inizializza il tema quando il modulo viene caricato
