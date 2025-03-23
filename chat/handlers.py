@@ -83,7 +83,8 @@ def get_llm_response(message_text):
 
         data = {
             # You can change this to any model supported by OpenRouter
-            "model": "openai/gpt-3.5-turbo",
+            #"model": "openai/gpt-3.5-turbo",
+            "model": "google/gemma-3-27b-it:free",
             "messages": [
                 {"role": "system",
                     "content": "You are a helpful assistant in a chat application."},
@@ -830,20 +831,64 @@ def register_handlers(socketio):
                     ai_user = cursor.fetchone()
                     print(f"AI user data from database: {ai_user}")
 
-                # Create response message
+                # Create response message - MODIFICATO PER INCLUDERE reply_to_id
                 with get_db_cursor(commit=True) as cursor:
                     cursor.execute(
                         """
                         INSERT INTO chat_schema.messages 
-                        (conversation_id, user_id, text, message_type)
-                        VALUES (%s, %s, %s, %s)
+                        (conversation_id, user_id, text, message_type, reply_to_id)
+                        VALUES (%s, %s, %s, %s, %s)
                         RETURNING id, created_at
                         """,
-                        (conversation_id, 2, ai_response, 'normal')
+                        (conversation_id, 2, ai_response, 'normal', message_id)  # Aggiungiamo message_id come reply_to_id
                     )
                     result = cursor.fetchone()
                     ai_message_id = result['id']
                     ai_created_at = result['created_at']
+
+                # Recuperiamo i dettagli del messaggio a cui stiamo rispondendo
+                with get_db_cursor() as cursor:
+                    cursor.execute(
+                        """
+                        SELECT m.id, m.text, m.message_type, m.file_data,
+                            u.id as user_id, u.username, u.display_name, u.avatar_url, u.status
+                        FROM chat_schema.messages m
+                        JOIN chat_schema.users u ON m.user_id = u.id
+                        WHERE m.id = %s
+                        """,
+                        (message_id,)
+                    )
+                    reply_message = cursor.fetchone()
+                    
+                # Prepara l'oggetto replyTo
+                reply_to = None
+                if reply_message:
+                    # Parse file_data per il messaggio citato
+                    reply_file_data = None
+                    if reply_message['file_data']:
+                        if isinstance(reply_message['file_data'], dict):
+                            reply_file_data = reply_message['file_data']
+                        else:
+                            try:
+                                reply_file_data = json.loads(reply_message['file_data'])
+                            except (json.JSONDecodeError, TypeError):
+                                print(f"Error parsing file_data for reply message {reply_message['id']}")
+                                reply_file_data = None
+                    
+                    # Costruisci l'oggetto reply
+                    reply_to = {
+                        'id': reply_message['id'],
+                        'text': reply_message['text'],
+                        'message_type': reply_message['message_type'],
+                        'fileData': reply_file_data,
+                        'user': {
+                            'id': reply_message['user_id'],
+                            'username': reply_message['username'],
+                            'displayName': reply_message['display_name'],
+                            'avatarUrl': reply_message['avatar_url'],
+                            'status': reply_message['status']
+                        }
+                    }
 
                 # Send AI response with user data from database
                 ai_message = {
@@ -860,10 +905,9 @@ def register_handlers(socketio):
                     'timestamp': ai_created_at.isoformat(),
                     'type': 'normal',
                     'fileData': None,
-                    'replyTo': None,
+                    'replyTo': reply_to,  # Includiamo l'oggetto reply completo
                     'forwardedFrom': None,
                     'metadata': {},
-
                     'edited': False,
                     'editedAt': None,
                     'isOwn': False

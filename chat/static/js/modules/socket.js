@@ -526,9 +526,9 @@ function setupTypingTimeoutChecker() {
             const startTime = parseInt(typingIndicator.dataset.startTime);
             const now = Date.now();
             
-            // Se l'indicatore è visibile da più di 15 secondi, nascondilo
-            if (now - startTime > 15000) {
-                console.log('Typing indicator timeout - hiding it after 15 seconds');
+            // Se l'indicatore è visibile da più di 45 secondi, nascondilo
+            if (now - startTime > 45000) {
+                console.log('Typing indicator timeout - hiding it after 45 seconds');
                 typingIndicator.style.display = 'none';
                 delete typingIndicator.dataset.startTime;
             }
