@@ -104,31 +104,16 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Funzione per aprire la visualizzazione nel modal
-    function openVisualization(vizId) {
-        currentVisualizationId = vizId;
-        
-        // Carica il contenuto nel modal
-        fetch('/visualization/' + vizId)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Errore nel caricamento della visualizzazione');
-                }
-                return response.text();
-            })
-            .then(html => {
-                modalContent.innerHTML = html;
-                modalTitle.textContent = 'Risultati della query';
-                resultsModal.style.display = 'block';
-                
-                // Controlla se è nei preferiti
-                checkFavoriteStatus(vizId);
-            })
-            .catch(error => {
-                console.error('Errore nel caricamento dei risultati:', error);
-                alert('Errore nel caricamento dei risultati: ' + error.message);
-            });
-    }
-
+	function openVisualization(vizId) {
+		currentVisualizationId = vizId;
+		
+		// Apri semplicemente la visualizzazione in una nuova finestra
+		window.open('/visualization/' + vizId, '_blank');
+		
+		// Aggiorna lo stato del preferito in background
+		checkFavoriteStatus(vizId);
+	}
+	
     // Chiudi modal quando si clicca sulla X
     closeModal.addEventListener('click', function() {
         resultsModal.style.display = 'none';

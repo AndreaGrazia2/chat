@@ -1,0 +1,548 @@
+/* 
+ * visualizations.css
+ * Stili base per le visualizzazioni generate dall'agente di database
+ */
+
+:root {
+	--primary-color: #1d74f5;
+	--primary-light: rgba(29, 116, 245, 0.1);
+	--primary-medium: rgba(29, 116, 245, 0.5);
+	--text-color: #333333;
+	--text-light: #666666;
+	--background-color: #f5f5f5;
+	--card-background: #ffffff;
+	--border-color: #e0e0e0;
+	--success-color: #28a745;
+	--warning-color: #ffc107;
+	--danger-color: #dc3545;
+	--info-color: #17a2b8;
+	--shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+	--border-radius: 4px;
+	--font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Reset e stili base */
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+html,
+body {
+	height: 100%;
+	font-family: var(--font-family);
+	font-size: 16px;
+	line-height: 1.5;
+	color: var(--text-color);
+	background-color: var(--background-color);
+}
+
+/* Container principale */
+.visualization-container {
+	margin: 20px;
+	padding: 20px;
+	background-color: var(--card-background);
+	border-radius: var(--border-radius);
+	box-shadow: var(--shadow);
+	overflow: hidden;
+}
+
+/* Header della visualizzazione */
+.visualization-header {
+	padding: 20px;
+	border-bottom: 1px solid var(--border-color);
+}
+
+.visualization-header h1 {
+	font-size: 1.8rem;
+	color: var(--primary-color);
+	margin-bottom: 10px;
+}
+
+.visualization-header .description {
+	color: var(--text-light);
+	font-size: 1rem;
+}
+
+/* Contenuto della visualizzazione */
+.visualization-content {
+	padding: 20px;
+	overflow-x: auto;
+}
+
+/* Footer della visualizzazione */
+.visualization-footer {
+	padding: 15px 20px;
+	background-color: var(--background-color);
+	color: var(--text-light);
+	font-size: 0.85rem;
+	text-align: right;
+	border-top: 1px solid var(--border-color);
+}
+
+/* Tabelle di dati */
+.data-table {
+	width: 100%;
+	border-collapse: collapse;
+	border-spacing: 0;
+	font-size: 0.95rem;
+}
+
+.data-table th,
+.data-table td {
+	padding: 10px 15px;
+	text-align: left;
+	border-bottom: 1px solid var(--border-color);
+}
+
+.data-table th {
+	background-color: var(--primary-color);
+	color: white;
+	font-weight: 600;
+	position: sticky;
+	top: 0;
+}
+
+.data-table tr:nth-child(even) {
+	background-color: var(--background-color);
+}
+
+.data-table tr:hover {
+	background-color: var(--primary-light);
+}
+
+/* Grafici */
+.chart-container {
+	width: 100%;
+	height: 400px;
+	position: relative;
+	margin: 20px 0;
+}
+
+/* Responsive per schermi piccoli */
+@media (max-width: 768px) {
+	.visualization-container {
+		margin: 10px;
+		width: calc(100% - 20px);
+	}
+
+	.data-table {
+		font-size: 0.85rem;
+	}
+
+	.data-table th,
+	.data-table td {
+		padding: 8px 10px;
+	}
+
+	.visualization-header h1 {
+		font-size: 1.5rem;
+	}
+
+	.chart-container {
+		height: 300px;
+	}
+}
+
+/* Stili per elementi specifici */
+.numeric-cell {
+	text-align: right;
+}
+
+.date-cell {
+	white-space: nowrap;
+}
+
+.boolean-true {
+	color: var(--success-color);
+}
+
+.boolean-false {
+	color: var(--danger-color);
+}
+
+/* Paginazione */
+.pagination {
+	display: flex;
+	justify-content: center;
+	margin-top: 20px;
+	list-style-type: none;
+}
+
+.pagination-item {
+	margin: 0 5px;
+}
+
+.pagination-link {
+	display: inline-block;
+	padding: 5px 10px;
+	border: 1px solid var(--border-color);
+	border-radius: var(--border-radius);
+	color: var(--text-color);
+	text-decoration: none;
+}
+
+.pagination-link.active {
+	background-color: var(--primary-color);
+	color: white;
+	border-color: var(--primary-color);
+}
+
+.pagination-link:hover:not(.active) {
+	background-color: var(--primary-light);
+}
+
+/* Stili per errori e messaggi */
+.error-message {
+	color: var(--danger-color);
+	padding: 15px;
+	border: 1px solid var(--danger-color);
+	border-radius: var(--border-radius);
+	margin: 20px 0;
+	background-color: rgba(220, 53, 69, 0.1);
+}
+
+.info-message {
+	color: var(--info-color);
+	padding: 15px;
+	border: 1px solid var(--info-color);
+	border-radius: var(--border-radius);
+	margin: 20px 0;
+	background-color: rgba(23, 162, 184, 0.1);
+}
+
+/* Badge per stati */
+.badge {
+	display: inline-block;
+	padding: 3px 8px;
+	border-radius: 12px;
+	font-size: 0.75rem;
+	font-weight: 600;
+}
+
+.badge-success {
+	background-color: rgba(40, 167, 69, 0.2);
+	color: var(--success-color);
+}
+
+.badge-warning {
+	background-color: rgba(255, 193, 7, 0.2);
+	color: #856404;
+}
+
+.badge-danger {
+	background-color: rgba(220, 53, 69, 0.2);
+	color: var(--danger-color);
+}
+
+.badge-info {
+	background-color: rgba(23, 162, 184, 0.2);
+	color: var(--info-color);
+}
+
+/* Helpers per la visualizzazione di dati */
+.text-center {
+	text-align: center;
+}
+
+.text-right {
+	text-align: right;
+}
+
+.text-bold {
+	font-weight: 600;
+}
+
+.text-italic {
+	font-style: italic;
+}
+
+.text-muted {
+	color: var(--text-light);
+}
+
+/* Contenitori per vari tipi di grafici */
+.metric-card {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 20px;
+	background-color: white;
+	border-radius: var(--border-radius);
+	box-shadow: var(--shadow);
+	margin-bottom: 20px;
+}
+
+.metric-value {
+	font-size: 2rem;
+	font-weight: 700;
+	color: var(--primary-color);
+	margin: 10px 0;
+}
+
+.metric-label {
+	font-size: 1rem;
+	color: var(--text-light);
+}
+
+/* Layout a griglia per dashboard */
+.grid-container {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+	gap: 20px;
+	padding: 20px;
+}
+
+/* Bottoni di controllo */
+.control-button {
+	background-color: var(--primary-color);
+	color: white;
+	border: none;
+	padding: 8px 15px;
+	border-radius: var(--border-radius);
+	cursor: pointer;
+	font-size: 0.9rem;
+	transition: background-color 0.2s;
+}
+
+.control-button:hover {
+	background-color: rgba(29, 116, 245, 0.8);
+}
+
+.control-button.secondary {
+	background-color: var(--text-light);
+}
+
+.control-group {
+	display: flex;
+	gap: 10px;
+	margin: 15px 0;
+}
+
+/* Tooltip personalizzato */
+.custom-tooltip {
+	position: absolute;
+	padding: 10px;
+	background-color: rgba(0, 0, 0, 0.8);
+	color: white;
+	border-radius: var(--border-radius);
+	pointer-events: none;
+	z-index: 1000;
+	font-size: 0.85rem;
+	max-width: 200px;
+}
+
+/* Stili per elementi HTML standard */
+
+/* Tabelle standard */
+table {
+	width: 100%;
+	border-collapse: collapse;
+	border-spacing: 0;
+	font-size: 0.95rem;
+	margin-bottom: 20px;
+}
+
+th,
+td {
+	padding: 10px 15px;
+	text-align: left;
+	border-bottom: 1px solid var(--border-color);
+}
+
+th {
+	background-color: var(--primary-color);
+	color: white;
+	font-weight: 600;
+	position: sticky;
+	top: 0;
+}
+
+/* Effetto zebra per le righe della tabella */
+tr:nth-child(even) {
+	background-color: var(--background-color);
+}
+
+tr:hover {
+	background-color: var(--primary-light);
+}
+
+/* Stili per canvas (grafici) */
+canvas {
+	width: 100% !important;
+	height: 400px !important;
+	max-height: 60vh;
+	margin: 20px 0;
+}
+
+/* Stili per intestazioni e paragrafi standard */
+h1,
+h2 {
+	color: var(--primary-color);
+	margin-bottom: 15px;
+}
+
+h1 {
+	font-size: 1.8rem;
+}
+
+h2 {
+	font-size: 1.5rem;
+}
+
+p {
+	margin-bottom: 10px;
+	color: var(--text-color);
+}
+
+/* Stili responsive per tabelle su dispositivi mobili */
+@media (max-width: 768px) {
+	table {
+		font-size: 0.85rem;
+	}
+
+	th,
+	td {
+		padding: 8px 10px;
+	}
+
+	canvas {
+		height: 300px !important;
+	}
+}
+
+/* Stili base per tabelle - selettore migliorato per funzionare con ID e classe */
+table[id^="data-table-"],
+.data-table {
+	width: 100%;
+	border-collapse: collapse;
+	border-spacing: 0;
+	font-size: 0.95rem;
+	table-layout: auto;
+	/* Permette alle colonne di adattarsi al contenuto */
+}
+
+/* Gestione avanzata delle colonne per tutte le tabelle */
+table[id^="data-table-"] th,
+table[id^="data-table-"] td,
+.data-table th,
+.data-table td {
+	padding: 10px 15px;
+	text-align: left;
+	border-bottom: 1px solid var(--border-color);
+	overflow: hidden;
+	/* Nasconde il contenuto che eccede */
+	text-overflow: ellipsis;
+	/* Mostra i puntini di sospensione per il testo troncato */
+	/* min-width: 50px; */
+	/* Larghezza minima per tutte le colonne */
+	/* max-width: 300px; */
+	/* Larghezza massima per tutte le colonne */
+}
+
+/* Colonne per testo corto - no wrapping */
+table[id^="data-table-"] td.short-text,
+.data-table td.short-text {
+	white-space: nowrap;
+	/* Impedisce il wrapping del testo */
+}
+
+/* Colonne per testo lungo - con wrapping */
+table[id^="data-table-"] td.text-column,
+.data-table td.text-column {
+	white-space: normal;
+	/* Permette il wrapping del testo */
+	min-width: 150px;
+	/* Larghezza minima maggiore */
+}
+
+/* Colonne numeriche - allineamento a destra */
+table[id^="data-table-"] td.numeric-cell,
+.data-table td.numeric-cell {
+	text-align: right;
+	/* Allinea i numeri a destra */
+	white-space: nowrap;
+	/* Impedisce il wrapping */
+	width: auto;
+	/* Larghezza automatica in base al contenuto */
+}
+
+/* Colonne per date - larghezza fissa */
+table[id^="data-table-"] td.date-cell,
+.data-table td.date-cell {
+	white-space: nowrap;
+	/* Impedisce il wrapping */
+	width: auto;
+	/* Larghezza automatica */
+}
+
+/* Colonne per booleani - centratura */
+table[id^="data-table-"] td.boolean-true,
+table[id^="data-table-"] td.boolean-false,
+.data-table td.boolean-true,
+.data-table td.boolean-false {
+	text-align: center;
+	width: 80px;
+	/* Larghezza fissa e ridotta */
+}
+
+/* Intestazioni di colonna - possibilità di troncamento e tooltip */
+table[id^="data-table-"] th,
+.data-table th {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	position: sticky;
+	top: 0;
+	z-index: 10;
+	background-color: var(--primary-color);
+	color: white;
+	font-weight: 600;
+}
+
+/* Stile zebra per le righe */
+table[id^="data-table-"] tr:nth-child(even),
+.data-table tr:nth-child(even) {
+	background-color: var(--background-color);
+}
+
+table[id^="data-table-"] tr:hover,
+.data-table tr:hover {
+	background-color: var(--primary-light);
+}
+
+/* Classe di supporto per colonne che devono rimanere strette */
+table[id^="data-table-"] .narrow-column,
+.data-table .narrow-column {
+	width: 80px;
+	max-width: 100px;
+}
+
+/* Classe di supporto per colonne che devono espandersi */
+table[id^="data-table-"] .wide-column,
+.data-table .wide-column {
+	min-width: 200px;
+}
+
+/* Supporto per tabelle responsive su dispositivi mobili */
+@media (max-width: 768px) {
+
+	table[id^="data-table-"] th,
+	table[id^="data-table-"] td,
+	.data-table th,
+	.data-table td {
+		max-width: 200px;
+		/* Riduci la larghezza massima su mobile */
+		min-width: 40px;
+		/* Riduci la larghezza minima su mobile */
+		padding: 8px 10px;
+		/* Riduci il padding */
+	}
+
+	table[id^="data-table-"] .wide-column,
+	.data-table .wide-column {
+		min-width: 150px;
+		/* Adatta colonne larghe per mobile */
+	}
+}
