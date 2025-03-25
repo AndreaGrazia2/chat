@@ -14,14 +14,8 @@ DB_SCHEMA = CAL_SCHEMA  # Definito direttamente qui invece di importarlo
 
 # Costruisci la stringa di connessione
 if DATABASE_URL:
-    # Aggiungi il parametro pooler=false per Neon
-    if "neon.tech" in DATABASE_URL:
-        if "?" not in DATABASE_URL:
-            ENGINE_URL = f"{DATABASE_URL}?pooler=false"
-        else:
-            ENGINE_URL = f"{DATABASE_URL}&pooler=false"
-    else:
-        ENGINE_URL = DATABASE_URL
+    # Non modificare la URL per Neon
+    ENGINE_URL = DATABASE_URL
 else:
     ENGINE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
