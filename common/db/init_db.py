@@ -14,21 +14,7 @@ logger = logging.getLogger(__name__)
 
 # Importa le configurazioni necessarie
 from common.config import CHAT_SCHEMA, CAL_SCHEMA
-
-def create_schema(engine, schema_name):
-    """Crea uno schema se non esiste già"""
-    with engine.connect() as conn:
-        # Verifica se lo schema esiste
-        result = conn.execute(text(f"SELECT EXISTS(SELECT 1 FROM information_schema.schemata WHERE schema_name = '{schema_name}')"))
-        schema_exists = result.scalar()
-        
-        if not schema_exists:
-            logger.info(f"Creazione dello schema {schema_name}...")
-            conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema_name}"))
-            conn.commit()
-            logger.info(f"Schema {schema_name} creato con successo.")
-        else:
-            logger.info(f"Lo schema {schema_name} esiste già.")
+from common.db.connection import get_engine, ensure_schema_exists
 
 def initialize_chat_schema():
     """Inizializza lo schema e le tabelle per il modulo chat"""
@@ -38,7 +24,7 @@ def initialize_chat_schema():
     from chat.database import engine, Base
     
     # Crea lo schema
-    create_schema(engine, CHAT_SCHEMA)
+    ensure_schema_exists(engine, CHAT_SCHEMA)
     
     # Crea tutte le tabelle
     Base.metadata.create_all(engine)
@@ -56,7 +42,7 @@ def initialize_cal_schema():
     from cal.database import engine, Base
     
     # Crea lo schema
-    create_schema(engine, CAL_SCHEMA)
+    ensure_schema_exists(engine, CAL_SCHEMA)
     
     # Crea tutte le tabelle
     Base.metadata.create_all(engine)
@@ -73,10 +59,9 @@ def seed_chat_data(engine):
     # Importa i modelli
     from chat.models import User
     from chat.database import SessionLocal
+    from common.db.connection import get_db_session
     
-    db = SessionLocal()
-    
-    try:
+    with get_db_session(SessionLocal) as db:
         # Verifica se ci sono già utenti
         user_count = db.query(User).count()
         
@@ -92,25 +77,14 @@ def seed_chat_data(engine):
             ]
             
             db.add_all(users)
-            db.commit()
-            
             logger.info("Dati di base per il modulo chat caricati con successo.")
         else:
             logger.info("I dati di base per il modulo chat sono già presenti.")
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Errore durante il caricamento dei dati di base per il modulo chat: {str(e)}")
-    finally:
-        db.close()
 
 def seed_calendar_data(engine):
     """Carica i dati di base per il modulo calendario"""
     logger.info("Caricamento dei dati di base per il modulo calendario...")
     
-    # Qui puoi caricare dati di base come le categorie di eventi
-    # Simile a seed_chat_data ma per il modulo calendario
-    
-    # Per ora, utilizziamo uno script SQL separato per inizializzare i dati di base
     try:
         schema_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'cal/schema.sql')
         

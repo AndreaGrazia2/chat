@@ -1,10 +1,19 @@
 from flask import Blueprint, render_template, jsonify, request, send_from_directory
 from common.config import SECRET_KEY
 from sqlalchemy import and_, or_, func, desc
-from chat.models import User, Conversation, Message, Channel, ChannelMember, ConversationParticipant
+from chat.models import User, Conversation, Message, Channel, ChannelMember, ConversationParticipant, MessageReadStatus
 from chat.database import SessionLocal
 import json
 from datetime import datetime
+
+from contextlib import contextmanager
+from common.db.connection import get_db_session
+
+@contextmanager
+def get_db():
+    """Context manager per ottenere una sessione del database"""
+    with get_db_session(SessionLocal) as db:
+        yield db
 
 # Custom JSON encoder to handle special types
 class CustomJSONEncoder(json.JSONEncoder):
@@ -41,8 +50,7 @@ def get_channel_messages(channel_name):
     limit = int(request.args.get('limit', 50))
     
     try:
-        db = SessionLocal()
-        try:
+        with get_db() as db:
             # Trova la conversazione del canale usando SQLAlchemy
             conversation = (
                 db.query(Conversation)
@@ -144,7 +152,7 @@ def get_channel_messages(channel_name):
             
             # Inverti per mostrare i messaggi più vecchi prima
             message_list.reverse()
-      
+    
             try:
                 # Serializza e poi deserializza per garantire compatibilità JSON
                 serialized_data = safe_json(message_list)
@@ -152,8 +160,6 @@ def get_channel_messages(channel_name):
             except Exception as json_error:
                 print(f"Error serializing messages for channel {channel_name}: {str(json_error)}")
                 return jsonify([])
-        finally:
-            db.close()
             
     except Exception as e:
         print(f"Error getting channel messages for {channel_name}: {str(e)}")
@@ -171,8 +177,7 @@ def get_dm_messages(user_id):
     limit = int(request.args.get('limit', 50))
     
     try:
-        db = SessionLocal()
-        try:
+        with get_db() as db: 
             # Find the DM conversation using SQLAlchemy
             # Usa una sottoquery per trovare le conversazioni dirette
             # dove entrambi gli utenti sono partecipanti
@@ -298,8 +303,6 @@ def get_dm_messages(user_id):
             
             # Use safe_json to ensure all data is properly serialized
             return jsonify(json.loads(safe_json(message_list)))
-        finally:
-            db.close()
             
     except Exception as e:
         print(f"Error getting DM messages: {str(e)}")
@@ -309,8 +312,7 @@ def get_dm_messages(user_id):
 def get_users():
     """Get all users"""
     try:
-        db = SessionLocal()
-        try:
+        with get_db() as db: 
             # Query usando SQLAlchemy
             users = db.query(User).order_by(User.display_name).all()
             
@@ -327,8 +329,7 @@ def get_users():
             ]
             
             return jsonify(user_list)
-        finally:
-            db.close()
+
     except Exception as e:
         print(f"Error getting users: {str(e)}")
         return jsonify({'error': str(e)}), 500
@@ -337,8 +338,7 @@ def get_users():
 def get_channels():
     """Get all channels"""
     try:
-        db = SessionLocal()
-        try:
+        with get_db() as db:
             # Query con SQLAlchemy usando join e group by
             from sqlalchemy import func
             
@@ -361,8 +361,7 @@ def get_channels():
                 })
             
             return jsonify(channel_list)
-        finally:
-            db.close()
+
     except Exception as e:
         print(f"Error getting channels: {str(e)}")
         return jsonify({'error': str(e)}), 500
@@ -376,8 +375,7 @@ def user_settings():
     
     if request.method == 'GET':
         try:
-            db = SessionLocal()
-            try:
+            with get_db() as db:  
                 # Cerca le impostazioni dell'utente usando SQLAlchemy
                 settings = db.query(UserSetting).filter(UserSetting.user_id == user_id).first()
                 
@@ -406,8 +404,7 @@ def user_settings():
                     "timezone": settings.timezone,
                     "settingsData": settings.settings_data or {}
                 })
-            finally:
-                db.close()
+
         except Exception as e:
             print(f"Error getting user settings: {str(e)}")
             return jsonify({'error': str(e)}), 500
@@ -419,8 +416,7 @@ def user_settings():
             # Add debug logging to see what theme is being saved
             print(f"Updating user settings, theme = {data.get('theme', 'light')}")
             
-            db = SessionLocal()
-            try:
+            with get_db() as db:
                 # Cerca le impostazioni esistenti o crea un nuovo record
                 settings = db.query(UserSetting).filter(UserSetting.user_id == user_id).first()
                 
@@ -459,8 +455,7 @@ def user_settings():
                     "timezone": settings.timezone,
                     "settingsData": settings.settings_data or {}
                 })
-            finally:
-                db.close()
+
         except Exception as e:
             print(f"Error updating user settings: {str(e)}")
             return jsonify({'error': str(e)}), 500      
@@ -469,10 +464,7 @@ def user_settings():
 def get_conversations():
     """Get all conversations for the current user"""
     try:
-        db = SessionLocal()
-        try:
-            # Get all conversations (both DMs and channels) using SQLAlchemy
-            
+        with get_db() as db:
             # Per conversazioni di tipo channel
             channel_convs = (
                 db.query(
@@ -590,8 +582,7 @@ def get_conversations():
             )
             
             return jsonify(all_conversations)
-        finally:
-            db.close()
+
     except Exception as e:
         print(f"Error getting conversations: {str(e)}")
         return jsonify({'error': str(e)}), 500
@@ -616,8 +607,7 @@ def search():
             "channels": []
         }
         
-        db = SessionLocal()
-        try:
+        with get_db() as db:
             # Search messages
             if search_type in ['all', 'messages']:
                 messages = (
@@ -705,8 +695,6 @@ def search():
                         "isPrivate": channel.is_private,
                         "memberCount": member_count
                     })
-        finally:
-            db.close()
         
         return jsonify(results)
     except Exception as e:

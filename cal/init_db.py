@@ -4,6 +4,7 @@ import logging
 import sqlalchemy
 from sqlalchemy import text
 from common.config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, CAL_SCHEMA
+from common.db.connection import get_engine, ensure_schema_exists
 
 # Configura il logging
 logging.basicConfig(level=logging.INFO)
@@ -14,25 +15,12 @@ def init_db():
     # Schema fisso per il modulo calendario - usando la variabile centralizzata
     DB_SCHEMA = CAL_SCHEMA
     
-    # Configurazione del database
-    # Costruisci la stringa di connessione
-    DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-    
     try:
-        # Crea una connessione al database
-        engine = sqlalchemy.create_engine(DATABASE_URL)
+        # Crea un motore SQLAlchemy
+        engine = get_engine()
         
-        # Controlla se lo schema cal_schema esiste
-        with engine.connect() as conn:
-            result = conn.execute(text(f"SELECT schema_name FROM information_schema.schemata WHERE schema_name = '{DB_SCHEMA}'"))
-            schema_exists = result.fetchone() is not None
-            
-            if not schema_exists:
-                logger.info(f"Lo schema '{DB_SCHEMA}' non esiste, creando...")
-                conn.execute(text(f"CREATE SCHEMA {DB_SCHEMA}"))
-                conn.commit()
-            else:
-                logger.info(f"Lo schema '{DB_SCHEMA}' esiste già")
+        # Assicura che lo schema esista
+        ensure_schema_exists(engine, DB_SCHEMA)
         
         # Leggi il file SQL con lo schema del database
         schema_path = os.path.join(os.path.dirname(__file__), 'schema.sql')

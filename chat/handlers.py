@@ -8,12 +8,19 @@ import subprocess
 import os
 import requests
 
-from chat.models import User, Conversation, Message, ConversationParticipant, Channel, ChannelMember
-from chat.database import get_db, SessionLocal
+from chat.models import User, Conversation, Message, ConversationParticipant, Channel, ChannelMember, MessageReadStatus
+from chat.database import SessionLocal
 from common.config import OPENROUTER_API_KEY, OPENROUTER_API_URL
-from chat.routes import safe_json, CustomJSONEncoder  # Importa la funzione safe_json
+from chat.routes import safe_json, CustomJSONEncoder 
 
-# Dopo gli import
+from contextlib import contextmanager
+from common.db.connection import get_db_session
+
+@contextmanager
+def get_db():
+    """Context manager per ottenere una sessione del database"""
+    with get_db_session(SessionLocal) as db:
+        yield db
 
 def prepare_for_socketio(data):
     """Prepara i dati per essere inviati tramite Socket.IO"""
@@ -22,8 +29,7 @@ def prepare_for_socketio(data):
 
 def ensure_users_exist():
     """Ensure that basic users exist in the database with proper data"""
-    db = SessionLocal()
-    try:
+    with get_db() as db:
         # Check if AI user exists
         ai_user = db.query(User).filter(User.id == 2).first()
         if not ai_user:
@@ -67,9 +73,6 @@ def ensure_users_exist():
             current_user.status = 'online'
             db.commit()
             print("Updated current user")
-    finally:
-        db.close()
-
 
 def get_llm_response(message_text):
     """Get a response from the LLM API"""
@@ -111,8 +114,7 @@ def get_llm_response(message_text):
 # Helper functions
 def get_users_data():
     """Get all users from database in format needed by frontend"""
-    db = SessionLocal()
-    try:
+    with get_db() as db:
         users = db.query(User).order_by(User.display_name).all()
         
         # Convert to dictionary format expected by frontend
@@ -127,39 +129,37 @@ def get_users_data():
             })
         
         return user_list
-    finally:
-        db.close()
-
 
 def get_channels_data():
     """Get all channels from database in format needed by frontend"""
-    db = SessionLocal()
-    try:
-        # SQLAlchemy query with join and group by
-        from sqlalchemy import func
-        
-        channels_with_counts = (
-            db.query(Channel, func.count(ChannelMember.user_id).label('member_count'))
-            .outerjoin(ChannelMember, Channel.id == ChannelMember.channel_id)
-            .group_by(Channel.id)
-            .order_by(Channel.name)
-            .all()
-        )
-        
-        # Convert to dictionary format expected by frontend
-        channel_list = []
-        for channel, member_count in channels_with_counts:
-            channel_list.append({
-                "id": channel.id,
-                "name": channel.name,
-                "description": channel.description,
-                "isPrivate": channel.is_private,
-                "memberCount": member_count
-            })
-        
-        return channel_list
-    finally:
-        db.close()
+    with get_db() as db:
+        try:
+            # SQLAlchemy query with join and group by
+            from sqlalchemy import func
+            
+            channels_with_counts = (
+                db.query(Channel, func.count(ChannelMember.user_id).label('member_count'))
+                .outerjoin(ChannelMember, Channel.id == ChannelMember.channel_id)
+                .group_by(Channel.id)
+                .order_by(Channel.name)
+                .all()
+            )
+            
+            # Convert to dictionary format expected by frontend
+            channel_list = []
+            for channel, member_count in channels_with_counts:
+                channel_list.append({
+                    "id": channel.id,
+                    "name": channel.name,
+                    "description": channel.description,
+                    "isPrivate": channel.is_private,
+                    "memberCount": member_count
+                })
+            
+            return channel_list
+        except Exception as e:
+            print(f"Error getting channels: {str(e)}")
+            return []
 
 
 def register_handlers(socketio):
@@ -229,8 +229,7 @@ def register_handlers(socketio):
         }, room=room, include_self=False)
 
         # Find the channel conversation
-        db = SessionLocal()
-        try:
+        with get_db() as db:
             conversation = (
                 db.query(Conversation)
                 .filter(Conversation.name == channel_name, Conversation.type == 'channel')
@@ -333,8 +332,6 @@ def register_handlers(socketio):
             except Exception as e:
                 print(f"Error preparing message history for Socket.IO: {str(e)}")
                 emit('messageHistory', [])  # Invia una lista vuota in caso di errore
-        finally:
-            db.close()
 
     @socketio.on('joinDirectMessage')
     def handle_join_dm(data):
@@ -358,8 +355,7 @@ def register_handlers(socketio):
         join_room(room)
 
         # Find the DM conversation
-        db = SessionLocal()
-        try:
+        with get_db() as db:
             # Query utilizzando SQLAlchemy
             conversation = (
                 db.query(Conversation)
@@ -478,8 +474,6 @@ def register_handlers(socketio):
 
             # Send DM history using prepare_for_socketio to ensure proper serialization
             emit('messageHistory', prepare_for_socketio(message_list))
-        finally:
-            db.close()
 
     @socketio.on('channelMessage')
     def handle_channel_message(data):
@@ -494,8 +488,7 @@ def register_handlers(socketio):
             return
 
         # Find the channel conversation
-        db = SessionLocal()
-        try:
+        with get_db() as db:
             conversation = (
                 db.query(Conversation)
                 .filter(Conversation.name == channel_name, Conversation.type == 'channel')
@@ -591,8 +584,6 @@ def register_handlers(socketio):
             room = f"channel:{channel_name}"
             emit('newMessage', prepare_for_socketio(message_dict), room=room)
             print(f"Broadcasted message {message_id} to room {room}")
-        finally:
-            db.close()
 
     @socketio.on('directMessage')
     def handle_direct_message(data):
@@ -607,8 +598,7 @@ def register_handlers(socketio):
         # Define room at the beginning of the function
         room = f"dm:{user_id}"
 
-        db = SessionLocal()
-        try:
+        with get_db() as db:
             # Check if users exist
             target_user = db.query(User).filter(User.id == user_id).first()
             current_user = db.query(User).filter(User.id == 1).first()
@@ -813,8 +803,6 @@ def register_handlers(socketio):
                         'conversationId': conversation_id,
                         'isTyping': False
                     }, room=room)
-        finally:
-            db.close()
 
     @socketio.on('deleteMessage')
     def handle_delete_message(data):
@@ -829,61 +817,61 @@ def register_handlers(socketio):
         
         print(f"Received delete request for message ID: {message_id}")
         
-        db = SessionLocal()
-        try:
-            # Prima verifica che il messaggio appartenga all'utente (sicurezza)
-            message = (
-                db.query(Message, Conversation)
-                .join(Conversation, Message.conversation_id == Conversation.id)
-                .filter(
-                    Message.id == message_id,
-                    Message.user_id == 1  # Solo messaggi dell'utente corrente
-                )
-                .first()
-            )
-            
-            if not message:
-                print(f"Error: Message {message_id} not found or not owned by current user")
-                return
-            
-            message, conversation = message
-            
-            # Elimina il messaggio dal database
-            db.delete(message)
-            db.commit()
-            
-            print(f"Successfully deleted message {message_id} from database")
-            
-            # Determina la stanza per l'emissione dell'evento
-            if conversation.type == 'channel':
-                room = f"channel:{conversation.name}"
-            else:  # Direct message
-                # Trova l'altro partecipante alla conversazione
-                participant = (
-                    db.query(ConversationParticipant)
+        with get_db() as db:
+            try:
+                # Prima verifica che il messaggio appartenga all'utente (sicurezza)
+                message = (
+                    db.query(Message, Conversation)
+                    .join(Conversation, Message.conversation_id == Conversation.id)
                     .filter(
-                        ConversationParticipant.conversation_id == conversation.id,
-                        ConversationParticipant.user_id != 1
+                        Message.id == message_id,
+                        Message.user_id == 1  # Solo messaggi dell'utente corrente
                     )
                     .first()
                 )
                 
-                if participant:
-                    room = f"dm:{participant.user_id}"
-                else:
-                    # Fallback alla conversazione
-                    room = f"conversation:{conversation.id}"
-            
-            # Invia evento di eliminazione a tutti nella stanza
-            emit('messageDeleted', {
-                'messageId': message_id,
-                'conversationId': conversation.id
-            }, room=room)
-        except Exception as e:
-            db.rollback()
-            print(f"Error during message deletion: {str(e)}")
-        finally:
-            db.close()
+                if not message:
+                    print(f"Error: Message {message_id} not found or not owned by current user")
+                    return
+                
+                message, conversation = message
+                
+                # Elimina il messaggio dal database
+                db.delete(message)
+                db.commit()
+                
+                print(f"Successfully deleted message {message_id} from database")
+                
+                # Determina la stanza per l'emissione dell'evento
+                if conversation.type == 'channel':
+                    room = f"channel:{conversation.name}"
+                else:  # Direct message
+                    # Trova l'altro partecipante alla conversazione
+                    participant = (
+                        db.query(ConversationParticipant)
+                        .filter(
+                            ConversationParticipant.conversation_id == conversation.id,
+                            ConversationParticipant.user_id != 1
+                        )
+                        .first()
+                    )
+                    
+                    if participant:
+                        room = f"dm:{participant.user_id}"
+                    else:
+                        # Fallback alla conversazione
+                        room = f"conversation:{conversation.id}"
+                
+                # Invia evento di eliminazione a tutti nella stanza
+                emit('messageDeleted', {
+                    'messageId': message_id,
+                    'conversationId': conversation.id
+                }, room=room)
+            except Exception as e:
+                db.rollback()
+                print(f"Error during message deletion: {str(e)}")
+            finally:
+                db.close()
 
     @socketio.on('editMessage')
     def handle_edit_message(data):
@@ -899,106 +887,106 @@ def register_handlers(socketio):
         
         print(f"Received edit request for message ID: {message_id}")
         
-        db = SessionLocal()
-        try:
-            # Prima verifica che il messaggio appartenga all'utente (sicurezza)
-            message = (
-                db.query(Message, Conversation)
-                .join(Conversation, Message.conversation_id == Conversation.id)
-                .filter(
-                    Message.id == message_id,
-                    Message.user_id == 1  # Solo messaggi dell'utente corrente
-                )
-                .first()
-            )
-            
-            if not message:
-                print(f"Error: Message {message_id} not found or not owned by current user")
-                return
-            
-            message, conversation = message
-            
-            # Aggiorna il messaggio nel database
-            message.text = new_text
-            message.edited = True
-            message.edited_at = datetime.now()
-            db.commit()
-            
-            edited_at = message.edited_at
-            
-            # Determina la stanza per l'emissione dell'evento
-            if conversation.type == 'channel':
-                room = f"channel:{conversation.name}"
-            else:  # Direct message
-                # Trova l'altro partecipante alla conversazione
-                participant = (
-                    db.query(ConversationParticipant)
+        with get_db() as db:
+            try:
+                # Prima verifica che il messaggio appartenga all'utente (sicurezza)
+                message = (
+                    db.query(Message, Conversation)
+                    .join(Conversation, Message.conversation_id == Conversation.id)
                     .filter(
-                        ConversationParticipant.conversation_id == conversation.id,
-                        ConversationParticipant.user_id != 1
+                        Message.id == message_id,
+                        Message.user_id == 1  # Solo messaggi dell'utente corrente
                     )
                     .first()
                 )
                 
-                if participant:
-                    room = f"dm:{participant.user_id}"
-                else:
-                    # Fallback alla conversazione
-                    room = f"conversation:{conversation.id}"
-            
-            # Invia evento di modifica a tutti nella stanza
-            emit('messageEdited', {
-                'messageId': message_id,
-                'conversationId': conversation.id,
-                'newText': new_text,
-                'editedAt': edited_at.isoformat()
-            }, room=room)
-            
-            print(f"Successfully updated message {message_id} and broadcasted to {room}")
-        except Exception as e:
-            db.rollback()
-            print(f"Error during message edit: {str(e)}")
-        finally:
-            db.close()
+                if not message:
+                    print(f"Error: Message {message_id} not found or not owned by current user")
+                    return
+                
+                message, conversation = message
+                
+                # Aggiorna il messaggio nel database
+                message.text = new_text
+                message.edited = True
+                message.edited_at = datetime.now()
+                db.commit()
+                
+                edited_at = message.edited_at
+                
+                # Determina la stanza per l'emissione dell'evento
+                if conversation.type == 'channel':
+                    room = f"channel:{conversation.name}"
+                else:  # Direct message
+                    # Trova l'altro partecipante alla conversazione
+                    participant = (
+                        db.query(ConversationParticipant)
+                        .filter(
+                            ConversationParticipant.conversation_id == conversation.id,
+                            ConversationParticipant.user_id != 1
+                        )
+                        .first()
+                    )
+                    
+                    if participant:
+                        room = f"dm:{participant.user_id}"
+                    else:
+                        # Fallback alla conversazione
+                        room = f"conversation:{conversation.id}"
+                
+                # Invia evento di modifica a tutti nella stanza
+                emit('messageEdited', {
+                    'messageId': message_id,
+                    'conversationId': conversation.id,
+                    'newText': new_text,
+                    'editedAt': edited_at.isoformat()
+                }, room=room)
+                
+                print(f"Successfully updated message {message_id} and broadcasted to {room}")
+            except Exception as e:
+                db.rollback()
+                print(f"Error during message edit: {str(e)}")
+            finally:
+                db.close()
 
 def ensure_channel_conversations_exist():
     """Ensure that all channels have corresponding conversations in the database"""
-    db = SessionLocal()
-    try:
-        # Ottieni tutti i canali
-        channels = db.query(Channel).all()
+    with get_db() as db:
+        try:
+            # Ottieni tutti i canali
+            channels = db.query(Channel).all()
 
-        for channel in channels:
-            # Verifica se esiste già una conversazione per questo canale
-            conversation = (
-                db.query(Conversation)
-                .filter(
-                    Conversation.name == channel.name, 
-                    Conversation.type == 'channel'
+            for channel in channels:
+                # Verifica se esiste già una conversazione per questo canale
+                conversation = (
+                    db.query(Conversation)
+                    .filter(
+                        Conversation.name == channel.name, 
+                        Conversation.type == 'channel'
+                    )
+                    .first()
                 )
-                .first()
-            )
 
-            if not conversation:
-                # Crea la conversazione se non esiste
-                conversation = Conversation(
-                    name=channel.name,
-                    type='channel'
-                )
-                db.add(conversation)
-                db.commit()
-                db.refresh(conversation)
-                print(f"Created missing conversation for channel {channel.name} with ID {conversation.id}")
+                if not conversation:
+                    # Crea la conversazione se non esiste
+                    conversation = Conversation(
+                        name=channel.name,
+                        type='channel'
+                    )
+                    db.add(conversation)
+                    db.commit()
+                    db.refresh(conversation)
+                    print(f"Created missing conversation for channel {channel.name} with ID {conversation.id}")
 
-                # Aggiungi almeno un messaggio di sistema per inizializzare la conversazione
-                welcome_message = Message(
-                    conversation_id=conversation.id,
-                    user_id=2,  # ID utente di sistema (John Doe)
-                    text=f"Welcome to the #{channel.name} channel!",
-                    message_type='system'
-                )
-                db.add(welcome_message)
-                db.commit()
-                print(f"Added welcome message to channel {channel.name}")
-    finally:
-        db.close()
+                    # Aggiungi almeno un messaggio di sistema per inizializzare la conversazione
+                    welcome_message = Message(
+                        conversation_id=conversation.id,
+                        user_id=2,  # ID utente di sistema (John Doe)
+                        text=f"Welcome to the #{channel.name} channel!",
+                        message_type='system'
+                    )
+                    db.add(welcome_message)
+                    db.commit()
+                    print(f"Added welcome message to channel {channel.name}")
+        finally:
+            db.close()
