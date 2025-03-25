@@ -1,13 +1,10 @@
 from flask import Blueprint, render_template, jsonify, request, send_from_directory
 from common.config import SECRET_KEY
-from chat.db_models import User, Conversation, Message
-from common.db.connection import get_db_cursor
+from sqlalchemy import and_, or_, func, desc
+from chat.models import User, Conversation, Message, Channel, ChannelMember, ConversationParticipant
+from chat.database import SessionLocal
 import json
 from datetime import datetime
-
-from chat.database import get_db
-from chat.models import User
-from sqlalchemy.orm import Session
 
 # Custom JSON encoder to handle special types
 class CustomJSONEncoder(json.JSONEncoder):
@@ -44,145 +41,103 @@ def get_channel_messages(channel_name):
     limit = int(request.args.get('limit', 50))
     
     try:
-        # Trova la conversazione del canale
-        with get_db_cursor() as cursor:
-            cursor.execute(
-                """
-                SELECT c.id FROM chat_schema.conversations c
-                WHERE c.name = %s AND c.type = 'channel'
-                """,
-                (channel_name,)
+        db = SessionLocal()
+        try:
+            # Trova la conversazione del canale usando SQLAlchemy
+            conversation = (
+                db.query(Conversation)
+                .filter(Conversation.name == channel_name, Conversation.type == 'channel')
+                .first()
             )
-            result = cursor.fetchone()
             
-            if not result:
+            if not conversation:
                 # Ritorna una lista vuota invece di provocare un errore
                 print(f"Warning: No conversation found for channel {channel_name}")
                 return jsonify([])
                 
-            conversation_id = result['id']
+            conversation_id = conversation.id
             
-            query = """
-                SELECT 
-                    m.id, m.conversation_id, m.user_id, m.text, 
-                    m.created_at, m.message_type, m.file_data,
-                    m.reply_to_id, m.forwarded_from_id,
-                    u.username, u.display_name, u.avatar_url, u.status
-                FROM chat_schema.messages m
-                JOIN chat_schema.users u ON m.user_id = u.id
-                WHERE m.conversation_id = %s
-            """
-            
-            params = [conversation_id]
+            # Costruisci la query SQLAlchemy base
+            query = (
+                db.query(Message, User)
+                .join(User, Message.user_id == User.id)
+                .filter(Message.conversation_id == conversation_id)
+            )
             
             # Aggiunta filtro paginazione
             if before_id:
-                query += " AND m.id < %s"
-                params.append(before_id)
+                query = query.filter(Message.id < before_id)
                 
             # Ordina e limita
-            query += " ORDER BY m.created_at DESC LIMIT %s"
-            params.append(limit)
+            query = query.order_by(desc(Message.created_at)).limit(limit)
             
-            # Debug per vedere la query
-            #print(f"Executing query for channel {channel_name}, conversation_id={conversation_id}: {query}")
-            #print(f"With params: {params}")
-            
-            cursor.execute(query, params)
-            messages = cursor.fetchall()
+            # Esegui la query
+            messages = query.all()
             
             # Converti in formato per il frontend
             message_list = []
             
             # Crea un dizionario per tenere traccia dei messaggi per riferimento
             reply_messages = {}
-            reply_ids = [msg['reply_to_id'] for msg in messages if msg['reply_to_id']]
+            reply_ids = [msg.reply_to_id for msg, _ in messages if msg.reply_to_id]
             
             # Carica tutti i messaggi citati in un'unica query (per performance)
             if reply_ids:
-                placeholders = ', '.join(['%s'] * len(reply_ids))
-                cursor.execute(
-                    f"""
-                    SELECT m.id, m.text, m.message_type, m.file_data,
-                           u.id as user_id, u.username, u.display_name, u.avatar_url, u.status
-                    FROM chat_schema.messages m
-                    JOIN chat_schema.users u ON m.user_id = u.id
-                    WHERE m.id IN ({placeholders})
-                    """,
-                    reply_ids
+                reply_msg_users = (
+                    db.query(Message, User)
+                    .join(User, Message.user_id == User.id)
+                    .filter(Message.id.in_(reply_ids))
+                    .all()
                 )
-                reply_results = cursor.fetchall()
-                for reply in reply_results:
+                
+                for reply, user in reply_msg_users:
                     # Prepara il messaggio di risposta per il riferimento
-                    file_data = None
-                    if reply['file_data']:
-                        if isinstance(reply['file_data'], dict):
-                            file_data = reply['file_data']
-                        else:
-                            try:
-                                file_data = json.loads(reply['file_data'])
-                            except (json.JSONDecodeError, TypeError):
-                                print(f"Error parsing file_data for replied message {reply['id']}")
-                                file_data = None
-                                
-                    reply_messages[reply['id']] = {
-                        'id': reply['id'],
-                        'text': reply['text'],
-                        'message_type': reply['message_type'],
-                        'fileData': file_data,
+                    reply_messages[reply.id] = {
+                        'id': reply.id,
+                        'text': reply.text,
+                        'message_type': reply.message_type,
+                        'fileData': reply.file_data,
                         'user': {
-                            'id': reply['user_id'],
-                            'username': reply['username'],
-                            'displayName': reply['display_name'],
-                            'avatarUrl': reply['avatar_url'],
-                            'status': reply['status']
+                            'id': user.id,
+                            'username': user.username,
+                            'displayName': user.display_name,
+                            'avatarUrl': user.avatar_url,
+                            'status': user.status
                         }
                     }
             
-            for msg in messages:
+            for msg, user in messages:
                 try:
-                    # CORREZIONE: gestione più robusta di file_data
-                    file_data = None
-                    if msg['file_data']:
-                        if isinstance(msg['file_data'], dict):
-                            file_data = msg['file_data']
-                        else:
-                            try:
-                                file_data = json.loads(msg['file_data'])
-                            except (json.JSONDecodeError, TypeError):
-                                print(f"Error parsing file_data for message {msg['id']}")
-                                file_data = None
-                    
                     # Gestisce il messaggio di risposta
                     reply_to = None
-                    if msg['reply_to_id'] and msg['reply_to_id'] in reply_messages:
-                        reply_to = reply_messages[msg['reply_to_id']]
+                    if msg.reply_to_id and msg.reply_to_id in reply_messages:
+                        reply_to = reply_messages[msg.reply_to_id]
                     
                     # Costruisci un dizionario base con valori di default
                     message_dict = {
-                        'id': msg['id'],
-                        'conversationId': msg['conversation_id'],
+                        'id': msg.id,
+                        'conversationId': msg.conversation_id,
                         'user': {
-                            'id': msg['user_id'],
-                            'username': msg['username'] or 'unknown',
-                            'displayName': msg['display_name'] or 'Unknown User',
-                            'avatarUrl': msg['avatar_url'] or 'https://ui-avatars.com/api/?name=Unknown',
-                            'status': msg['status'] or 'offline'
+                            'id': user.id,
+                            'username': user.username or 'unknown',
+                            'displayName': user.display_name or 'Unknown User',
+                            'avatarUrl': user.avatar_url or 'https://ui-avatars.com/api/?name=Unknown',
+                            'status': user.status or 'offline'
                         },
-                        'text': msg['text'] or '',
-                        'timestamp': msg['created_at'].isoformat() if msg['created_at'] else None,
-                        'type': msg['message_type'] or 'normal',
-                        'fileData': file_data,
+                        'text': msg.text or '',
+                        'timestamp': msg.created_at.isoformat() if msg.created_at else None,
+                        'type': msg.message_type or 'normal',
+                        'fileData': msg.file_data,
                         'replyTo': reply_to,
                         'forwardedFrom': None,  # Si potrebbe espandere anche questo se necessario
-                        'metadata': {},
-                        'edited': False,
-                        'editedAt': None,
-                        'isOwn': msg['user_id'] == 1
+                        'metadata': msg.metadata or {},
+                        'edited': msg.edited,
+                        'editedAt': msg.edited_at.isoformat() if msg.edited_at else None,
+                        'isOwn': msg.user_id == 1
                     }
                     message_list.append(message_dict)
                 except Exception as field_error:
-                    print(f"Error processing message {msg['id']} for channel {channel_name}: {str(field_error)}")
+                    print(f"Error processing message {msg.id} for channel {channel_name}: {str(field_error)}")
                     print(f"Message data: {msg}")
                     # Continua con il prossimo messaggio invece di far fallire tutto
                     continue
@@ -197,6 +152,8 @@ def get_channel_messages(channel_name):
             except Exception as json_error:
                 print(f"Error serializing messages for channel {channel_name}: {str(json_error)}")
                 return jsonify([])
+        finally:
+            db.close()
             
     except Exception as e:
         print(f"Error getting channel messages for {channel_name}: {str(e)}")
@@ -214,175 +171,126 @@ def get_dm_messages(user_id):
     limit = int(request.args.get('limit', 50))
     
     try:
-        # Find the DM conversation
-        with get_db_cursor() as cursor:
-            cursor.execute(
-                """
-                SELECT c.id FROM chat_schema.conversations c
-                JOIN chat_schema.conversation_participants cp1 ON c.id = cp1.conversation_id
-                JOIN chat_schema.conversation_participants cp2 ON c.id = cp2.conversation_id
-                WHERE c.type = 'direct'
-                AND cp1.user_id = 1  -- Current user
-                AND cp2.user_id = %s
-                """,
-                (user_id,)
+        db = SessionLocal()
+        try:
+            # Find the DM conversation using SQLAlchemy
+            # Usa una sottoquery per trovare le conversazioni dirette
+            # dove entrambi gli utenti sono partecipanti
+            current_user_convs = (
+                db.query(ConversationParticipant.conversation_id)
+                .filter(ConversationParticipant.user_id == 1)
+                .subquery()
             )
-            result = cursor.fetchone()
             
-            if not result:
+            target_user_convs = (
+                db.query(ConversationParticipant.conversation_id)
+                .filter(ConversationParticipant.user_id == user_id)
+                .subquery()
+            )
+            
+            conversation = (
+                db.query(Conversation)
+                .filter(
+                    Conversation.type == 'direct',
+                    Conversation.id.in_(current_user_convs),
+                    Conversation.id.in_(target_user_convs)
+                )
+                .first()
+            )
+            
+            if not conversation:
                 return jsonify([])
                 
-            conversation_id = result['id']
+            conversation_id = conversation.id
             
-            # Build query to get messages
-            query = """
-                SELECT m.id, m.conversation_id, m.user_id, m.reply_to_id, 
-                       m.text, m.message_type, m.file_data, m.forwarded_from_id,
-                       m.metadata, m.edited, m.edited_at, m.created_at,
-                       u.username, u.display_name, u.avatar_url, u.status
-                FROM chat_schema.messages m
-                JOIN chat_schema.users u ON m.user_id = u.id
-                WHERE m.conversation_id = %s
-            """
-            
-            params = [conversation_id]
+            # Build query to get messages using SQLAlchemy
+            query = (
+                db.query(Message, User)
+                .join(User, Message.user_id == User.id)
+                .filter(Message.conversation_id == conversation_id)
+            )
             
             # Add pagination filter if specified
             if before_id:
-                query += " AND m.id < %s"
-                params.append(before_id)
+                query = query.filter(Message.id < before_id)
                 
             # Order and limit
-            query += " ORDER BY m.created_at DESC LIMIT %s"
-            params.append(limit)
+            query = query.order_by(desc(Message.created_at)).limit(limit)
             
-            cursor.execute(query, params)
-            messages = cursor.fetchall()
+            # Execute query
+            messages = query.all()
             
             # Carica tutti i messaggi di risposta in un'unica query per migliorare le performance
-            reply_ids = [msg['reply_to_id'] for msg in messages if msg['reply_to_id']]
+            reply_ids = [msg.reply_to_id for msg, _ in messages if msg.reply_to_id]
             reply_messages = {}
             
             if reply_ids:
-                placeholders = ', '.join(['%s'] * len(reply_ids))
-                cursor.execute(
-                    f"""
-                    SELECT m.id, m.text, m.message_type, m.file_data,
-                           u.id as user_id, u.username, u.display_name, u.avatar_url, u.status
-                    FROM chat_schema.messages m
-                    JOIN chat_schema.users u ON m.user_id = u.id
-                    WHERE m.id IN ({placeholders})
-                    """,
-                    reply_ids
+                reply_msg_users = (
+                    db.query(Message, User)
+                    .join(User, Message.user_id == User.id)
+                    .filter(Message.id.in_(reply_ids))
+                    .all()
                 )
-                reply_results = cursor.fetchall()
-                for reply in reply_results:
-                    # Parse file_data for reply
-                    file_data = None
-                    if reply['file_data']:
-                        if isinstance(reply['file_data'], dict):
-                            file_data = reply['file_data'] 
-                        else:
-                            try:
-                                file_data = json.loads(reply['file_data'])
-                            except (json.JSONDecodeError, TypeError):
-                                print(f"Error parsing file_data for replied message {reply['id']}")
-                                file_data = None
-                                
-                    reply_messages[reply['id']] = {
-                        'id': reply['id'],
-                        'text': reply['text'],
-                        'message_type': reply['message_type'],
-                        'fileData': file_data,
+                
+                for reply, user in reply_msg_users:
+                    reply_messages[reply.id] = {
+                        'id': reply.id,
+                        'text': reply.text,
+                        'message_type': reply.message_type,
+                        'fileData': reply.file_data,
                         'user': {
-                            'id': reply['user_id'],
-                            'username': reply['username'],
-                            'displayName': reply['display_name'],
-                            'avatarUrl': reply['avatar_url'],
-                            'status': reply['status']
+                            'id': user.id,
+                            'username': user.username,
+                            'displayName': user.display_name,
+                            'avatarUrl': user.avatar_url,
+                            'status': user.status
                         }
                     }
             
             # Convert to frontend format
             message_list = []
-            for msg in messages:
+            for msg, user in messages:
                 # Get forwarded user data (if present)
-                forwarded_user = None
-                if msg['forwarded_from_id']:
-                    cursor.execute(
-                        """
-                        SELECT id, username, display_name, avatar_url
-                        FROM chat_schema.users
-                        WHERE id = %s
-                        """,
-                        (msg['forwarded_from_id'],)
-                    )
-                    forward_result = cursor.fetchone()
-                    if forward_result:
-                        forwarded_user = {
-                            'id': forward_result['id'],
-                            'username': forward_result['username'],
-                            'displayName': forward_result['display_name'],
-                            'avatarUrl': forward_result['avatar_url']
+                forwarded_from = None
+                if msg.forwarded_from_id:
+                    forwarded_user = db.query(User).get(msg.forwarded_from_id)
+                    if forwarded_user:
+                        forwarded_from = {
+                            'id': msg.forwarded_from_id,
+                            'user': {
+                                'id': forwarded_user.id,
+                                'username': forwarded_user.username,
+                                'displayName': forwarded_user.display_name,
+                                'avatarUrl': forwarded_user.avatar_url,
+                                'status': forwarded_user.status
+                            }
                         }
                 
                 # Get reply_to from cached results
                 reply_to = None
-                if msg['reply_to_id'] and msg['reply_to_id'] in reply_messages:
-                    reply_to = reply_messages[msg['reply_to_id']]
-                
-                # Create forwarded_from object  
-                forwarded_from = None
-                if forwarded_user:
-                    forwarded_from = {
-                        'id': msg['forwarded_from_id'],
-                        'user': forwarded_user
-                    }
-                
-                # FIXED: Properly handle file_data field
-                file_data = None
-                if msg['file_data']:
-                    if isinstance(msg['file_data'], dict):
-                        file_data = msg['file_data']
-                    else:
-                        try:
-                            file_data = json.loads(msg['file_data'])
-                        except (json.JSONDecodeError, TypeError):
-                            print(f"Error parsing file_data for message {msg['id']}")
-                            file_data = None
-                
-                # FIXED: Properly handle metadata field
-                metadata = {}
-                if msg['metadata']:
-                    if isinstance(msg['metadata'], dict):
-                        metadata = msg['metadata']
-                    else:
-                        try:
-                            metadata = json.loads(msg['metadata'])
-                        except (json.JSONDecodeError, TypeError):
-                            print(f"Error parsing metadata for message {msg['id']}")
-                            metadata = {}
+                if msg.reply_to_id and msg.reply_to_id in reply_messages:
+                    reply_to = reply_messages[msg.reply_to_id]
                 
                 message_list.append({
-                    'id': msg['id'],
-                    'conversationId': msg['conversation_id'],
+                    'id': msg.id,
+                    'conversationId': msg.conversation_id,
                     'user': {
-                        'id': msg['user_id'],
-                        'username': msg['username'],
-                        'displayName': msg['display_name'],
-                        'avatarUrl': msg['avatar_url'],
-                        'status': msg['status']
+                        'id': user.id,
+                        'username': user.username,
+                        'displayName': user.display_name,
+                        'avatarUrl': user.avatar_url,
+                        'status': user.status
                     },
-                    'text': msg['text'],
-                    'timestamp': msg['created_at'].isoformat(),
-                    'type': msg['message_type'],
-                    'fileData': file_data,
+                    'text': msg.text,
+                    'timestamp': msg.created_at.isoformat(),
+                    'type': msg.message_type,
+                    'fileData': msg.file_data,
                     'replyTo': reply_to,
                     'forwardedFrom': forwarded_from,
-                    'metadata': metadata,
-                    'edited': msg['edited'],
-                    'editedAt': msg['edited_at'].isoformat() if msg['edited_at'] else None,
-                    'isOwn': msg['user_id'] == 1  # Assume current user is ID 1
+                    'metadata': msg.metadata or {},
+                    'edited': msg.edited,
+                    'editedAt': msg.edited_at.isoformat() if msg.edited_at else None,
+                    'isOwn': msg.user_id == 1  # Assume current user is ID 1
                 })
             
             # Reverse order to show oldest messages first
@@ -390,6 +298,8 @@ def get_dm_messages(user_id):
             
             # Use safe_json to ensure all data is properly serialized
             return jsonify(json.loads(safe_json(message_list)))
+        finally:
+            db.close()
             
     except Exception as e:
         print(f"Error getting DM messages: {str(e)}")
@@ -399,47 +309,60 @@ def get_dm_messages(user_id):
 def get_users():
     """Get all users"""
     try:
-        db = next(get_db())  # Ottiene la sessione del database
-        
-        # Query ORM
-        users = db.query(User).order_by(User.display_name).all()
-        
-        # Usa il metodo to_dict dal modello
-        user_list = [user.to_dict() for user in users]
-        
-        return jsonify(user_list)
+        db = SessionLocal()
+        try:
+            # Query usando SQLAlchemy
+            users = db.query(User).order_by(User.display_name).all()
+            
+            # Converti in lista di dizionari
+            user_list = [
+                {
+                    "id": user.id,
+                    "username": user.username,
+                    "displayName": user.display_name,
+                    "avatarUrl": user.avatar_url,
+                    "status": user.status
+                }
+                for user in users
+            ]
+            
+            return jsonify(user_list)
+        finally:
+            db.close()
     except Exception as e:
         print(f"Error getting users: {str(e)}")
         return jsonify({'error': str(e)}), 500
-
+ 
 @chat_bp.route('/api/channels')
 def get_channels():
     """Get all channels"""
     try:
-        with get_db_cursor() as cursor:
-            cursor.execute(
-                """
-                SELECT c.id, c.name, c.description, c.is_private,
-                       COUNT(cm.user_id) as member_count
-                FROM chat_schema.channels c
-                LEFT JOIN chat_schema.channel_members cm ON c.id = cm.channel_id
-                GROUP BY c.id
-                ORDER BY c.name
-                """
+        db = SessionLocal()
+        try:
+            # Query con SQLAlchemy usando join e group by
+            from sqlalchemy import func
+            
+            channels_with_counts = (
+                db.query(Channel, func.count(ChannelMember.user_id).label('member_count'))
+                .outerjoin(ChannelMember, Channel.id == ChannelMember.channel_id)
+                .group_by(Channel.id)
+                .order_by(Channel.name)
+                .all()
             )
-            channels = cursor.fetchall()
-        
-        channel_list = []
-        for channel in channels:
-            channel_list.append({
-                "id": channel['id'],
-                "name": channel['name'],
-                "description": channel['description'],
-                "isPrivate": channel['is_private'],
-                "memberCount": channel['member_count']
-            })
-        
-        return jsonify(channel_list)
+            
+            channel_list = []
+            for channel, member_count in channels_with_counts:
+                channel_list.append({
+                    "id": channel.id,
+                    "name": channel.name,
+                    "description": channel.description,
+                    "isPrivate": channel.is_private,
+                    "memberCount": member_count
+                })
+            
+            return jsonify(channel_list)
+        finally:
+            db.close()
     except Exception as e:
         print(f"Error getting channels: {str(e)}")
         return jsonify({'error': str(e)}), 500
@@ -447,45 +370,44 @@ def get_channels():
 @chat_bp.route('/api/user/settings', methods=['GET', 'PUT'])
 def user_settings():
     """Get or update user settings"""
+    from chat.models import UserSetting
+    
     user_id = 1  # Assume current user is ID 1
     
     if request.method == 'GET':
         try:
-            with get_db_cursor() as cursor:
-                cursor.execute(
-                    """
-                    SELECT * FROM chat_schema.user_settings
-                    WHERE user_id = %s
-                    """,
-                    (user_id,)
-                )
-                settings = cursor.fetchone()
-            
-            if not settings:
-                # Create default settings if not exist
-                with get_db_cursor(commit=True) as cursor:
-                    cursor.execute(
-                        """
-                        INSERT INTO chat_schema.user_settings 
-                        (user_id, theme, notification_enabled, sound_enabled, language, timezone)
-                        VALUES (%s, %s, %s, %s, %s, %s)
-                        RETURNING *
-                        """,
-                        (user_id, 'light', True, True, 'en', 'UTC')
+            db = SessionLocal()
+            try:
+                # Cerca le impostazioni dell'utente usando SQLAlchemy
+                settings = db.query(UserSetting).filter(UserSetting.user_id == user_id).first()
+                
+                if not settings:
+                    # Create default settings if not exist
+                    settings = UserSetting(
+                        user_id=user_id,
+                        theme='light',
+                        notification_enabled=True,
+                        sound_enabled=True,
+                        language='en',
+                        timezone='UTC'
                     )
-                    settings = cursor.fetchone()
-            
-            # Add debug logging to see what theme is being returned
-            print(f"Getting user settings, theme = {settings['theme']}")
-            
-            return jsonify({
-                "theme": settings['theme'],
-                "notificationEnabled": settings['notification_enabled'],
-                "soundEnabled": settings['sound_enabled'],
-                "language": settings['language'],
-                "timezone": settings['timezone'],
-                "settingsData": json.loads(settings['settings_data']) if settings['settings_data'] else {}
-            })
+                    db.add(settings)
+                    db.commit()
+                    db.refresh(settings)
+                
+                # Add debug logging to see what theme is being returned
+                print(f"Getting user settings, theme = {settings.theme}")
+                
+                return jsonify({
+                    "theme": settings.theme,
+                    "notificationEnabled": settings.notification_enabled,
+                    "soundEnabled": settings.sound_enabled,
+                    "language": settings.language,
+                    "timezone": settings.timezone,
+                    "settingsData": settings.settings_data or {}
+                })
+            finally:
+                db.close()
         except Exception as e:
             print(f"Error getting user settings: {str(e)}")
             return jsonify({'error': str(e)}), 500
@@ -497,125 +419,179 @@ def user_settings():
             # Add debug logging to see what theme is being saved
             print(f"Updating user settings, theme = {data.get('theme', 'light')}")
             
-            with get_db_cursor(commit=True) as cursor:
-                cursor.execute(
-                    """
-                    INSERT INTO chat_schema.user_settings 
-                    (user_id, theme, notification_enabled, sound_enabled, language, timezone, settings_data)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (user_id) DO UPDATE SET
-                        theme = EXCLUDED.theme,
-                        notification_enabled = EXCLUDED.notification_enabled,
-                        sound_enabled = EXCLUDED.sound_enabled,
-                        language = EXCLUDED.language,
-                        timezone = EXCLUDED.timezone,
-                        settings_data = EXCLUDED.settings_data
-                    RETURNING *
-                    """,
-                    (
-                        user_id, 
-                        data.get('theme', 'light'),
-                        data.get('notificationEnabled', True),
-                        data.get('soundEnabled', True),
-                        data.get('language', 'en'),
-                        data.get('timezone', 'UTC'),
-                        json.dumps(data.get('settingsData', {}))
+            db = SessionLocal()
+            try:
+                # Cerca le impostazioni esistenti o crea un nuovo record
+                settings = db.query(UserSetting).filter(UserSetting.user_id == user_id).first()
+                
+                if settings:
+                    # Aggiorna un record esistente
+                    settings.theme = data.get('theme', 'light')
+                    settings.notification_enabled = data.get('notificationEnabled', True)
+                    settings.sound_enabled = data.get('soundEnabled', True)
+                    settings.language = data.get('language', 'en')
+                    settings.timezone = data.get('timezone', 'UTC')
+                    settings.settings_data = data.get('settingsData', {})
+                else:
+                    # Crea un nuovo record
+                    settings = UserSetting(
+                        user_id=user_id,
+                        theme=data.get('theme', 'light'),
+                        notification_enabled=data.get('notificationEnabled', True),
+                        sound_enabled=data.get('soundEnabled', True),
+                        language=data.get('language', 'en'),
+                        timezone=data.get('timezone', 'UTC'),
+                        settings_data=data.get('settingsData', {})
                     )
-                )
-                settings = cursor.fetchone()
-            
-            # Verify the theme was properly saved
-            print(f"Theme saved as: {settings['theme']}")
-            
-            return jsonify({
-                "theme": settings['theme'],
-                "notificationEnabled": settings['notification_enabled'],
-                "soundEnabled": settings['sound_enabled'],
-                "language": settings['language'],
-                "timezone": settings['timezone'],
-                "settingsData": json.loads(settings['settings_data']) if settings['settings_data'] else {}
-            })
+                    db.add(settings)
+                
+                db.commit()
+                db.refresh(settings)
+                
+                # Verify the theme was properly saved
+                print(f"Theme saved as: {settings.theme}")
+                
+                return jsonify({
+                    "theme": settings.theme,
+                    "notificationEnabled": settings.notification_enabled,
+                    "soundEnabled": settings.sound_enabled,
+                    "language": settings.language,
+                    "timezone": settings.timezone,
+                    "settingsData": settings.settings_data or {}
+                })
+            finally:
+                db.close()
         except Exception as e:
             print(f"Error updating user settings: {str(e)}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': str(e)}), 500      
 
 @chat_bp.route('/api/conversations')
 def get_conversations():
     """Get all conversations for the current user"""
     try:
-        with get_db_cursor() as cursor:
-            # Get all conversations (both DMs and channels)
-            cursor.execute(
-                """
-                SELECT c.id, c.name, c.type, c.created_at,
-                       CASE 
-                           WHEN c.type = 'direct' THEN u.id 
-                           ELSE NULL 
-                       END as user_id,
-                       CASE 
-                           WHEN c.type = 'direct' THEN u.username 
-                           ELSE c.name 
-                       END as display_name,
-                       CASE 
-                           WHEN c.type = 'direct' THEN u.avatar_url 
-                           ELSE NULL 
-                       END as avatar_url,
-                       CASE 
-                           WHEN c.type = 'direct' THEN u.status 
-                           ELSE NULL 
-                       END as status,
-                       (
-                           SELECT COUNT(*) 
-                           FROM chat_schema.messages m
-                           LEFT JOIN chat_schema.message_read_status mrs 
-                               ON m.id = mrs.message_id AND mrs.user_id = 1
-                           WHERE m.conversation_id = c.id 
-                           AND mrs.message_id IS NULL
-                           AND m.user_id != 1
-                       ) as unread_count,
-                       (
-                           SELECT m.created_at
-                           FROM chat_schema.messages m
-                           WHERE m.conversation_id = c.id
-                           ORDER BY m.created_at DESC
-                           LIMIT 1
-                       ) as last_activity
-                FROM chat_schema.conversations c
-                LEFT JOIN chat_schema.conversation_participants cp ON c.id = cp.conversation_id
-                LEFT JOIN chat_schema.users u ON 
-                    CASE 
-                        WHEN c.type = 'direct' THEN 
-                            (SELECT user_id FROM chat_schema.conversation_participants 
-                             WHERE conversation_id = c.id AND user_id != 1 LIMIT 1)
-                        ELSE NULL
-                    END = u.id
-                WHERE 
-                    (c.type = 'channel') OR
-                    (c.type = 'direct' AND EXISTS (
-                        SELECT 1 FROM chat_schema.conversation_participants 
-                        WHERE conversation_id = c.id AND user_id = 1
-                    ))
-                GROUP BY c.id, u.id
-                ORDER BY last_activity DESC NULLS LAST
-                """
+        db = SessionLocal()
+        try:
+            # Get all conversations (both DMs and channels) using SQLAlchemy
+            
+            # Per conversazioni di tipo channel
+            channel_convs = (
+                db.query(
+                    Conversation.id, 
+                    Conversation.name, 
+                    Conversation.type, 
+                    Conversation.created_at,
+                    func.count(Message.id).filter(
+                        Message.user_id != 1,
+                        ~Message.id.in_(
+                            db.query(MessageReadStatus.message_id)
+                            .filter(MessageReadStatus.user_id == 1)
+                            .subquery()
+                        )
+                    ).label('unread_count'),
+                    db.query(Message.created_at)
+                    .filter(Message.conversation_id == Conversation.id)
+                    .order_by(desc(Message.created_at))
+                    .limit(1)
+                    .scalar_subquery()
+                    .label('last_activity')
+                )
+                .outerjoin(Message, Conversation.id == Message.conversation_id)
+                .filter(Conversation.type == 'channel')
+                .group_by(Conversation.id)
             )
-            conversations = cursor.fetchall()
-        
-        conversation_list = []
-        for conv in conversations:
-            conversation_list.append({
-                "id": conv['id'],
-                "name": conv['name'],
-                "type": conv['type'],
-                "userId": conv['user_id'],
-                "displayName": conv['display_name'],
-                "avatarUrl": conv['avatar_url'],
-                "status": conv['status'],
-                "unreadCount": conv['unread_count'],
-                "lastActivity": conv['last_activity'].isoformat() if conv['last_activity'] else None
-            })
-        
-        return jsonify(conversation_list)
+            
+            # Per conversazioni di tipo direct
+            from sqlalchemy.sql import text, null
+            
+            # Subquery per trovare le conversazioni direct dell'utente corrente
+            current_user_dm_convs = (
+                db.query(ConversationParticipant.conversation_id)
+                .join(Conversation, ConversationParticipant.conversation_id == Conversation.id)
+                .filter(
+                    ConversationParticipant.user_id == 1,
+                    Conversation.type == 'direct'
+                )
+                .subquery()
+            )
+            
+            # Trova l'altro utente in ogni conversazione direct
+            direct_convs = (
+                db.query(
+                    Conversation.id, 
+                    Conversation.name, 
+                    Conversation.type, 
+                    Conversation.created_at,
+                    User.id.label('user_id'),
+                    User.username,
+                    User.display_name,
+                    User.avatar_url,
+                    User.status,
+                    func.count(Message.id).filter(
+                        Message.user_id != 1,
+                        ~Message.id.in_(
+                            db.query(MessageReadStatus.message_id)
+                            .filter(MessageReadStatus.user_id == 1)
+                            .subquery()
+                        )
+                    ).label('unread_count'),
+                    db.query(Message.created_at)
+                    .filter(Message.conversation_id == Conversation.id)
+                    .order_by(desc(Message.created_at))
+                    .limit(1)
+                    .scalar_subquery()
+                    .label('last_activity')
+                )
+                .join(ConversationParticipant, Conversation.id == ConversationParticipant.conversation_id)
+                .join(User, ConversationParticipant.user_id == User.id)
+                .outerjoin(Message, Conversation.id == Message.conversation_id)
+                .filter(
+                    Conversation.id.in_(current_user_dm_convs),
+                    ConversationParticipant.user_id != 1,  # Non l'utente corrente
+                    Conversation.type == 'direct'
+                )
+                .group_by(Conversation.id, User.id)
+            )
+            
+            # Unione di tutte le conversazioni
+            all_conversations = []
+            
+            # Aggiungi conversazioni channel
+            for conv in channel_convs:
+                all_conversations.append({
+                    "id": conv.id,
+                    "name": conv.name,
+                    "type": conv.type,
+                    "userId": None,
+                    "displayName": conv.name,
+                    "avatarUrl": None,
+                    "status": None,
+                    "unreadCount": conv.unread_count,
+                    "lastActivity": conv.last_activity.isoformat() if conv.last_activity else None
+                })
+            
+            # Aggiungi conversazioni direct
+            for conv in direct_convs:
+                all_conversations.append({
+                    "id": conv.id,
+                    "name": conv.name,
+                    "type": conv.type,
+                    "userId": conv.user_id,
+                    "displayName": conv.display_name,
+                    "avatarUrl": conv.avatar_url,
+                    "status": conv.status,
+                    "unreadCount": conv.unread_count,
+                    "lastActivity": conv.last_activity.isoformat() if conv.last_activity else None
+                })
+            
+            # Ordina per ultima attività
+            all_conversations.sort(
+                key=lambda x: x.get('lastActivity') or '1970-01-01',
+                reverse=True
+            )
+            
+            return jsonify(all_conversations)
+        finally:
+            db.close()
     except Exception as e:
         print(f"Error getting conversations: {str(e)}")
         return jsonify({'error': str(e)}), 500
@@ -640,103 +616,99 @@ def search():
             "channels": []
         }
         
-        with get_db_cursor() as cursor:
+        db = SessionLocal()
+        try:
             # Search messages
             if search_type in ['all', 'messages']:
-                cursor.execute(
-                    """
-                    SELECT m.id, m.conversation_id, m.text, m.created_at,
-                           u.id as user_id, u.username, u.display_name, u.avatar_url,
-                           c.type as conversation_type, c.name as conversation_name
-                    FROM chat_schema.messages m
-                    JOIN chat_schema.users u ON m.user_id = u.id
-                    JOIN chat_schema.conversations c ON m.conversation_id = c.id
-                    LEFT JOIN chat_schema.conversation_participants cp ON c.id = cp.conversation_id
-                    WHERE 
-                        m.text ILIKE %s
-                        AND (
-                            (c.type = 'channel') OR
-                            (c.type = 'direct' AND EXISTS (
-                                SELECT 1 FROM chat_schema.conversation_participants 
-                                WHERE conversation_id = c.id AND user_id = 1
-                            ))
+                messages = (
+                    db.query(Message, User, Conversation)
+                    .join(User, Message.user_id == User.id)
+                    .join(Conversation, Message.conversation_id == Conversation.id)
+                    .filter(Message.text.ilike(f"%{query}%"))
+                    .filter(
+                        # Solo messaggi delle conversazioni accessibili
+                        (Conversation.type == 'channel') |
+                        (
+                            (Conversation.type == 'direct') &
+                            Conversation.id.in_(
+                                db.query(ConversationParticipant.conversation_id)
+                                .filter(ConversationParticipant.user_id == 1)
+                            )
                         )
-                    GROUP BY m.id, u.id, c.id
-                    ORDER BY m.created_at DESC
-                    LIMIT 10
-                    """,
-                    (f"%{query}%",)
+                    )
+                    .order_by(desc(Message.created_at))
+                    .limit(10)
+                    .all()
                 )
-                messages = cursor.fetchall()
                 
-                for msg in messages:
+                for msg, user, conv in messages:
                     results["messages"].append({
-                        "id": msg['id'],
-                        "conversationId": msg['conversation_id'],
-                        "text": msg['text'],
-                        "timestamp": msg['created_at'].isoformat(),
+                        "id": msg.id,
+                        "conversationId": msg.conversation_id,
+                        "text": msg.text,
+                        "timestamp": msg.created_at.isoformat(),
                         "user": {
-                            "id": msg['user_id'],
-                            "username": msg['username'],
-                            "displayName": msg['display_name'],
-                            "avatarUrl": msg['avatar_url']
+                            "id": user.id,
+                            "username": user.username,
+                            "displayName": user.display_name,
+                            "avatarUrl": user.avatar_url
                         },
-                        "conversationType": msg['conversation_type'],
-                        "conversationName": msg['conversation_name']
+                        "conversationType": conv.type,
+                        "conversationName": conv.name
                     })
             
             # Search users
             if search_type in ['all', 'users']:
-                cursor.execute(
-                    """
-                    SELECT id, username, display_name, avatar_url, status
-                    FROM chat_schema.users
-                    WHERE username ILIKE %s OR display_name ILIKE %s
-                    ORDER BY display_name
-                    LIMIT 10
-                    """,
-                    (f"%{query}%", f"%{query}%")
+                users = (
+                    db.query(User)
+                    .filter(
+                        User.username.ilike(f"%{query}%") | 
+                        User.display_name.ilike(f"%{query}%")
+                    )
+                    .order_by(User.display_name)
+                    .limit(10)
+                    .all()
                 )
-                users = cursor.fetchall()
                 
                 for user in users:
                     results["users"].append({
-                        "id": user['id'],
-                        "username": user['username'],
-                        "displayName": user['display_name'],
-                        "avatarUrl": user['avatar_url'],
-                        "status": user['status']
+                        "id": user.id,
+                        "username": user.username,
+                        "displayName": user.display_name,
+                        "avatarUrl": user.avatar_url,
+                        "status": user.status
                     })
             
             # Search channels
             if search_type in ['all', 'channels']:
-                cursor.execute(
-                    """
-                    SELECT c.id, c.name, c.description, c.is_private,
-                           COUNT(cm.user_id) as member_count
-                    FROM chat_schema.channels c
-                    LEFT JOIN chat_schema.channel_members cm ON c.id = cm.channel_id
-                    WHERE c.name ILIKE %s OR c.description ILIKE %s
-                    GROUP BY c.id
-                    ORDER BY c.name
-                    LIMIT 10
-                    """,
-                    (f"%{query}%", f"%{query}%")
+                channels = (
+                    db.query(
+                        Channel,
+                        func.count(ChannelMember.user_id).label('member_count')
+                    )
+                    .outerjoin(ChannelMember, Channel.id == ChannelMember.channel_id)
+                    .filter(
+                        Channel.name.ilike(f"%{query}%") | 
+                        Channel.description.ilike(f"%{query}%")
+                    )
+                    .group_by(Channel.id)
+                    .order_by(Channel.name)
+                    .limit(10)
+                    .all()
                 )
-                channels = cursor.fetchall()
                 
-                for channel in channels:
+                for channel, member_count in channels:
                     results["channels"].append({
-                        "id": channel['id'],
-                        "name": channel['name'],
-                        "description": channel['description'],
-                        "isPrivate": channel['is_private'],
-                        "memberCount": channel['member_count']
+                        "id": channel.id,
+                        "name": channel.name,
+                        "description": channel.description,
+                        "isPrivate": channel.is_private,
+                        "memberCount": member_count
                     })
+        finally:
+            db.close()
         
         return jsonify(results)
     except Exception as e:
         print(f"Error searching: {str(e)}")
         return jsonify({'error': str(e)}), 500
-
-      

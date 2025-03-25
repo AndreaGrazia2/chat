@@ -180,11 +180,13 @@ class MessageReadStatus(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
     read_at = Column(DateTime, server_default=func.now())
     
-    # Vincolo di unicità
+    # Relazioni
+    message = relationship("Message")
+    user = relationship("User")
+    
     __table_args__ = (
         # Garantisce che un messaggio sia marcato come letto solo una volta per utente
-        # Utilizza `UniqueConstraint` invece del __table_args__ se necessario
-        {"sqlite_autoincrement": True},
+        UniqueConstraint('message_id', 'user_id', name='uq_message_read_user'),
     )
 
 class UserSetting(Base):
