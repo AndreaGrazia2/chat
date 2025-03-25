@@ -1,0 +1,37 @@
+name: Sync Fork
+
+on:
+  schedule:
+    # Esegui ogni giorno alle 2:00 UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Permette di attivare manualmente il workflow
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config --global user.name 'GitHub Action'
+          git config --global user.email 'action@github.com'
+
+      - name: Sync Fork
+        run: |
+          # Aggiungi il repository originale come remote
+          git remote add upstream ${{ secrets.UPSTREAM_REPO }}
+          
+          # Recupera tutti i branch del repository originale
+          git fetch upstream
+          
+          # Fai il checkout del tuo branch principale (solitamente main o master)
+          git checkout main
+          
+          # Unisci le modifiche dal branch upstream
+          git merge upstream/main
+          
+          # Pushta le modifiche nel tuo fork
+          git push origin main
