@@ -3,7 +3,7 @@ services:
     name: chat
     env: python
     plan: free
-    region: virginia
+    region: frankfurt
     repo: https://github.com/xbeat/chat
     branch: main
     autoDeploy: true    
