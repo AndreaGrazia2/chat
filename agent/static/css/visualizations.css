@@ -546,3 +546,222 @@ table[id^="data-table-"] .wide-column,
 		/* Adatta colonne larghe per mobile */
 	}
 }
+
+/* ===== STILI PER VISUALIZZAZIONI CALENDARIO ===== */
+
+/* Container del calendario */
+.calendar-container {
+    margin: 20px 0;
+    width: 100%;
+    background-color: var(--card-background);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+}
+
+/* Header del calendario */
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.calendar-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.calendar-nav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.calendar-nav button {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+}
+
+.current-month {
+    font-weight: 600;
+    padding: 0 10px;
+}
+
+/* Griglia del calendario mensile */
+.month-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    border-left: 1px solid var(--border-color);
+    border-top: 1px solid var(--border-color);
+}
+
+.weekday-header {
+    text-align: center;
+    padding: 10px;
+    font-weight: 600;
+    background-color: var(--background-color);
+    border-right: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.calendar-day {
+    min-height: 100px;
+    padding: 8px;
+    border-right: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    position: relative;
+}
+
+.calendar-day.today {
+    background-color: var(--primary-light);
+}
+
+.calendar-day.other-month {
+    background-color: var(--background-color);
+    color: var(--text-light);
+}
+
+.day-number {
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+/* Eventi nel calendario */
+.calendar-event {
+    margin-bottom: 3px;
+    padding: 3px 5px;
+    border-radius: 3px;
+    font-size: 0.8rem;
+    color: white;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.calendar-event.work {
+    background-color: #4285F4;
+}
+
+.calendar-event.personal {
+    background-color: #EA4335;
+}
+
+.calendar-event.family {
+    background-color: #FBBC05;
+}
+
+.calendar-event.health {
+    background-color: #34A853;
+}
+
+/* Vista settimanale */
+.week-grid {
+    display: grid;
+    grid-template-columns: 60px repeat(7, 1fr);
+    border-left: 1px solid var(--border-color);
+}
+
+.time-label {
+    padding: 5px;
+    text-align: right;
+    border-right: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.8rem;
+    height: 50px;
+}
+
+.time-slot {
+    border-right: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    position: relative;
+    height: 50px;
+}
+
+/* Vista giornaliera */
+.day-grid {
+    display: grid;
+    grid-template-columns: 60px 1fr;
+    border-left: 1px solid var(--border-color);
+}
+
+/* Eventi nelle viste settimanale e giornaliera */
+.time-event {
+    position: absolute;
+    left: 2px;
+    right: 2px;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-size: 0.8rem;
+    color: white;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    z-index: 1;
+}
+
+/* Più eventi */
+.more-events {
+    background-color: var(--primary-color);
+    color: white;
+    font-size: 0.8rem;
+    text-align: center;
+    padding: 2px;
+    border-radius: 3px;
+    margin-top: 2px;
+    cursor: pointer;
+}
+
+/* Popup eventi */
+.event-popup {
+    position: absolute;
+    background-color: white;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 10px;
+    box-shadow: var(--shadow);
+    z-index: 100;
+    max-width: 300px;
+}
+
+.event-popup-header {
+    font-weight: 600;
+    margin-bottom: 5px;
+    color: var(--primary-color);
+}
+
+.event-popup-time {
+    font-size: 0.8rem;
+    color: var(--text-light);
+    margin-bottom: 5px;
+}
+
+.event-popup-description {
+    font-size: 0.9rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .month-grid {
+        font-size: 0.8rem;
+    }
+    
+    .calendar-day {
+        min-height: 60px;
+        padding: 3px;
+    }
+    
+    .calendar-event {
+        font-size: 0.7rem;
+        padding: 2px 3px;
+    }
+    
+    .time-label, .time-slot {
+        height: 40px;
+    }
+}

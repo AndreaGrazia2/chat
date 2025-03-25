@@ -87,24 +87,93 @@ def get_db_schema():
 		- conversation_participants (conversation_id, user_id, joined_at)
 		"""
 
+def get_cal_schema():
+    """Legge dinamicamente lo schema del calendario e restituisce una descrizione testuale"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Query per ottenere tutte le tabelle nello schema cal_schema
+        cursor.execute("""
+            SELECT table_name 
+            FROM information_schema.tables 
+            WHERE table_schema = 'cal_schema'
+        """)
+        tables = [row[0] for row in cursor.fetchall()]
+        
+        # Per ogni tabella, ottiene le colonne
+        schema_description = []
+        for table in tables:
+            cursor.execute(f"""
+                SELECT column_name, data_type
+                FROM information_schema.columns
+                WHERE table_schema = 'cal_schema' AND table_name = '{table}'
+                ORDER BY ordinal_position
+            """)
+            columns = [f"{row[0]} ({row[1]})" for row in cursor.fetchall()]
+            schema_description.append(f"- {table} ({', '.join(columns)})")
+        
+        cursor.close()
+        conn.close()
+        
+        return "\n".join(schema_description)
+    except Exception as e:
+        print(f"Errore nel recupero dello schema del calendario: {e}")
+        return """
+        - categories (id, name, color, icon, description, created_at, updated_at)
+        - users (id, username, email, password_hash, first_name, last_name, avatar_url, theme, preferred_view, is_active, created_at, updated_at)
+        - events (id, user_id, title, description, start_date, end_date, category_id, all_day, is_recurring, recurrence_rule, location, url, is_public, color, created_at, updated_at)
+        - event_attendees (event_id, user_id, status, response_date, created_at, updated_at)
+        - calendar_shares (user_id, shared_with_id, permission, created_at, updated_at)
+        - tags (id, name, color, user_id, created_at)
+        - event_tags (event_id, tag_id)
+        - reminders (id, event_id, user_id, reminder_time, minutes_before, notification_type, is_sent, created_at, updated_at)
+        """
+
 # Ottiene lo schema del database
 db_schema = get_db_schema()
+cal_schema = get_cal_schema()
 
 # Template per l'analisi dell'intento
 intent_template = f"""
 Sei un agente AI specializzato nell'analizzare messaggi dell'utente e determinare se è necessario eseguire una query su un database.
 Se l'utente sta chiedendo informazioni che potrebbero essere ottenute da un database, identifica l'intento specifico e genera una query SQL appropriata.
 
-Il database ha queste tabelle (schema chat_schema):
+Il database ha due schemi distinti:
+
+1. Schema principale della chat (chat_schema):
 {db_schema}
+Questo schema contiene dati relativi a chat, messaggi, conversazioni e utenti.
+
+2. Schema del calendario (cal_schema):
+{cal_schema}
+Questo schema contiene dati relativi a eventi del calendario, categorie, promemoria e partecipanti.
+
+REGOLE IMPORTANTI PER LA SCELTA DELLO SCHEMA:
+- Se l'utente vuole informazioni su eventi, calendario, appuntamenti, promemoria o categorie di eventi, usa cal_schema
+- Se l'utente vuole informazioni su chat, messaggi, conversazioni o utenti, usa chat_schema
+- Se l'utente chiede ESPLICITAMENTE di visualizzare dati della chat in formato calendario, usa chat_schema ma genera una visualizzazione di tipo calendario
+- Utilizza il prefisso dello schema in tutte le query (es. cal_schema.events o chat_schema.messages)
 
 Analizza attentamente: {{user_input}}
 
 Ragiona passo per passo:
 1. Determina se l'utente sta chiedendo informazioni che richiedono accesso al database.
-2. Se sì, identifica quale tipo di informazione sta cercando.
+2. Identifica quale tipo di informazione sta cercando e quale schema è rilevante (chat_schema o cal_schema).
 3. Determina quali tabelle e campi sono necessari per rispondere alla domanda.
 4. Genera una query SQL appropriata e sicura.
+
+Oltre alle visualizzazioni standard (table, bar_chart, line_chart, pie_chart), puoi anche generare visualizzazioni di calendario:
+- "calendar_month": visualizza i risultati in un calendario mensile
+- "calendar_week": visualizza i risultati in un calendario settimanale
+- "calendar_day": visualizza i risultati in un calendario giornaliero
+
+Per le visualizzazioni di tipo calendario, preferibilmente usa dati da cal_schema.events, che include:
+- title: il titolo dell'evento
+- start_date: quando inizia l'evento
+- end_date: quando finisce l'evento
+- category_id: riferimento alla categoria dell'evento
+- description: descrizione dell'evento
 
 IMPORTANTE: La tua risposta DEVE essere in formato JSON valido. Non aggiungere alcun testo prima o dopo il JSON. 
 Rispondi SOLO con il seguente formato JSON:
@@ -115,7 +184,7 @@ Rispondi SOLO con il seguente formato JSON:
   "query": "la query SQL da eseguire",
   "title": "un titolo descrittivo per la visualizzazione",
   "description": "breve descrizione del risultato",
-  "visualization_type": "tipo di visualizzazione consigliata (table, bar_chart, line_chart, pie_chart)"
+  "visualization_type": "tipo di visualizzazione consigliata (table, bar_chart, line_chart, pie_chart, calendar_month, calendar_week, calendar_day)"
 }}}}
 """
 
@@ -136,9 +205,14 @@ IMPORTANTE:
 1. Il template deve utilizzare la sintassi Jinja2 per iterare sui dati e mostrare le informazioni
 2. Il template deve fare riferimento al foglio di stile "{{ static_url }}css/visualizations.css"
 3. Il template deve includere lo script "{{ static_url }}js/visualizations.js"
+
 4. Per grafici, utilizza Chart.js v3.x o superiori caricato da CDN
-5. Crea un template ottimizzato per il tipo di visualizzazione richiesto ({visualization_type})
-6. I dati saranno passati al template con le seguenti variabili:
+5. Per visualizzazioni calendario, usa FullCalendar v5.x e includi ENTRAMBI questi script:
+   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.js"></script>
+   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.css">
+
+6. Crea un template ottimizzato per il tipo di visualizzazione richiesto ({visualization_type})
+7. I dati saranno passati al template con le seguenti variabili:
    - title: titolo della visualizzazione
    - description: descrizione della visualizzazione
    - data: lista di oggetti con i dati
@@ -147,17 +221,29 @@ IMPORTANTE:
    - table_id: un ID univoco per la tabella
    - needs_pagination: booleano che indica se è necessaria la paginazione
 
-7. Se stai creando una tabella:
+8. Se stai creando una tabella:
    - Assegna alla tabella un ID univoco: id="data-table-{{{{ table_id }}}}"
    - Dopo la tabella aggiungi questo codice:
      {{% if needs_pagination %}}
      <div class="pagination-container" data-table-id="data-table-{{{{ table_id }}}}" data-page-size="10"></div>
      {{% endif %}}
 
+9. Per le visualizzazioni di tipo calendario (calendar_month, calendar_week, calendar_day):
+9.1. Usa FullCalendar con la configurazione appropriata:
+     - Per calendar_month: initialView: 'dayGridMonth'
+     - Per calendar_week: initialView: 'timeGridWeek'
+     - Per calendar_day: initialView: 'timeGridDay'
+9.2. I dati dovranno essere convertiti in formato evento con questi campi (FullCalendar format):
+     - title: nome dell'evento
+     - start: quando inizia l'evento (formato ISO)
+     - end: quando finisce l'evento (opzionale)
+     - color: colore dell'evento (mappa da categoria)
+	 - extendedProps: {{ description: dettagli aggiuntivi }}	
+9.3. Aggiungi controlli per navigare tra date e visualizzazioni
+9.4. Assicurati di avere un'intestazione chiara con il titolo della visualizzazione
+
 ATTENZIONE: Genera SOLAMENTE il codice HTML grezzo del template Jinja2, senza alcun delimitatore di codice come ```html o ```. 
 Il tuo output verrà utilizzato direttamente come template HTML, quindi NON includere assolutamente tag markdown o altri formati di codice.
-
-Se il tipo di visualizzazione è un grafico (bar_chart, line_chart, pie_chart, ecc.), assicurati di includere il codice JavaScript necessario per inizializzare il grafico con Chart.js.
 """
 
 visualization_prompt = ChatPromptTemplate.from_template(visualization_template)
@@ -333,65 +419,71 @@ def save_visualization(title, description, template_id, data_json, original_quer
 
 # Funzione per eseguire una query SQL
 def execute_query(query):
-	try:
-		conn = get_db_connection()
-		cursor = conn.cursor()
-		
-		# Imposta lo schema di ricerca
-		cursor.execute("SET search_path TO chat_schema")
-		
-		# Assicurati che la query sia sicura (questa è una verifica base)
-		if not query.strip().upper().startswith(("SELECT", "WITH")):
-			raise Exception("Solo le query SELECT sono supportate per sicurezza")
-		
-		print(f"DEBUG - Esecuzione query: {query}")
-		
-		# Esegui la query
-		cursor.execute(query)
-		
-		# Ottieni i risultati
-		if cursor.description:
-			results = cursor.fetchall()
-			column_names = [desc[0] for desc in cursor.description]
-			
-			# Verifica se abbiamo ottenuto risultati
-			if len(results) == 0:
-				print("DEBUG - La query non ha restituito risultati")
-		else:
-			results = [{"affected_rows": cursor.rowcount}]
-			column_names = ["affected_rows"]
-		
-		cursor.close()
-		conn.close()
-		return results, column_names
-	except Exception as e:
-		print(f"ERRORE nell'esecuzione della query: {e}")
-		
-		# Query diagnostica
-		try:
-			conn = get_db_connection()
-			cursor = conn.cursor()
-			
-			# Verifica lo schema corrente
-			cursor.execute("SELECT current_schema()")
-			current_schema = cursor.fetchone()[0]
-			print(f"Schema corrente: {current_schema}")
-			
-			# Verifica l'esistenza delle tabelle
-			cursor.execute("""
-				SELECT table_name 
-				FROM information_schema.tables 
-				WHERE table_schema = 'chat_schema'
-			""")
-			tables = [row[0] for row in cursor.fetchall()]
-			print(f"Tabelle in chat_schema: {tables}")
-			
-			cursor.close()
-			conn.close()
-		except Exception as diag_error:
-			print(f"Errore nel diagnosticare: {diag_error}")
-		
-		return None, None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Determina lo schema in base alla query (usa una regex semplice per identificare riferimenti a cal_schema)
+        if "cal_schema." in query or "FROM cal_schema" in query or "JOIN cal_schema" in query:
+            # Imposta lo schema di ricerca a entrambi
+            cursor.execute("SET search_path TO chat_schema, cal_schema")
+        else:
+            # Usa solo lo schema chat come prima
+            cursor.execute("SET search_path TO chat_schema")
+        
+        # Assicurati che la query sia sicura (questa è una verifica base)
+        if not query.strip().upper().startswith(("SELECT", "WITH")):
+            raise Exception("Solo le query SELECT sono supportate per sicurezza")
+        
+        print(f"DEBUG - Esecuzione query: {query}")
+        
+        # Esegui la query
+        cursor.execute(query)
+        
+        # Ottieni i risultati
+        if cursor.description:
+            results = cursor.fetchall()
+            column_names = [desc[0] for desc in cursor.description]
+            
+            # Verifica se abbiamo ottenuto risultati
+            if len(results) == 0:
+                print("DEBUG - La query non ha restituito risultati")
+        else:
+            results = [{"affected_rows": cursor.rowcount}]
+            column_names = ["affected_rows"]
+        
+        cursor.close()
+        conn.close()
+        return results, column_names
+    except Exception as e:
+        print(f"ERRORE nell'esecuzione della query: {e}")
+        
+        # Query diagnostica
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            # Verifica lo schema corrente
+            cursor.execute("SELECT current_schema()")
+            current_schema = cursor.fetchone()[0]
+            print(f"Schema corrente: {current_schema}")
+            
+            # Verifica l'esistenza delle tabelle in entrambi gli schemi
+            for schema in ['chat_schema', 'cal_schema']:
+                cursor.execute(f"""
+                    SELECT table_name 
+                    FROM information_schema.tables 
+                    WHERE table_schema = '{schema}'
+                """)
+                tables = [row[0] for row in cursor.fetchall()]
+                print(f"Tabelle in {schema}: {tables}")
+            
+            cursor.close()
+            conn.close()
+        except Exception as diag_error:
+            print(f"Errore nel diagnosticare: {diag_error}")
+        
+        return None, None
 
 # Funzione per salvare la cronologia delle query
 def save_query_history(user_input, intent_data, query, success, error_message="", viz_id=None, execution_time=0, result_count=0):
