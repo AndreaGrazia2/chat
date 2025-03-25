@@ -1,6 +1,6 @@
 import os
 import logging
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from common.config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, DATABASE_URL, CAL_SCHEMA
@@ -23,12 +23,16 @@ else:
 logger.info(f"DATABASE_URL: {'Presente' if DATABASE_URL else 'Non impostato'}")
 logger.info(f"Usando ENGINE_URL: {ENGINE_URL.split('@')[0].replace(DB_PASSWORD, '***')}@{ENGINE_URL.split('@')[1]}")
 
-# Crea il motore SQLAlchemy con lo schema specificato
-engine = create_engine(ENGINE_URL, connect_args={"options": f"-csearch_path={DB_SCHEMA}"})
-
 try:
-    # Crea il motore SQLAlchemy con lo schema specificato
-    engine = create_engine(ENGINE_URL, connect_args={"options": f"-csearch_path={DB_SCHEMA}"})
+    # Crea il motore SQLAlchemy senza specificare search_path nelle opzioni di connessione
+    engine = create_engine(ENGINE_URL)
+    
+    # Imposta lo schema dopo la connessione mediante un event listener
+    @event.listens_for(engine, "connect")
+    def set_search_path(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute(f"SET search_path TO {DB_SCHEMA}, public")
+        cursor.close()
     
     # Crea una factory di sessioni
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
