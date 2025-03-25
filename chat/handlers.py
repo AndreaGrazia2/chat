@@ -314,7 +314,7 @@ def register_handlers(socketio):
                     'fileData': file_data,
                     'replyTo': reply_to,
                     'forwardedFrom': None,
-                    'metadata': msg.metadata or {},
+                    'message_metadata': msg.message_metadata or {},
                     'edited': msg.edited,
                     'editedAt': msg.edited_at.isoformat() if msg.edited_at else None,
                     'isOwn': msg.user_id == 1  # Assume current user is ID 1
@@ -463,7 +463,7 @@ def register_handlers(socketio):
                     'fileData': msg.file_data,
                     'replyTo': reply_to,
                     'forwardedFrom': forwarded_from,
-                    'metadata': msg.metadata or {},
+                    'message_metadata': msg.message_metadata or {},
                     'edited': msg.edited,
                     'editedAt': msg.edited_at.isoformat() if msg.edited_at else None,
                     'isOwn': msg.user_id == 1  # Assume current user is ID 1
@@ -573,7 +573,7 @@ def register_handlers(socketio):
                 'fileData': file_data,
                 'replyTo': None,  # Would need to fetch reply details
                 'forwardedFrom': None,  # Would need to fetch forwarded details
-                'metadata': message_data.get('metadata'),
+                'message_metadata': message_data.get('message_metadata'),
                 'edited': False,
                 'editedAt': None,
                 'isOwn': True,  # Mark as own message for sender
@@ -675,7 +675,7 @@ def register_handlers(socketio):
                 message_type=message_data.get('type', 'normal'),
                 file_data=message_data.get('fileData'),
                 forwarded_from_id=forwarded_from_id,
-                metadata=message_data.get('metadata', {})
+                message_metadata=message_data.get('message_metadata', {})
             )
             db.add(new_message)
             db.commit()
@@ -701,7 +701,7 @@ def register_handlers(socketio):
                 'fileData': message_data.get('fileData'),
                 'replyTo': None,  # Would need to fetch reply details
                 'forwardedFrom': None,  # Would need to fetch forwarded details
-                'metadata': message_data.get('metadata', {}),
+                'message_metadata': message_data.get('message_metadata', {}),
                 'edited': False,
                 'editedAt': None,
                 'isOwn': True,
@@ -788,7 +788,7 @@ def register_handlers(socketio):
                         'fileData': None,
                         'replyTo': reply_to,  # Includiamo l'oggetto reply completo
                         'forwardedFrom': None,
-                        'metadata': {},
+                        'message_metadata': {},
                         'edited': False,
                         'editedAt': None,
                         'isOwn': False

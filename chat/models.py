@@ -3,7 +3,7 @@ Modelli SQLAlchemy per il modulo chat.
 """
 import json
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, Boolean, DateTime, ForeignKey, Text, JSON
+from sqlalchemy import Column, String, Integer, Boolean, DateTime, ForeignKey, Text, JSON, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -82,7 +82,7 @@ class Message(Base):
     message_type = Column(String(50), default="normal")
     file_data = Column(JSON)
     forwarded_from_id = Column(Integer, ForeignKey("messages.id", ondelete="SET NULL"))
-    metadata = Column(JSON)
+    message_metadata = Column("metadata", JSON)
     edited = Column(Boolean, default=False)
     edited_at = Column(DateTime)
     created_at = Column(DateTime, server_default=func.now())
@@ -128,7 +128,7 @@ class Message(Base):
             "fileData": self.file_data,
             "replyTo": reply_to_dict,
             "forwardedFrom": forwarded_from_dict,
-            "metadata": self.metadata or {},
+            "message_metadata": self.message_metadata or {},
             "edited": self.edited,
             "editedAt": self.edited_at.isoformat() if self.edited_at else None,
             "isOwn": False  # Deve essere impostato dal chiamante

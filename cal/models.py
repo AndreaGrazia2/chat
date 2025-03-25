@@ -98,11 +98,12 @@ class Event(Base, TimestampMixin):
     is_public = Column(Boolean, default=False)
     color = Column(String(7))
     
-    # Relazioni
+    # Relazioni (mantieni queste)
     user = relationship("User", back_populates="events")
     category = relationship("Category", back_populates="events")
     attendees = relationship("EventAttendee", back_populates="event")
-    tags = relationship("Tag", secondary="event_tags", back_populates="events")
+    # RIMUOVI questa riga: 
+    # tags = relationship("Tag", secondary="event_tags", back_populates="events")
     reminders = relationship("Reminder", back_populates="event")
     
     # Constraint per validare che end_date sia successiva a start_date
@@ -169,8 +170,8 @@ class Tag(Base, TimestampMixin):
     color = Column(String(7))
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
     
-    # Relazioni
-    events = relationship("Event", secondary="event_tags", back_populates="tags")
+    # RIMUOVI questa riga:
+    # events = relationship("Event", secondary="event_tags", back_populates="tags")
     user = relationship("User")
     
     def __repr__(self):
@@ -263,3 +264,7 @@ class UserPreference(Base):
             "language": self.language,
             "timezone": self.timezone
         }
+
+# Setup delle relazioni circolari - usa __table__ anziché la stringa
+Event.tags = relationship("Tag", secondary=EventTag.__table__, back_populates="events")
+Tag.events = relationship("Event", secondary=EventTag.__table__, back_populates="tags")    

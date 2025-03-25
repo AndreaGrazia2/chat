@@ -138,7 +138,7 @@ def get_channel_messages(channel_name):
                         'fileData': msg.file_data,
                         'replyTo': reply_to,
                         'forwardedFrom': None,  # Si potrebbe espandere anche questo se necessario
-                        'metadata': msg.metadata or {},
+                        'message_metadata': msg.message_metadata or {},
                         'edited': msg.edited,
                         'editedAt': msg.edited_at.isoformat() if msg.edited_at else None,
                         'isOwn': msg.user_id == 1
@@ -292,7 +292,7 @@ def get_dm_messages(user_id):
                     'fileData': msg.file_data,
                     'replyTo': reply_to,
                     'forwardedFrom': forwarded_from,
-                    'metadata': msg.metadata or {},
+                    'message_metadata': msg.message_metadata or {},
                     'edited': msg.edited,
                     'editedAt': msg.edited_at.isoformat() if msg.edited_at else None,
                     'isOwn': msg.user_id == 1  # Assume current user is ID 1
