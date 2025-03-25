@@ -10,13 +10,18 @@ logger = logging.getLogger(__name__)
 def get_db_connection():
     """Crea una connessione al database"""
     try:
-        connection = psycopg2.connect(
-            host=DB_HOST,
-            port=DB_PORT,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD
-        )
+        # Controlla se è presente una stringa di connessione completa
+        if DATABASE_URL:
+            connection = psycopg2.connect(DATABASE_URL)
+        else:
+            # Altrimenti usa i parametri separati
+            connection = psycopg2.connect(
+                host=DB_HOST,
+                port=DB_PORT,
+                database=DB_NAME,
+                user=DB_USER,
+                password=DB_PASSWORD
+            )
         connection.autocommit = False
         return connection
     except Exception as e:

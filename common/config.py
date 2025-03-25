@@ -25,6 +25,8 @@ FLASK_ENV = os.getenv('FLASK_ENV', 'production' if not DEBUG else 'development')
 # Porta su cui eseguire l'applicazione
 PORT = int(os.getenv('PORT', 5000))
 
+DATABASE_URL = os.getenv('DATABASE_URL', '')
+
 # Database
 DB_HOST = os.getenv('DB_HOST', 'localhost')
 DB_PORT = os.getenv('DB_PORT', '5432')

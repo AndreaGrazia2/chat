@@ -15,9 +15,14 @@ DB_SCHEMA = CAL_SCHEMA
 # Costruisci la stringa di connessione
 DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
+if DATABASE_URL:
+    ENGINE_URL = DATABASE_URL
+else:
+    ENGINE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+
 try:
     # Crea il motore SQLAlchemy con lo schema specificato
-    engine = create_engine(DATABASE_URL, connect_args={"options": f"-csearch_path={DB_SCHEMA}"})
+    engine = create_engine(ENGINE_URL, connect_args={"options": f"-csearch_path={DB_SCHEMA}"})
     
     # Crea una factory di sessioni
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
