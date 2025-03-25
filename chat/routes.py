@@ -5,6 +5,10 @@ from common.db.connection import get_db_cursor
 import json
 from datetime import datetime
 
+from chat.database import get_db
+from chat.models import User
+from sqlalchemy.orm import Session
+
 # Custom JSON encoder to handle special types
 class CustomJSONEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -395,19 +399,13 @@ def get_dm_messages(user_id):
 def get_users():
     """Get all users"""
     try:
-        with get_db_cursor() as cursor:
-            cursor.execute("SELECT * FROM chat_schema.users ORDER BY display_name")
-            users = cursor.fetchall()
+        db = next(get_db())  # Ottiene la sessione del database
         
-        user_list = []
-        for user in users:
-            user_list.append({
-                "id": user['id'],
-                "username": user['username'],
-                "displayName": user['display_name'],
-                "avatarUrl": user['avatar_url'],
-                "status": user['status']
-            })
+        # Query ORM
+        users = db.query(User).order_by(User.display_name).all()
+        
+        # Usa il metodo to_dict dal modello
+        user_list = [user.to_dict() for user in users]
         
         return jsonify(user_list)
     except Exception as e:

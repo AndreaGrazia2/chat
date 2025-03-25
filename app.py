@@ -39,6 +39,11 @@ common_static = Blueprint('common_static', __name__,
 # Registra il blueprint degli elementi statici comuni
 app.register_blueprint(common_static)
 
+# Inizializza gli schemi del database
+from common.db.init_db import initialize_chat_schema, initialize_cal_schema
+initialize_chat_schema()
+initialize_cal_schema()
+
 # Aggiungi i template comuni al percorso di ricerca di Jinja
 app.jinja_loader.searchpath.append(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), 'common/templates')
