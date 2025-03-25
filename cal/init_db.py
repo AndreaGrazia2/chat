@@ -3,7 +3,7 @@ import sys
 import logging
 import sqlalchemy
 from sqlalchemy import text
-from dotenv import load_dotenv
+from common.config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
 
 # Configura il logging
 logging.basicConfig(level=logging.INFO)
@@ -11,18 +11,7 @@ logger = logging.getLogger(__name__)
 
 # Funzione per inizializzare il database
 def init_db():
-    # Carica le variabili d'ambiente dal file .env (solo in ambiente locale)
-    # In produzione su Render, le variabili d'ambiente sono configurate nella piattaforma
-    if os.path.exists('.env'):
-        load_dotenv()
-    
     # Configurazione del database
-    DB_HOST = os.getenv("DB_HOST", "localhost")
-    DB_PORT = os.getenv("DB_PORT", "5432")
-    DB_NAME = os.getenv("DB_NAME", "agent_db")
-    DB_USER = os.getenv("DB_USER", "postgres")
-    DB_PASSWORD = os.getenv("DB_PASSWORD", "")
-
     # Costruisci la stringa di connessione
     DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     
@@ -74,4 +63,3 @@ def init_db():
 
 if __name__ == "__main__":
     success = init_db()
-    sys.exit(0 if success else 1)

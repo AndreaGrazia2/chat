@@ -1,10 +1,10 @@
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from contextlib import contextmanager
-from ..config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, DB_SCHEMA
+from common.config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
 
-def get_db_connection():
-    """Crea una connessione al database"""
+def get_db_connection(schema="chat_schema"):
+    """Crea una connessione al database con lo schema specificato"""
     connection = psycopg2.connect(
         host=DB_HOST,
         port=DB_PORT,
@@ -16,15 +16,15 @@ def get_db_connection():
     return connection
 
 @contextmanager
-def get_db_cursor(commit=False):
-    """Context manager per ottenere un cursore DB"""
+def get_db_cursor(commit=False, schema="chat_schema"):
+    """Context manager per ottenere un cursore DB con lo schema specificato"""
     connection = None
     try:
         connection = get_db_connection()
         # Usa RealDictCursor per avere i risultati come dizionari
         cursor = connection.cursor(cursor_factory=RealDictCursor)
         # Imposta lo schema corretto
-        cursor.execute(f"SET search_path TO {DB_SCHEMA}, public")
+        cursor.execute(f"SET search_path TO {schema}, public")
         
         yield cursor
         

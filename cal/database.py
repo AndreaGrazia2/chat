@@ -1,26 +1,16 @@
 import os
+import logging
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from dotenv import load_dotenv
-import logging
+from common.config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
 
 # Configura il logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Carica le variabili d'ambiente dal file .env (solo in ambiente locale)
-# In produzione su Render, le variabili d'ambiente sono configurate nella piattaforma
-if os.path.exists('.env'):
-    load_dotenv()
-
-# Configurazione del database
-DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_PORT = os.getenv("DB_PORT", "5432")
-DB_NAME = os.getenv("DB_NAME", "agent_db")
-DB_USER = os.getenv("DB_USER", "postgres")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "")
-DB_SCHEMA = "cal_schema"  # Schema fisso per il modulo calendario
+# Schema fisso per il modulo calendario
+DB_SCHEMA = "cal_schema"
 
 # Costruisci la stringa di connessione
 DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
