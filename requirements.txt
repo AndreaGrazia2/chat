@@ -5,7 +5,6 @@ requests
 gunicorn
 gevent
 gevent-websocket
-psycopg2-binary
 langchain
 langchain-community
 jinja2
