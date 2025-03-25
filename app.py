@@ -40,9 +40,10 @@ common_static = Blueprint('common_static', __name__,
 app.register_blueprint(common_static)
 
 # Inizializza gli schemi del database
-from common.db.init_db import initialize_chat_schema, initialize_cal_schema
-initialize_chat_schema()
-initialize_cal_schema()
+import logging
+logger = logging.getLogger(__name__)
+logger.info("L'inizializzazione automatica del database è disabilitata")
+
 
 # Aggiungi i template comuni al percorso di ricerca di Jinja
 app.jinja_loader.searchpath.append(
