@@ -103,32 +103,3 @@ def ensure_schema_exists(engine, schema_name):
         else:
             logger.info(f"Schema {schema_name} già esistente")
 
-# Funzioni di compatibilità retroattiva (opzionali)
-# Queste funzioni mantengono la stessa interfaccia delle funzioni originali
-# ma usano internamente SQLAlchemy invece di psycopg2
-
-def get_chat_db_session():
-    """
-    Helper per ottenere una sessione SQLAlchemy per lo schema chat.
-    
-    Yields:
-        Session: Sessione SQLAlchemy per lo schema chat
-    """
-    engine = get_engine(schema=CHAT_SCHEMA)
-    ensure_schema_exists(engine, CHAT_SCHEMA)
-    session_factory = create_session_factory(engine)
-    with get_db_session(session_factory) as session:
-        yield session
-
-def get_cal_db_session():
-    """
-    Helper per ottenere una sessione SQLAlchemy per lo schema calendar.
-    
-    Yields:
-        Session: Sessione SQLAlchemy per lo schema calendar
-    """
-    engine = get_engine(schema=CAL_SCHEMA)
-    ensure_schema_exists(engine, CAL_SCHEMA)
-    session_factory = create_session_factory(engine)
-    with get_db_session(session_factory) as session:
-        yield session
