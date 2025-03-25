@@ -10,11 +10,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Schema fisso per il modulo calendario - usando la variabile centralizzata
-DB_SCHEMA = "cal_schema"  # Definito direttamente qui invece di importarlo
+DB_SCHEMA = CAL_SCHEMA  # Definito direttamente qui invece di importarlo
 
 # Costruisci la stringa di connessione
-DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-
 if DATABASE_URL:
     ENGINE_URL = DATABASE_URL
 else:
