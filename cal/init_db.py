@@ -3,7 +3,7 @@ import sys
 import logging
 import sqlalchemy
 from sqlalchemy import text
-from common.config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
+from common.config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, CAL_SCHEMA
 
 # Configura il logging
 logging.basicConfig(level=logging.INFO)
@@ -11,6 +11,9 @@ logger = logging.getLogger(__name__)
 
 # Funzione per inizializzare il database
 def init_db():
+    # Schema fisso per il modulo calendario - usando la variabile centralizzata
+    DB_SCHEMA = CAL_SCHEMA
+    
     # Configurazione del database
     # Costruisci la stringa di connessione
     DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
@@ -21,15 +24,15 @@ def init_db():
         
         # Controlla se lo schema cal_schema esiste
         with engine.connect() as conn:
-            result = conn.execute(text("SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'cal_schema'"))
+            result = conn.execute(text(f"SELECT schema_name FROM information_schema.schemata WHERE schema_name = '{DB_SCHEMA}'"))
             schema_exists = result.fetchone() is not None
             
             if not schema_exists:
-                logger.info("Lo schema 'cal_schema' non esiste, creando...")
-                conn.execute(text("CREATE SCHEMA cal_schema"))
+                logger.info(f"Lo schema '{DB_SCHEMA}' non esiste, creando...")
+                conn.execute(text(f"CREATE SCHEMA {DB_SCHEMA}"))
                 conn.commit()
             else:
-                logger.info("Lo schema 'cal_schema' esiste già")
+                logger.info(f"Lo schema '{DB_SCHEMA}' esiste già")
         
         # Leggi il file SQL con lo schema del database
         schema_path = os.path.join(os.path.dirname(__file__), 'schema.sql')
@@ -38,7 +41,7 @@ def init_db():
         
         # Esegui lo script SQL
         with engine.connect() as conn:
-            conn.execute(text("SET search_path TO cal_schema, public"))
+            conn.execute(text(f"SET search_path TO {DB_SCHEMA}, public"))
             
             # Dividi lo script in singole istruzioni SQL
             # Nota: questo è un approccio semplificato, potrebbe non funzionare con SQL complessi
@@ -63,3 +66,4 @@ def init_db():
 
 if __name__ == "__main__":
     success = init_db()
+    sys.exit(0 if success else 1)

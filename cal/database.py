@@ -3,14 +3,14 @@ import logging
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from common.config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
+from common.config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, CAL_SCHEMA
 
 # Configura il logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Schema fisso per il modulo calendario
-DB_SCHEMA = "cal_schema"
+# Schema fisso per il modulo calendario - usando la variabile centralizzata
+DB_SCHEMA = CAL_SCHEMA
 
 # Costruisci la stringa di connessione
 DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
