@@ -1,5 +1,17 @@
-from flask import Blueprint, render_template, jsonify, request, send_from_directory
-from common.config import SECRET_KEY
+from datetime import datetime, timedelta
+import uuid
+import logging
+from flask import Blueprint, render_template, jsonify, request, send_from_directory, current_app
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import and_, or_, func
+from dateutil import parser
+
+from .database import SessionLocal
+from .models import Event, User, Category
+
+# Configura il logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Crea un Blueprint per il calendario
 calendar_bp = Blueprint('calendar', __name__, 
@@ -20,27 +32,253 @@ def serve_static(filename):
 # API routes per il calendario
 @calendar_bp.route('/api/events')
 def get_events():
-    """API per ottenere gli eventi del calendario"""
-    # Implementazione futura: recuperare gli eventi da un database
-    # Per ora restituiamo un array vuoto
-    return jsonify([])
+    """API per ottenere gli eventi del calendario
+    
+    Parametri:
+    - start: Data di inizio (formato ISO)
+    - end: Data di fine (formato ISO)
+    - user_id: ID dell'utente (opzionale, default a un ID di test)
+    """
+    try:
+        # Ottieni i parametri dalla query
+        start_str = request.args.get('start', None)
+        end_str = request.args.get('end', None)
+        user_id_str = request.args.get('user_id', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11')  # ID utente demo
+        
+        # Converte le stringhe in date
+        start_date = parser.parse(start_str) if start_str else (datetime.now() - timedelta(days=30))
+        end_date = parser.parse(end_str) if end_str else (datetime.now() + timedelta(days=60))
+        user_id = uuid.UUID(user_id_str)
+        
+        # Ottieni una sessione del database
+        db = SessionLocal()
+        
+        # Query per gli eventi dell'utente nel periodo specificato
+        events = db.query(Event).filter(
+            and_(
+                Event.user_id == user_id,
+                or_(
+                    and_(Event.start_date >= start_date, Event.start_date <= end_date),
+                    and_(Event.end_date >= start_date, Event.end_date <= end_date),
+                    and_(Event.start_date <= start_date, Event.end_date >= end_date)
+                )
+            )
+        ).all()
+        
+        # Converte gli eventi in dizionari
+        events_list = [
+            {
+                "id": str(event.id),
+                "titolo": event.title,
+                "descrizione": event.description,
+                "dataInizio": event.start_date.isoformat(),
+                "dataFine": event.end_date.isoformat(),
+                "categoria": event.category_id,
+                "location": event.location,
+                "creato": event.created_at.isoformat() if event.created_at else None,
+                "modificato": event.updated_at.isoformat() if event.updated_at else None
+            } for event in events
+        ]
+        
+        db.close()
+        return jsonify(events_list)
+    
+    except Exception as e:
+        logger.error(f"Errore durante il recupero degli eventi: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 @calendar_bp.route('/api/events', methods=['POST'])
 def create_event():
     """API per creare un nuovo evento"""
-    event_data = request.json
-    # Implementazione futura: salvare l'evento in un database
-    return jsonify({"success": True, "message": "Evento creato con successo"})
+    try:
+        # Ottieni i dati dalla richiesta
+        event_data = request.json
+        user_id_str = event_data.get('user_id', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11')  # ID utente demo
+        
+        # Ottieni una sessione del database
+        db = SessionLocal()
+        
+        # Converte le stringhe di data in oggetti datetime
+        start_date = parser.parse(event_data.get('dataInizio'))
+        end_date = parser.parse(event_data.get('dataFine'))
+        
+        # Crea un nuovo evento nel database
+        new_event = Event(
+            user_id=uuid.UUID(user_id_str),
+            title=event_data.get('titolo'),
+            description=event_data.get('descrizione', ''),
+            start_date=start_date,
+            end_date=end_date,
+            category_id=event_data.get('categoria', 'personal'),
+            location=event_data.get('location', ''),
+            all_day=event_data.get('allDay', False),
+            is_recurring=event_data.get('isRecurring', False),
+            recurrence_rule=event_data.get('recurrenceRule', None),
+            is_public=event_data.get('isPublic', False),
+            color=event_data.get('color', None)
+        )
+        
+        db.add(new_event)
+        db.commit()
+        
+        # Aggiorna l'oggetto per ottenere l'ID generato
+        db.refresh(new_event)
+        
+        # Prepara la risposta
+        response = {
+            "success": True,
+            "message": "Evento creato con successo",
+            "id": str(new_event.id),
+            "evento": {
+                "id": str(new_event.id),
+                "titolo": new_event.title,
+                "descrizione": new_event.description,
+                "dataInizio": new_event.start_date.isoformat(),
+                "dataFine": new_event.end_date.isoformat(),
+                "categoria": new_event.category_id,
+                "location": new_event.location,
+                "creato": new_event.created_at.isoformat() if new_event.created_at else None
+            }
+        }
+        
+        db.close()
+        return jsonify(response)
+    
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Errore nel database durante la creazione dell'evento: {str(e)}")
+        return jsonify({"success": False, "message": f"Errore nel database: {str(e)}"}), 500
+    
+    except Exception as e:
+        logger.error(f"Errore durante la creazione dell'evento: {str(e)}")
+        return jsonify({"success": False, "message": f"Errore: {str(e)}"}), 500
 
 @calendar_bp.route('/api/events/<event_id>', methods=['PUT'])
 def update_event(event_id):
     """API per aggiornare un evento esistente"""
-    event_data = request.json
-    # Implementazione futura: aggiornare l'evento nel database
-    return jsonify({"success": True, "message": "Evento aggiornato con successo"})
+    try:
+        # Ottieni i dati dalla richiesta
+        event_data = request.json
+        
+        # Ottieni una sessione del database
+        db = SessionLocal()
+        
+        # Trova l'evento nel database
+        event = db.query(Event).filter(Event.id == uuid.UUID(event_id)).first()
+        
+        if not event:
+            db.close()
+            return jsonify({"success": False, "message": "Evento non trovato"}), 404
+        
+        # Aggiorna i campi dell'evento
+        if 'titolo' in event_data:
+            event.title = event_data['titolo']
+        if 'descrizione' in event_data:
+            event.description = event_data['descrizione']
+        if 'dataInizio' in event_data:
+            event.start_date = parser.parse(event_data['dataInizio'])
+        if 'dataFine' in event_data:
+            event.end_date = parser.parse(event_data['dataFine'])
+        if 'categoria' in event_data:
+            event.category_id = event_data['categoria']
+        if 'location' in event_data:
+            event.location = event_data['location']
+        if 'allDay' in event_data:
+            event.all_day = event_data['allDay']
+        if 'isRecurring' in event_data:
+            event.is_recurring = event_data['isRecurring']
+        if 'recurrenceRule' in event_data:
+            event.recurrence_rule = event_data['recurrenceRule']
+        if 'isPublic' in event_data:
+            event.is_public = event_data['isPublic']
+        if 'color' in event_data:
+            event.color = event_data['color']
+        
+        db.commit()
+        
+        # Prepara la risposta
+        response = {
+            "success": True,
+            "message": "Evento aggiornato con successo",
+            "id": str(event.id),
+            "evento": {
+                "id": str(event.id),
+                "titolo": event.title,
+                "descrizione": event.description,
+                "dataInizio": event.start_date.isoformat(),
+                "dataFine": event.end_date.isoformat(),
+                "categoria": event.category_id,
+                "location": event.location,
+                "modificato": event.updated_at.isoformat() if event.updated_at else None
+            }
+        }
+        
+        db.close()
+        return jsonify(response)
+    
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Errore nel database durante l'aggiornamento dell'evento: {str(e)}")
+        return jsonify({"success": False, "message": f"Errore nel database: {str(e)}"}), 500
+    
+    except Exception as e:
+        logger.error(f"Errore durante l'aggiornamento dell'evento: {str(e)}")
+        return jsonify({"success": False, "message": f"Errore: {str(e)}"}), 500
 
 @calendar_bp.route('/api/events/<event_id>', methods=['DELETE'])
 def delete_event(event_id):
     """API per eliminare un evento"""
-    # Implementazione futura: eliminare l'evento dal database
-    return jsonify({"success": True, "message": "Evento eliminato con successo"})
+    try:
+        # Ottieni una sessione del database
+        db = SessionLocal()
+        
+        # Trova l'evento nel database
+        event = db.query(Event).filter(Event.id == uuid.UUID(event_id)).first()
+        
+        if not event:
+            db.close()
+            return jsonify({"success": False, "message": "Evento non trovato"}), 404
+        
+        # Elimina l'evento
+        db.delete(event)
+        db.commit()
+        
+        db.close()
+        return jsonify({"success": True, "message": "Evento eliminato con successo"})
+    
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Errore nel database durante l'eliminazione dell'evento: {str(e)}")
+        return jsonify({"success": False, "message": f"Errore nel database: {str(e)}"}), 500
+    
+    except Exception as e:
+        logger.error(f"Errore durante l'eliminazione dell'evento: {str(e)}")
+        return jsonify({"success": False, "message": f"Errore: {str(e)}"}), 500
+
+@calendar_bp.route('/api/categories')
+def get_categories():
+    """API per ottenere le categorie di eventi"""
+    try:
+        # Ottieni una sessione del database
+        db = SessionLocal()
+        
+        # Query per tutte le categorie
+        categories = db.query(Category).all()
+        
+        # Converte le categorie in dizionari
+        categories_list = [
+            {
+                "id": category.id,
+                "nome": category.name,
+                "colore": category.color,
+                "icona": category.icon,
+                "descrizione": category.description
+            } for category in categories
+        ]
+        
+        db.close()
+        return jsonify(categories_list)
+    
+    except Exception as e:
+        logger.error(f"Errore durante il recupero delle categorie: {str(e)}")
+        return jsonify({"error": str(e)}), 500

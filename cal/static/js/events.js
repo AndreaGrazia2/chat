@@ -32,9 +32,6 @@ const categorie = {
  * @returns {Object} - Evento creato
  */
 function aggiungiEvento(evento) {
-    // Genera un ID univoco
-    const id = generateUniqueId();
-    
     // Utilizza la funzione helper centralizzata per gestire le date
     let dataInizio = createDate(evento.dataInizio);
     let dataFine = createDate(evento.dataFine);
@@ -45,34 +42,58 @@ function aggiungiEvento(evento) {
     
     // Crea l'oggetto evento
     const nuovoEvento = {
-        id,
         titolo: evento.titolo,
         descrizione: evento.descrizione || '',
         dataInizio: dataInizio,
         dataFine: dataFine,
         categoria: evento.categoria || 'personal',
-        creato: createDate(new Date()),
+        location: evento.location || '',
         isNew: true // Aggiungiamo questo flag per l'animazione
     };
     
-    // Aggiungi l'evento all'array
-    eventi.push(nuovoEvento);
-    
-    // Salva gli eventi
-    salvaEventi();
-    
-    // Aggiorna la vista del calendario
-    aggiornaViste();
-    
-    // Rimuoviamo il flag isNew dopo un po' di tempo
-    setTimeout(() => {
-        const index = eventi.findIndex(e => e.id === id);
-        if (index !== -1) {
-            eventi[index].isNew = false;
+    // Utilizziamo l'API per salvare l'evento
+    return fetch('/cal/api/events', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(nuovoEvento)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Errore durante la creazione dell\'evento');
         }
-    }, 2000);
-    
-    return id;
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Aggiunge l'ID generato dal server all'evento
+            nuovoEvento.id = data.id;
+            
+            // Aggiungi l'evento all'array locale
+            eventi.push(nuovoEvento);
+            
+            // Aggiorna la vista del calendario
+            aggiornaViste();
+            
+            // Rimuoviamo il flag isNew dopo un po' di tempo
+            setTimeout(() => {
+                const index = eventi.findIndex(e => e.id === data.id);
+                if (index !== -1) {
+                    eventi[index].isNew = false;
+                }
+            }, 2000);
+            
+            return data.id;
+        } else {
+            throw new Error(data.message || 'Errore sconosciuto durante la creazione dell\'evento');
+        }
+    })
+    .catch(error => {
+        console.error('Errore durante la creazione dell\'evento:', error);
+        mostraNotifica('Errore durante la creazione dell\'evento: ' + error.message, 'error');
+        return null;
+    });
 }
 
 /**
@@ -82,35 +103,64 @@ function aggiungiEvento(evento) {
  * @returns {Object|null} - Evento modificato o null se non trovato
  */
 function modificaEvento(eventoId, datiAggiornati) {
-    // Trova l'indice dell'evento
+    // Trova l'indice dell'evento nell'array locale
     const indice = eventi.findIndex(e => e.id === eventoId);
 
     if (vistaAttuale === 'day' && datiAggiornati.dataInizio) {
         dataSelezionata = createDate(datiAggiornati.dataInizio);
     }
 
-    // Se l'evento non esiste, restituisci null
-    if (indice === -1) return null;
+    // Se l'evento non esiste localmente, restituisci null
+    if (indice === -1) return Promise.resolve(null);
     
-    // Aggiorna i dati dell'evento
-    const eventoAggiornato = {
-        ...eventi[indice],
+    // Prepara i dati da inviare all'API
+    const datiPerAPI = {
         ...datiAggiornati,
-        dataInizio: datiAggiornati.dataInizio ? createDate(datiAggiornati.dataInizio) : eventi[indice].dataInizio,
-        dataFine: datiAggiornati.dataFine ? createDate(datiAggiornati.dataFine) : eventi[indice].dataFine,
-        modificato: createDate(new Date())
+        dataInizio: datiAggiornati.dataInizio ? createDate(datiAggiornati.dataInizio).toISOString() : eventi[indice].dataInizio.toISOString(),
+        dataFine: datiAggiornati.dataFine ? createDate(datiAggiornati.dataFine).toISOString() : eventi[indice].dataFine.toISOString(),
     };
     
-    // Sostituisci l'evento nell'array
-    eventi[indice] = eventoAggiornato;
-    
-    // Salva gli eventi
-    salvaEventi();
-    
-    // Aggiorna le viste
-    aggiornaViste();
-    
-    return eventoAggiornato;
+    // Utilizziamo l'API per aggiornare l'evento
+    return fetch(`/cal/api/events/${eventoId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(datiPerAPI)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Errore durante l\'aggiornamento dell\'evento');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Aggiorna l'evento nell'array locale
+            const eventoAggiornato = {
+                ...eventi[indice],
+                ...datiAggiornati,
+                dataInizio: datiAggiornati.dataInizio ? createDate(datiAggiornati.dataInizio) : eventi[indice].dataInizio,
+                dataFine: datiAggiornati.dataFine ? createDate(datiAggiornati.dataFine) : eventi[indice].dataFine,
+                modificato: new Date()
+            };
+            
+            // Sostituisci l'evento nell'array
+            eventi[indice] = eventoAggiornato;
+            
+            // Aggiorna le viste
+            aggiornaViste();
+            
+            return eventoAggiornato;
+        } else {
+            throw new Error(data.message || 'Errore sconosciuto durante l\'aggiornamento dell\'evento');
+        }
+    })
+    .catch(error => {
+        console.error('Errore durante l\'aggiornamento dell\'evento:', error);
+        mostraNotifica('Errore durante l\'aggiornamento dell\'evento: ' + error.message, 'error');
+        return null;
+    });
 }
 
 /**
@@ -119,22 +169,40 @@ function modificaEvento(eventoId, datiAggiornati) {
  * @returns {boolean} - True se l'evento è stato eliminato, false altrimenti
  */
 function eliminaEvento(id) {
-    // Trova l'indice dell'evento
+    // Trova l'indice dell'evento nell'array locale
     const indice = eventi.findIndex(e => e.id === id);
     
-    // Se l'evento non esiste, restituisci false
-    if (indice === -1) return false;
+    // Se l'evento non esiste localmente, restituisci false
+    if (indice === -1) return Promise.resolve(false);
     
-    // Rimuovi l'evento dall'array
-    eventi.splice(indice, 1);
-    
-    // Salva gli eventi
-    salvaEventi();
-    
-    // Aggiorna le viste
-    aggiornaViste();
-    
-    return true;
+    // Utilizziamo l'API per eliminare l'evento
+    return fetch(`/cal/api/events/${id}`, {
+        method: 'DELETE'
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Errore durante l\'eliminazione dell\'evento');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Rimuovi l'evento dall'array locale
+            eventi.splice(indice, 1);
+            
+            // Aggiorna le viste
+            aggiornaViste();
+            
+            return true;
+        } else {
+            throw new Error(data.message || 'Errore sconosciuto durante l\'eliminazione dell\'evento');
+        }
+    })
+    .catch(error => {
+        console.error('Errore durante l\'eliminazione dell\'evento:', error);
+        mostraNotifica('Errore durante l\'eliminazione dell\'evento: ' + error.message, 'error');
+        return false;
+    });
 }
 
 /**
@@ -184,40 +252,69 @@ function getEventiSettimana(dataInizio, dataFine) {
 }
 
 /**
- * Salva gli eventi (in localStorage per demo, in un'implementazione reale si userebbe un'API)
- */
-function salvaEventi() {
-    localStorage.setItem('eventi', JSON.stringify(eventi));
-    // In un'implementazione reale, qui si chiamerebbe l'API per salvare gli eventi
-}
-
-/**
  * Carica gli eventi dal localStorage (o da un'API in un'implementazione reale)
  */
 // Carica gli eventi dal localStorage
 function caricaEventi() {
-    const eventiSalvati = localStorage.getItem('eventi');
-    if (eventiSalvati) {
-        eventi = JSON.parse(eventiSalvati);
-        
-        // Converti le stringhe di data in oggetti Date usando la funzione centralizzata
-        eventi.forEach(evento => {
-            evento.dataInizio = createDate(evento.dataInizio);
-            evento.dataFine = createDate(evento.dataFine);
-            if (evento.creato) evento.creato = createDate(evento.creato);
-            if (evento.modificato) evento.modificato = createDate(evento.modificato);
+    // Calcola l'intervallo di date per cui caricare gli eventi (da 1 mese fa a 2 mesi dopo)
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - 1);
+    
+    const endDate = new Date();
+    endDate.setMonth(endDate.getMonth() + 2);
+    
+    // Formatta le date in ISO
+    const startIso = startDate.toISOString();
+    const endIso = endDate.toISOString();
+    
+    // Carica gli eventi dall'API
+    fetch(`/cal/api/events?start=${encodeURIComponent(startIso)}&end=${encodeURIComponent(endIso)}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Errore durante il caricamento degli eventi');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Pulisce l'array degli eventi
+            eventi = [];
+            
+            // Converti le stringhe di data in oggetti Date
+            data.forEach(evento => {
+                eventi.push({
+                    id: evento.id,
+                    titolo: evento.titolo,
+                    descrizione: evento.descrizione || '',
+                    dataInizio: createDate(evento.dataInizio),
+                    dataFine: createDate(evento.dataFine),
+                    categoria: evento.categoria,
+                    location: evento.location || '',
+                    creato: evento.creato ? createDate(evento.creato) : null,
+                    modificato: evento.modificato ? createDate(evento.modificato) : null
+                });
+            });
+            
+            console.log(`Caricati ${eventi.length} eventi dall'API`);
+            
+            // Aggiorna le viste
+            aggiornaViste();
+        })
+        .catch(error => {
+            console.error('Errore durante il caricamento degli eventi:', error);
+            mostraNotifica('Errore durante il caricamento degli eventi. Generazione eventi di test...', 'warning');
+            
+            // Se c'è un errore, genera eventi di test
+            generaEventiTest(15);
         });
-        console.log(`Caricati ${eventi.length} eventi dal localStorage`);
-    } else {
-        // Se non ci sono eventi, genera eventi di test
-        console.log('Nessun evento trovato, genero eventi di test...');
-        generaEventiTest(15);
-    }
 }
 
 /**
  * events.js - Miglioramento della funzione generaEventiTest
  * Genera eventi di test più realistici e meglio distribuiti
+ */
+/**
+ * Genera eventi di test
+ * @param {number} numEventi - Numero di eventi da generare
  */
 function generaEventiTest(numEventi = 15) {
     const categorie = ['work', 'personal', 'family', 'health'];
@@ -330,14 +427,15 @@ function generaEventiTest(numEventi = 15) {
             descrizione,
             dataInizio,
             dataFine,
-            categoria
+            categoria,
+            location: ''
         });
     }
     
-    // Salva gli eventi
-    salvaEventi();
-    
     console.log(`Generati ${numEventi} eventi di test realistici`);
+    
+    // Aggiorna le viste
+    aggiornaViste();
 }
 
 // Funzione per salvare le modifiche agli eventi
