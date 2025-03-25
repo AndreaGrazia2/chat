@@ -22,6 +22,14 @@ print(f"ENV: {os.getenv('FLASK_ENV', 'Not set')}")
 print(f"DEBUG: {os.getenv('DEBUG', 'False')}")
 print(f"Database host: {os.getenv('DB_HOST', 'Not set')}")
 
+# Dopo il caricamento delle variabili d'ambiente
+print(f"DATABASE_URL: {'***PRESENTE***' if os.getenv('DATABASE_URL') else 'NON IMPOSTATO'}")
+if os.getenv('DATABASE_URL'):
+    # Mostra solo i primi 20 caratteri per sicurezza
+    print(f"DATABASE_URL inizia con: {os.getenv('DATABASE_URL')[:20]}...")
+print(f"DB_HOST: {os.getenv('DB_HOST', 'Non impostato')}")
+print(f"DB_PORT: {os.getenv('DB_PORT', 'Non impostato')}")
+print(f"DB_NAME: {os.getenv('DB_NAME', 'Non impostato')}")
 # Importa la funzione per creare l'app
 from app import create_app
 

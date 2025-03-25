@@ -18,13 +18,7 @@ services:
         sync: false
       - key: OPENROUTER_API_KEY
         sync: false
-      - key: DB_HOST
+      - key: DATABASE_URL
         sync: false
-      - key: DB_PORT
-        sync: false
-      - key: DB_NAME
-        sync: false
-      - key: DB_USER
-        sync: false
-      - key: DB_PASSWORD
-        sync: false
+      - key: ENV
+        synnc: false

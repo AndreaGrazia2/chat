@@ -25,6 +25,10 @@ if DATABASE_URL:
 else:
     ENGINE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
+# Prima di creare il motore SQLAlchemy
+logger.info(f"DATABASE_URL: {'Presente' if DATABASE_URL else 'Non impostato'}")
+logger.info(f"Usando ENGINE_URL: {ENGINE_URL.split('@')[0].replace(DB_PASSWORD, '***')}@{ENGINE_URL.split('@')[1]}")
+
 # Crea il motore SQLAlchemy con lo schema specificato
 engine = create_engine(ENGINE_URL, connect_args={"options": f"-csearch_path={DB_SCHEMA}"})
 
