@@ -277,8 +277,12 @@ INSERT INTO messages (conversation_id, user_id, text, message_type, created_at) 
 (7, 1, 'Ok, teniamolo presente. Comunque oggi in meeting discuteremo del budget.', 'normal', '2024-03-01 11:50:00'),
 (7, 2, 'Perfetto, grazie per l''aggiornamento.', 'normal', '2024-03-01 11:55:00'),
 (7, 1, 'Mi puoi mandare l''ultimo rapporto di avanzamento?', 'normal', '2024-03-01 14:30:00'),
-(7, 2, 'Certo, te lo invio subito.', 'normal', '2024-03-01 14:35:00'),
-(7, 2, 'Ecco il report settimanale.', 'file', '{"name":"Report_Settimanale","ext":"pdf","size":"1.2 MB","icon":"fa-file-pdf"}', '2024-03-01 14:40:00'),
+(7, 2, 'Certo, te lo invio subito.', 'normal', '2024-03-01 14:35:00');
+
+INSERT INTO messages (conversation_id, user_id, text, message_type, file_data, created_at) VALUES
+(7, 2, 'Ecco il report settimanale.', 'file', '{"name":"Report_Settimanale","ext":"pdf","size":"1.2 MB","icon":"fa-file-pdf"}', '2024-03-01 14:40:00');
+
+INSERT INTO messages (conversation_id, user_id, text, message_type, created_at) VALUES
 (7, 1, 'Grazie! Lo leggerò oggi pomeriggio.', 'normal', '2024-03-01 14:45:00'),
 (7, 1, 'Che ne pensi della nuova feature proposta dal team marketing?', 'normal', '2024-03-02 09:30:00'),
 (7, 2, 'Interessante, ma richiederà più tempo di quanto stimato.', 'normal', '2024-03-02 09:35:00'),
@@ -304,7 +308,9 @@ INSERT INTO messages (conversation_id, user_id, text, message_type, file_data, c
 (8, 3, 'Ho seguito la guida di stile che abbiamo definito.', 'normal', NULL, '2024-03-01 15:50:00'),
 (8, 1, 'Hai pensato anche alla versione mobile?', 'normal', NULL, '2024-03-02 11:30:00'),
 (8, 3, 'Sì, ho preparato anche quelle. Te le mostro.', 'normal', NULL, '2024-03-02 11:35:00'),
-(8, 3, 'Ecco i mockup mobile.', 'file', '{"name":"Mobile_UI","ext":"psd","size":"4.2 MB","icon":"fa-file-image"}', '2024-03-02 11:40:00'),
+(8, 3, 'Ecco i mockup mobile.', 'file', '{"name":"Mobile_UI","ext":"psd","size":"4.2 MB","icon":"fa-file-image"}', '2024-03-02 11:40:00');
+
+INSERT INTO messages (conversation_id, user_id, text, message_type, created_at) VALUES
 (8, 1, 'Ottimo lavoro! Sono molto responsive.', 'normal', NULL, '2024-03-02 11:45:00'),
 (8, 3, 'Grazie! Ho pensato all''usabilità su diverse dimensioni di schermo.', 'normal', NULL, '2024-03-02 11:50:00'),
 (8, 1, 'Per la prossima versione, pensiamo anche al dark mode?', 'normal', NULL, '2024-03-03 09:30:00'),

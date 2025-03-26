@@ -23,7 +23,12 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'dev_key')
 FLASK_ENV = os.getenv('FLASK_ENV', 'production' if not DEBUG else 'development')
 
 # Porta su cui eseguire l'applicazione
-PORT = int(os.getenv('PORT', 5000))
+# Porta su cui eseguire l'applicazione
+if FLASK_ENV == 'development':
+    PORT = int(os.getenv('PORT', 5000))
+else:
+    # In produzione (come su Render) usa la porta fornita dall'ambiente o 10000 come fallback
+    PORT = int(os.getenv('PORT', 10000))
 
 DATABASE_URL = os.getenv('DATABASE_URL', '')
 
