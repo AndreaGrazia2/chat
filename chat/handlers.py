@@ -23,7 +23,7 @@ def get_db():
     with get_db_session(SessionLocal) as db:
         yield db
 
-def check_calendar_intent(message_text, user_id, conversation_id, room):
+def check_calendar_intent(message_text, user_id, conversation_id, room, original_message_id=None):
     """
     Verifica se il messaggio contiene un intento calendario e invia la risposta appropriata
     
@@ -32,6 +32,7 @@ def check_calendar_intent(message_text, user_id, conversation_id, room):
         user_id: ID dell'utente destinatario (per messaggi diretti)
         conversation_id: ID della conversazione
         room: Room Socket.IO per emettere eventi
+        original_message_id: ID del messaggio a cui rispondere
         
     Returns:
         bool: True se è un intento calendario, False altrimenti
@@ -49,12 +50,13 @@ def check_calendar_intent(message_text, user_id, conversation_id, room):
                 # Ottieni dati utente AI dal database (useremo John Doe come mittente)
                 ai_user = db.query(User).filter(User.id == 2).first()
                 
-                # Crea messaggio di risposta
+                # Crea messaggio di risposta con reply_to_id
                 ai_message = Message(
                     conversation_id=conversation_id,
                     user_id=2,  # John Doe
                     text=response,
-                    message_type='normal'
+                    message_type='normal',
+                    reply_to_id=original_message_id  # Imposta il riferimento al messaggio originale
                 )
                 db.add(ai_message)
                 db.commit()
@@ -62,6 +64,27 @@ def check_calendar_intent(message_text, user_id, conversation_id, room):
                 
                 ai_message_id = ai_message.id
                 ai_created_at = ai_message.created_at
+                
+                # Se abbiamo un messaggio originale, recuperiamo i suoi dettagli per il reply
+                reply_to = None
+                if original_message_id:
+                    original_message = db.query(Message).get(original_message_id)
+                    if original_message:
+                        original_user = db.query(User).get(original_message.user_id)
+                        if original_user:
+                            reply_to = {
+                                'id': original_message.id,
+                                'text': original_message.text,
+                                'message_type': original_message.message_type,
+                                'fileData': original_message.file_data,
+                                'user': {
+                                    'id': original_user.id,
+                                    'username': original_user.username,
+                                    'displayName': original_user.display_name,
+                                    'avatarUrl': original_user.avatar_url,
+                                    'status': original_user.status
+                                }
+                            }
                 
                 # Invia la risposta dell'agente
                 ai_message_dict = {
@@ -78,7 +101,7 @@ def check_calendar_intent(message_text, user_id, conversation_id, room):
                     'timestamp': ai_created_at.isoformat(),
                     'type': 'normal',
                     'fileData': None,
-                    'replyTo': None,
+                    'replyTo': reply_to,  # Aggiungi il riferimento al messaggio originale
                     'forwardedFrom': None,
                     'message_metadata': {'calendar_intent': True},  # Aggiungiamo un flag per tracciare
                     'edited': False,
@@ -96,6 +119,10 @@ def check_calendar_intent(message_text, user_id, conversation_id, room):
                         'data': agent_result.get('result', {})
                     }
                     
+                    # Log dettagliato dell'evento prima dell'emissione
+                    logger.info(f"Emitting calendarEvent: {calendar_event}")
+                    print(f"[CALENDAR_DEBUG] Broadcasting calendarEvent: {calendar_event}")
+
                     # Broadcast a tutti i client - assicura che anche il calendario sia aggiornato
                     emit('calendarEvent', calendar_event, broadcast=True)
             
@@ -668,7 +695,7 @@ def register_handlers(socketio):
             
             # NUOVA IMPLEMENTAZIONE: Verifica intento calendario per messaggi di canale
             message_text = message_data.get('text', '')
-            check_calendar_intent(message_text, None, conversation_id, room)
+            check_calendar_intent(message_text, None, conversation_id, room, message_id)
 
     @socketio.on('directMessage')
     def handle_direct_message(data):
@@ -801,7 +828,7 @@ def register_handlers(socketio):
             
             # NUOVA IMPLEMENTAZIONE: Verifica intento calendario
             message_text = message_data.get('text', '')
-            is_calendar_intent = check_calendar_intent(message_text, user_id, conversation_id, room)
+            is_calendar_intent = check_calendar_intent(message_text, user_id, conversation_id, room, message_id)
             
             # Se il messaggio è per John Doe E NON è un intento calendario, procedi con l'inferenza standard
             if int(user_id) == 2 and not is_calendar_intent:

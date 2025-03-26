@@ -47,20 +47,58 @@ function initDomCache() {
 }
 
 function initSocketListeners() {
-    // Verifica se Socket.IO è disponibile (potrebbe essere già caricato dalla chat)
+    console.log('[CALENDAR_DEBUG] initSocketListeners() called');
+    
+    // Verifica se Socket.IO è disponibile
     if (typeof io !== 'undefined') {
+        console.log('[CALENDAR_DEBUG] Socket.IO is available');
         const socket = io();
+        
+        // Aggiungi log per verificare la connessione
+        socket.on('connect', function() {
+            console.log('[CALENDAR_DEBUG] Socket.IO connected successfully');
+        });
         
         // Ascolta gli eventi del calendario
         socket.on('calendarEvent', function(data) {
-            console.log('Ricevuto evento calendario:', data);
+            console.log('[CALENDAR_DEBUG] Received calendarEvent:', data);
             
             if (data.type === 'calendar_update') {
-                // Ricarica gli eventi
+                // Stampa più dettagli per debug
+                console.log('[CALENDAR_DEBUG] Action:', data.action);
+                console.log('[CALENDAR_DEBUG] Data:', data.data);
+                
+                // Ricarica eventi - chiama la funzione esistente
+                console.log('[CALENDAR_DEBUG] Calling caricaEventi()');
                 caricaEventi();
                 
-                // Aggiorna le viste
-                aggiornaViste();
+                // Cerca la funzione per aggiornare le viste
+                if (typeof aggiornaViste === 'function') {
+                    console.log('[CALENDAR_DEBUG] Calling aggiornaViste()');
+                    aggiornaViste();
+                } else {
+                    console.error('[CALENDAR_DEBUG] aggiornaViste function not found!');
+                    
+                    // Alternativa 1: aggiornaVista (singolare)
+                    if (typeof aggiornaVista === 'function') {
+                        console.log('[CALENDAR_DEBUG] Calling aggiornaVista() instead');
+                        aggiornaVista();
+                    } 
+                    
+                    // Alternativa 2: inizializzaViste
+                    else if (typeof inizializzaViste === 'function') {
+                        console.log('[CALENDAR_DEBUG] Calling inizializzaViste() instead');
+                        inizializzaViste();
+                    }
+                    
+                    // Ultima risorsa: ricarica la pagina
+                    else {
+                        console.log('[CALENDAR_DEBUG] No update function found, forcing reload');
+                        setTimeout(function() {
+                            location.reload();
+                        }, 1000);
+                    }
+                }
                 
                 // Mostra una notifica
                 let message = '';
@@ -78,9 +116,16 @@ function initSocketListeners() {
                         message = 'Calendario aggiornato';
                 }
                 
-                mostraNotifica(message, 'success');
+                // Usa mostraNotifica se esiste
+                if (typeof mostraNotifica === 'function') {
+                    mostraNotifica(message, 'success');
+                } else {
+                    console.log('[CALENDAR_DEBUG] Notification:', message);
+                }
             }
         });
+    } else {
+        console.error('[CALENDAR_DEBUG] Socket.IO not available!');
     }
 }
 
