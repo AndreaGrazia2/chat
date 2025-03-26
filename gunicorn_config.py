@@ -3,8 +3,10 @@ import gevent.monkey
 gevent.monkey.patch_all()  # Esegui il monkey patching PRIMA dell'importazione di altri moduli
 
 # Configurazione per il server Gunicorn
-bind = "0.0.0.0:" + os.getenv("PORT", "10000")
-workers = 1
+port = int(os.environ.get("PORT", 10000))
+bind = f"0.0.0.0:{port}"
+
+workers = 4
 worker_class = "geventwebsocket.gunicorn.workers.GeventWebSocketWorker"
 timeout = 120
 keepalive = 5

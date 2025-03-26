@@ -114,12 +114,15 @@ if __name__ == '__main__':
     # Registra informazioni di configurazione
     log_config_info()
     
+    # Assicurati che PORT sia un intero
+    port = int(PORT)
+    
     # In modalità sviluppo, usa il server integrato di Flask
     if FLASK_ENV == 'development':
-        print(f"Avvio del server di sviluppo su http://0.0.0.0:{PORT}")
-        socketio.run(app, host='0.0.0.0', port=PORT, debug=DEBUG, use_reloader=False)
+        print(f"Avvio del server di sviluppo su http://0.0.0.0:{port}")
+        socketio.run(app, host='0.0.0.0', port=port, debug=DEBUG, use_reloader=False)
     else:
         # In produzione, il server sarà gestito da Gunicorn
         # Questo codice non verrà eseguito quando si usa Gunicorn
-        print(f"Avvio del server in modalità produzione su http://0.0.0.0:{PORT}")
-        socketio.run(app, host='0.0.0.0', port=PORT, debug=False)
+        print(f"Avvio del server in modalità produzione su http://0.0.0.0:{port}")
+        socketio.run(app, host='0.0.0.0', port=port, debug=False)
