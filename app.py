@@ -5,10 +5,12 @@ import os
 import sys
 from flask import Flask, request, jsonify, redirect, Blueprint
 from flask_socketio import SocketIO
-from dotenv import load_dotenv
 
 # Imposta un limite di ricorsione sicura
 sys.setrecursionlimit(1000)
+
+# Importa la configurazione centralizzata
+from common.config import SECRET_KEY, DEBUG, PORT, FLASK_ENV, log_config_info
 
 # Verifica che gevent-websocket sia installato
 try:
@@ -16,9 +18,6 @@ try:
     print("gevent-websocket è installato correttamente")
 except ImportError:
     print("ERRORE: gevent-websocket non è installato!")
-
-# Carica le variabili d'ambiente
-load_dotenv()
 
 # Importa i blueprint
 from chat.routes import chat_bp
@@ -30,25 +29,32 @@ from chat.handlers import register_handlers
 
 # Crea l'applicazione Flask
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev_key')
+app.config['SECRET_KEY'] = SECRET_KEY
 
-# Create a blueprint for common static files
+# Crea un blueprint per i file statici comuni
 common_static = Blueprint('common_static', __name__, 
                          static_folder=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'common/static'),
                          static_url_path='/common')
 
-# Register the common static blueprint
+# Registra il blueprint degli elementi statici comuni
 app.register_blueprint(common_static)
 
-# Add common templates to Jinja search path
+# Inizializza gli schemi del database
+import logging
+logger = logging.getLogger(__name__)
+logger.info("L'inizializzazione automatica del database è disabilitata")
+
+
+# Aggiungi i template comuni al percorso di ricerca di Jinja
 app.jinja_loader.searchpath.append(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), 'common/templates')
 )
 
-
-# Configura Socket.IO
+# Configura Socket.IO con le impostazioni per una migliore stabilità
 socketio = SocketIO(app, cors_allowed_origins="*",
-                    async_mode='gevent', ping_timeout=60, ping_interval=25)
+                    async_mode='gevent', 
+                    ping_timeout=60, 
+                    ping_interval=25)
 
 # Registra i blueprint
 app.register_blueprint(chat_bp, url_prefix='/chat')
@@ -82,30 +88,38 @@ def index():
     """Reindirizza alla pagina principale della chat"""
     return redirect('/chat/')
 
-# Add this after your Flask app initialization
+# Gestore per le pagine non trovate (404)
 @app.errorhandler(404)
 def page_not_found(e):
-    # Get the requested URL
+    # Ottieni l'URL richiesto
     requested_url = request.url
     
-    # Log the 404 error with just the file path and referrer
+    # Registra l'errore 404 con il percorso del file e il referrer
     print(f"404 Not Found: {requested_url}")
     if request.referrer:
         print(f"Referrer: {request.referrer}")
     
-    # Return the standard 404 response
+    # Restituisci la risposta 404 standard
     return f"404 Not Found: {requested_url}", 404
+
+# Funzione per creare l'applicazione Flask (per Gunicorn)
+def create_app():
+    """Restituisce l'applicazione Flask configurata per Gunicorn"""
+    # Registra informazioni di configurazione
+    log_config_info()
+    return app
 
 # Avvio dell'applicazione
 if __name__ == '__main__':
-    port = int(os.getenv('PORT', 5000))
+    # Registra informazioni di configurazione
+    log_config_info()
     
     # In modalità sviluppo, usa il server integrato di Flask
-    if os.getenv('FLASK_ENV') == 'development':
-        print(f"Avvio del server di sviluppo su http://0.0.0.0:{port}")
-        socketio.run(app, host='0.0.0.0', port=port, debug=True, use_reloader=False)
+    if FLASK_ENV == 'development':
+        print(f"Avvio del server di sviluppo su http://0.0.0.0:{PORT}")
+        socketio.run(app, host='0.0.0.0', port=PORT, debug=DEBUG, use_reloader=False)
     else:
         # In produzione, il server sarà gestito da Gunicorn
         # Questo codice non verrà eseguito quando si usa Gunicorn
-        print(f"Avvio del server in modalità produzione su http://0.0.0.0:{port}")
-        socketio.run(app, host='0.0.0.0', port=port, debug=False)
+        print(f"Avvio del server in modalità produzione su http://0.0.0.0:{PORT}")
+        socketio.run(app, host='0.0.0.0', port=PORT, debug=False)

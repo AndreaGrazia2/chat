@@ -1,39 +1,105 @@
-import psycopg2
-from psycopg2.extras import RealDictCursor
+"""
+Utility di connessione al database basate su SQLAlchemy.
+Sostituisce le vecchie funzioni che utilizzavano psycopg2 con equivalenti SQLAlchemy.
+"""
+import logging
 from contextlib import contextmanager
-from ..config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, DB_SCHEMA
+from sqlalchemy import create_engine, text, event
+from sqlalchemy.orm import sessionmaker
+from common.config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, CHAT_SCHEMA, CAL_SCHEMA, DATABASE_URL
 
-def get_db_connection():
-    """Crea una connessione al database"""
-    connection = psycopg2.connect(
-        host=DB_HOST,
-        port=DB_PORT,
-        database=DB_NAME,
-        user=DB_USER,
-        password=DB_PASSWORD
-    )
-    connection.autocommit = False
-    return connection
+# Configura il logging
+logger = logging.getLogger(__name__)
+
+def get_engine(schema=None):
+    """
+    Crea un motore SQLAlchemy con schema opzionale.
+    
+    Args:
+        schema (str, optional): Nome dello schema da utilizzare
+    
+    Returns:
+        Engine: Motore SQLAlchemy configurato
+    """
+    try:
+        # Costruisci la stringa di connessione
+        if DATABASE_URL:
+            engine_url = DATABASE_URL
+        else:
+            engine_url = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+        
+        # Mostra info di connessione (maschera la password)
+        masked_url = engine_url
+        if DB_PASSWORD:
+            masked_url = engine_url.replace(DB_PASSWORD, "***")
+        logger.info(f"Connessione database: {masked_url}")
+        
+        # Crea il motore SQLAlchemy
+        engine = create_engine(engine_url)
+        
+        # Imposta lo schema se specificato
+        if schema:
+            @event.listens_for(engine, "connect")
+            def set_search_path(dbapi_connection, connection_record):
+                cursor = dbapi_connection.cursor()
+                cursor.execute(f"SET search_path TO {schema}, public")
+                cursor.close()
+        
+        return engine
+    except Exception as e:
+        logger.error(f"Errore nella creazione del motore SQLAlchemy: {str(e)}")
+        raise
+
+def create_session_factory(engine):
+    """
+    Crea una factory di sessioni SQLAlchemy.
+    
+    Args:
+        engine: Motore SQLAlchemy
+    
+    Returns:
+        sessionmaker: Factory di sessioni SQLAlchemy
+    """
+    return sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 @contextmanager
-def get_db_cursor(commit=False):
-    """Context manager per ottenere un cursore DB"""
-    connection = None
+def get_db_session(session_factory):
+    """
+    Context manager per ottenere una sessione del database.
+    
+    Args:
+        session_factory: Factory di sessioni SQLAlchemy
+    
+    Yields:
+        Session: Sessione SQLAlchemy
+    """
+    session = session_factory()
     try:
-        connection = get_db_connection()
-        # Usa RealDictCursor per avere i risultati come dizionari
-        cursor = connection.cursor(cursor_factory=RealDictCursor)
-        # Imposta lo schema corretto
-        cursor.execute(f"SET search_path TO {DB_SCHEMA}, public")
-        
-        yield cursor
-        
-        if commit:
-            connection.commit()
+        yield session
+        session.commit()
     except Exception as e:
-        if connection:
-            connection.rollback()
-        raise e
+        session.rollback()
+        logger.error(f"Errore durante l'operazione sul database: {str(e)}")
+        raise
     finally:
-        if connection:
-            connection.close()
+        session.close()
+
+def ensure_schema_exists(engine, schema_name):
+    """
+    Verifica che lo schema esista e lo crea se necessario.
+    
+    Args:
+        engine: Motore SQLAlchemy
+        schema_name (str): Nome dello schema da verificare/creare
+    """
+    with engine.connect() as conn:
+        result = conn.execute(text(f"SELECT EXISTS(SELECT 1 FROM information_schema.schemata WHERE schema_name = '{schema_name}')"))
+        schema_exists = result.scalar()
+        
+        if not schema_exists:
+            logger.warning(f"Lo schema {schema_name} non esiste! Verrà creato automaticamente.")
+            conn.execute(text(f"CREATE SCHEMA {schema_name}"))
+            conn.commit()
+        else:
+            logger.info(f"Schema {schema_name} già esistente")
+

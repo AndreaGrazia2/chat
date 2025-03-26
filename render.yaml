@@ -8,13 +8,17 @@ services:
     branch: main
     autoDeploy: true    
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn -c gunicorn_config.py app:app
+    startCommand: gunicorn -c gunicorn_config.py wsgi:app
     envVars:
-      - key: ENV
-        value: prod
       - key: FLASK_ENV
         value: production
+      - key: DEBUG
+        value: false
       - key: SECRET_KEY
         sync: false
       - key: OPENROUTER_API_KEY
         sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: ENV
+        value: prod

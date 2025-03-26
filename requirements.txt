@@ -5,8 +5,10 @@ requests
 gunicorn
 gevent
 gevent-websocket
-psycopg2-binary
+sqlalchemy
+alembic
+python-dateutil
+jinja2
 langchain
 langchain-community
-jinja2
-python-dateutil
+psycopg2-binary
