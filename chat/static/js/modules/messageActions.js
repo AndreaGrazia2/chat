@@ -7,7 +7,19 @@ import { sendDirectMessage } from './socket.js'
  * messageActions.js - Actions that can be performed on messages
  */
 
+// Funzione di verifica per ID temporanei
+function isTemporaryId(messageId) {
+    return typeof messageId === 'string' && messageId.startsWith('temp-');
+}
+
 function handleReply(messageId) {
+    // Verifica se il messaggio ha un ID temporaneo
+    if (isTemporaryId(messageId)) {
+        console.log(`Impossibile rispondere a un messaggio in fase di invio (${messageId})`);
+        showNotification('Impossibile rispondere a un messaggio in fase di invio', true);
+        return;
+    }
+
     const message = displayedMessages.find(m => m.id == messageId);
     if (!message) return;
     
@@ -55,6 +67,13 @@ function cancelReply() {
 }
 
 function forwardMessage(messageId) {
+    // Verifica se il messaggio ha un ID temporaneo
+    if (isTemporaryId(messageId)) {
+        console.log(`Impossibile inoltrare un messaggio in fase di invio (${messageId})`);
+        showNotification('Impossibile inoltrare un messaggio in fase di invio', true);
+        return;
+    }
+
     const message = displayedMessages.find(m => m.id == messageId);
     if (!message || !currentlyConnected) return;
     
@@ -82,6 +101,7 @@ function forwardMessage(messageId) {
 }
 
 function copyMessageText(messageId) {
+    // La copia del testo è permessa anche per messaggi temporanei
     const message = displayedMessages.find(m => m.id == messageId);
     if (message) {
         navigator.clipboard.writeText(message.text).then(() => {
@@ -94,6 +114,13 @@ function copyMessageText(messageId) {
 }
 
 function editMessage(messageId) {
+    // Verifica se il messaggio ha un ID temporaneo
+    if (isTemporaryId(messageId)) {
+        console.log(`Impossibile modificare un messaggio in fase di invio (${messageId})`);
+        showNotification('Impossibile modificare un messaggio in fase di invio', true);
+        return;
+    }
+
     const message = displayedMessages.find(m => m.id == messageId);
     if (!message || !message.isOwn) return;
     
@@ -256,6 +283,13 @@ function showConfirmDialog(message, confirmCallback) {
 }
 
 function deleteMessage(messageId) {
+    // Verifica se il messaggio ha un ID temporaneo
+    if (isTemporaryId(messageId)) {
+        console.log(`Impossibile eliminare un messaggio in fase di invio (${messageId})`);
+        showNotification('Impossibile eliminare un messaggio in fase di invio', true);
+        return;
+    }
+
     const messageIndex = displayedMessages.findIndex(m => m.id == messageId);
     if (messageIndex === -1) return;
     

@@ -17,6 +17,11 @@ import { sendMessage } from './chat.js';
  * Contains the main initialization functions for the chat application.
  */
 
+// Funzione di verifica per ID temporanei
+function isTemporaryId(messageId) {
+    return typeof messageId === 'string' && messageId.startsWith('temp-');
+}
+
 function initializeApp() {
     // Setup del failsafe per history lock
     setupHistoryLockFailsafe();
@@ -61,6 +66,12 @@ function setupHistoryLockFailsafe() {
 }
 
 function showContextMenu(x, y, messageId) {
+    // Non mostrare il menu contestuale per messaggi con ID temporaneo
+    if (isTemporaryId(messageId)) {
+        console.log(`Non è possibile mostrare il menu contestuale per un messaggio temporaneo: ${messageId}`);
+        return;
+    }
+    
     const message = displayedMessages.find(m => m.id == messageId);
     if (!message) return;
     
@@ -168,6 +179,15 @@ function setupEventListeners() {
     document.getElementById('contextMenu').addEventListener('click', function(e) {
         const action = e.target.dataset.action;
         const messageId = this.dataset.messageId;
+        
+        // Verifica se il messaggio ha un ID temporaneo
+        if (isTemporaryId(messageId)) {
+            console.log(`Non è possibile eseguire l'azione ${action} su un messaggio temporaneo`);
+            showNotification('Impossibile eseguire questa azione su un messaggio in fase di invio', true);
+            this.style.display = 'none';
+            return;
+        }
+        
         switch (action) {
             case 'reply':
                 handleReply(messageId);
@@ -194,12 +214,28 @@ function setupEventListeners() {
         // Pulsante risposta
         if (e.target.classList.contains('reply-button')) {
             const messageId = e.target.dataset.messageId;
+            
+            // Verifica se è un ID temporaneo
+            if (isTemporaryId(messageId)) {
+                console.log(`Non è possibile rispondere a un messaggio temporaneo: ${messageId}`);
+                showNotification('Impossibile rispondere a un messaggio in fase di invio', true);
+                return;
+            }
+            
             handleReply(messageId);
         }
         
         // Pulsante menu
         if (e.target.classList.contains('menu-button')) {
             const messageId = e.target.dataset.messageId;
+            
+            // Verifica se è un ID temporaneo
+            if (isTemporaryId(messageId)) {
+                console.log(`Non è possibile mostrare il menu per un messaggio temporaneo: ${messageId}`);
+                showNotification('Impossibile eseguire azioni su un messaggio in fase di invio', true);
+                return;
+            }
+            
             const rect = e.target.getBoundingClientRect();
             showContextMenu(rect.right, rect.top, messageId);
             e.stopPropagation();
@@ -279,7 +315,6 @@ function setupEventListeners() {
     });
 }
 
-// Export functions
 // Export functions
 export { 
     initializeApp, 

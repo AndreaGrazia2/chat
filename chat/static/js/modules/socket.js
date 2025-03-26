@@ -1,8 +1,7 @@
 import { updateUnreadBadge}  from './uiNavigation.js';
-import { showNotification}  from './utils.js';
 import { scrollToBottom } from './coreScroll.js';
 import { createMessageElement } from './messageRenderer.js';
-import { formatDate, showLoader, hideLoader } from './utils.js';
+import { showLoader, hideLoader, formatTime, formatDate, linkifyText, showNotification  } from './utils.js';
 
 /**
  * socket.js - Gestione Socket.IO e comunicazione tempo reale
@@ -146,7 +145,6 @@ function handleMessageHistory(history) {
 }
 
 // Funzione per gestire nuovi messaggi
-// Modifica a handleNewMessage() in socket.js
 function handleNewMessage(message) {
     console.log('Nuovo messaggio ricevuto:', message);
 
@@ -158,40 +156,148 @@ function handleNewMessage(message) {
     // Verifica se questo messaggio è un duplicato
     let isDuplicate = false;
     
-    // Verifica se il messaggio esiste già in displayedMessages (controllo per ID)
-    const existingMessage = displayedMessages.find(m => m.id === message.id);
-    if (existingMessage) {
-        isDuplicate = true;
-        console.log('Messaggio duplicato rilevato per ID:', message.id);
-    } else if (message.isOwn || (message.user && message.user.displayName === "You")) {
-        // Se è un messaggio nostro o con nome utente "You", controlla se è un duplicato
-        const recentMessages = displayedMessages.filter(m => {
-            // Verifica il testo del messaggio
-            const textMatch = m.text === message.text;
+    // Controlla se c'è un ID temporaneo associato a questo messaggio
+    const tempId = message.tempId;
+    let replacedTempMessage = false;
+    
+    // Se c'è un tempId, cerca messaggi con quell'ID
+    if (tempId && typeof tempId === 'string' && tempId.startsWith('temp-')) {
+        const tempMessageIndex = displayedMessages.findIndex(m => m.id === tempId);
+        if (tempMessageIndex !== -1) {
+            console.log(`Sostituendo il messaggio temporaneo ${tempId} con l'ID permanente ${message.id}`);
             
-            // Verifica se il messaggio è recente (inviato negli ultimi 5 secondi)
-            const isRecent = new Date() - new Date(m.timestamp) < 5000;
-            
-            // Controlla se è di proprietà dell'utente
-            const isOwnMessage = m.isOwn;
-            
-            return isOwnMessage && textMatch && isRecent;
-        });
-        
-        if (recentMessages.length > 0) {
-            // È un duplicato, aggiorniamo solo lo stato
-            isDuplicate = true;
-            const existingMsg = recentMessages[0];
-            const existingEl = document.querySelector(`.message-container[data-message-id="${existingMsg.id}"]`);
-            
-            if (existingEl) {
-                // Cambiamo icona da orologio a spunta
-                const statusIcon = existingEl.parentElement.querySelector('.timestamp i');
+            // Trova l'elemento DOM con l'ID temporaneo
+            const tempEl = document.querySelector(`.message-container[data-message-id="${tempId}"]`);
+            if (tempEl) {
+                // Aggiorna l'ID nell'attributo data-message-id
+                tempEl.dataset.messageId = message.id;
+                
+                // Aggiorna anche gli attributi dei pulsanti all'interno del messaggio
+                const buttons = tempEl.querySelectorAll('[data-message-id]');
+                buttons.forEach(button => {
+                    button.dataset.messageId = message.id;
+                });
+                
+                // Cambia icona da orologio a spunta
+                const statusIcon = tempEl.parentElement.querySelector('.timestamp i');
                 if (statusIcon) {
                     statusIcon.className = 'fas fa-check';
                     statusIcon.style.opacity = '1';
                 }
-                existingMsg.status = 'sent';
+                
+                // Rimuovi la classe sending-message per attivare le azioni
+                tempEl.classList.remove('sending-message');
+                
+                // Sostituisci la sezione delle azioni se è in stato 'sending'
+                const actionsContainer = tempEl.querySelector('.message-actions.sending');
+                if (actionsContainer) {
+                    const newActions = document.createElement('div');
+                    newActions.className = 'message-actions';
+                    newActions.innerHTML = `
+                        <button class="reply-button" data-message-id="${message.id}">↩️ Reply</button>
+                        <button class="menu-button" data-message-id="${message.id}">⋮</button>
+                    `;
+                    actionsContainer.replaceWith(newActions);
+                }
+                
+                // Aggiorna l'oggetto del messaggio nell'array displayedMessages
+                // con il nuovo ID permanente e stato 'sent'
+                const tempMessage = displayedMessages[tempMessageIndex];
+                tempMessage.id = message.id;
+                tempMessage.status = 'sent';
+                
+                // Marca come già gestito
+                replacedTempMessage = true;
+                isDuplicate = true;
+            }
+        }
+    }
+    
+    // Se non abbiamo già gestito come sostituzione di un messaggio temporaneo,
+    // esegui il controllo duplicati standard
+    if (!replacedTempMessage) {
+        // Verifica se il messaggio esiste già in displayedMessages (controllo per ID)
+        const existingMessage = displayedMessages.find(m => m.id === message.id);
+        if (existingMessage) {
+            isDuplicate = true;
+            console.log('Messaggio duplicato rilevato per ID:', message.id);
+        } else if (message.isOwn || (message.user && message.user.displayName === "You")) {
+            // Se è un messaggio nostro o con nome utente "You", controlla se è un duplicato
+            const recentMessages = displayedMessages.filter(m => {
+                // Verifica il testo del messaggio
+                const textMatch = m.text === message.text;
+                
+                // Verifica se il messaggio è recente (inviato negli ultimi 5 secondi)
+                const isRecent = new Date() - new Date(m.timestamp) < 5000;
+                
+                // Controlla se è di proprietà dell'utente
+                const isOwnMessage = m.isOwn;
+                
+                return isOwnMessage && textMatch && isRecent;
+            });
+            
+            if (recentMessages.length > 0) {
+                // È un duplicato, aggiorniamo solo lo stato
+                isDuplicate = true;
+                const existingMsg = recentMessages[0];
+                
+                // Controlla se l'ID esistente è temporaneo
+                if (typeof existingMsg.id === 'string' && existingMsg.id.startsWith('temp-')) {
+                    const oldId = existingMsg.id;
+                    
+                    // Aggiorna l'ID nell'oggetto messaggio
+                    existingMsg.id = message.id;
+                    existingMsg.status = 'sent';
+                    
+                    // Aggiorna l'ID nell'elemento DOM
+                    const existingEl = document.querySelector(`.message-container[data-message-id="${oldId}"]`);
+                    if (existingEl) {
+                        // Aggiorna l'attributo data-message-id
+                        existingEl.dataset.messageId = message.id;
+                        
+                        // Aggiorna anche gli attributi dei pulsanti all'interno del messaggio
+                        const buttons = existingEl.querySelectorAll('[data-message-id]');
+                        buttons.forEach(button => {
+                            button.dataset.messageId = message.id;
+                        });
+                        
+                        // Cambiamo icona da orologio a spunta
+                        const statusIcon = existingEl.parentElement.querySelector('.timestamp i');
+                        if (statusIcon) {
+                            statusIcon.className = 'fas fa-check';
+                            statusIcon.style.opacity = '1';
+                        }
+                        
+                        // Rimuovi la classe sending-message e aggiungi le azioni se necessario
+                        existingEl.classList.remove('sending-message');
+                        
+                        // Sostituisci la sezione delle azioni se è in stato 'sending'
+                        const actionsContainer = existingEl.querySelector('.message-actions.sending');
+                        if (actionsContainer) {
+                            const newActions = document.createElement('div');
+                            newActions.className = 'message-actions';
+                            newActions.innerHTML = `
+                                <button class="reply-button" data-message-id="${message.id}">↩️ Reply</button>
+                                <button class="menu-button" data-message-id="${message.id}">⋮</button>
+                            `;
+                            actionsContainer.replaceWith(newActions);
+                        }
+                        
+                        console.log(`Aggiornato ID del messaggio da ${oldId} a ${message.id}`);
+                    }
+                } else {
+                    // Se non è temporaneo, aggiorna solo lo stato
+                    const existingEl = document.querySelector(`.message-container[data-message-id="${existingMsg.id}"]`);
+                    if (existingEl) {
+                        // Cambiamo icona da orologio a spunta
+                        const statusIcon = existingEl.parentElement.querySelector('.timestamp i');
+                        if (statusIcon) {
+                            statusIcon.className = 'fas fa-check';
+                            statusIcon.style.opacity = '1';
+                        }
+                        existingMsg.status = 'sent';
+                    }
+                }
             }
         }
     }

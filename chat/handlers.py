@@ -906,6 +906,34 @@ def register_handlers(socketio):
         
         print(f"Received delete request for message ID: {message_id}")
         
+        # Verifica se si tratta di un ID temporaneo
+        if isinstance(message_id, str) and message_id.startswith('temp-'):
+            print(f"Detected temporary ID: {message_id}, skipping database operation")
+            
+            # Per i messaggi temporanei, inviamo direttamente la conferma di eliminazione
+            # poiché non sono ancora stati salvati nel database
+            room = None
+            if channel_name:
+                room = f"channel:{channel_name}"
+            elif user_id:
+                room = f"dm:{user_id}"
+            
+            if room:
+                emit('messageDeleted', {
+                    'messageId': message_id,
+                    'conversationId': None  # Non abbiamo un conversationId per messaggi temporanei
+                }, room=room)
+                print(f"Notified deletion of temporary message {message_id}")
+            return
+        
+        # Solo se l'ID è un intero valido, procediamo con la cancellazione dal database
+        try:
+            # Assicuriamoci che message_id sia un intero
+            message_id = int(message_id)
+        except (ValueError, TypeError):
+            print(f"Error: Invalid message ID format: {message_id}")
+            return
+        
         with get_db() as db:
             try:
                 # Prima verifica che il messaggio appartenga all'utente (sicurezza)
@@ -959,8 +987,6 @@ def register_handlers(socketio):
             except Exception as e:
                 db.rollback()
                 print(f"Error during message deletion: {str(e)}")
-            finally:
-                db.close()
 
     @socketio.on('editMessage')
     def handle_edit_message(data):
@@ -975,6 +1001,20 @@ def register_handlers(socketio):
             return
         
         print(f"Received edit request for message ID: {message_id}")
+        
+        # Verifica se si tratta di un ID temporaneo
+        if isinstance(message_id, str) and message_id.startswith('temp-'):
+            print(f"Cannot edit temporary message with ID: {message_id}")
+            # Non possiamo modificare un messaggio che non è ancora stato salvato nel database
+            return
+        
+        # Solo se l'ID è un intero valido, procediamo con la modifica nel database
+        try:
+            # Assicuriamoci che message_id sia un intero
+            message_id = int(message_id)
+        except (ValueError, TypeError):
+            print(f"Error: Invalid message ID format: {message_id}")
+            return
         
         with get_db() as db:
             try:
@@ -1035,8 +1075,6 @@ def register_handlers(socketio):
             except Exception as e:
                 db.rollback()
                 print(f"Error during message edit: {str(e)}")
-            finally:
-                db.close()
 
 def ensure_channel_conversations_exist():
     """Ensure that all channels have corresponding conversations in the database"""
