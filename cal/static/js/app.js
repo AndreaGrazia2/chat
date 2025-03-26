@@ -46,6 +46,44 @@ function initDomCache() {
     domCache.eventCategory = document.getElementById('eventCategory');
 }
 
+function initSocketListeners() {
+    // Verifica se Socket.IO è disponibile (potrebbe essere già caricato dalla chat)
+    if (typeof io !== 'undefined') {
+        const socket = io();
+        
+        // Ascolta gli eventi del calendario
+        socket.on('calendarEvent', function(data) {
+            console.log('Ricevuto evento calendario:', data);
+            
+            if (data.type === 'calendar_update') {
+                // Ricarica gli eventi
+                caricaEventi();
+                
+                // Aggiorna le viste
+                aggiornaViste();
+                
+                // Mostra una notifica
+                let message = '';
+                switch (data.action) {
+                    case 'create':
+                        message = 'Nuovo evento creato';
+                        break;
+                    case 'update':
+                        message = 'Evento aggiornato';
+                        break;
+                    case 'delete':
+                        message = 'Evento eliminato';
+                        break;
+                    default:
+                        message = 'Calendario aggiornato';
+                }
+                
+                mostraNotifica(message, 'success');
+            }
+        });
+    }
+}
+
 /**
  * Inizializza l'applicazione
  */
@@ -74,7 +112,10 @@ function initApp() {
     if (typeof enableDragAndDrop === 'function') {
         enableDragAndDrop();
     }
-    
+
+    // Inizializza i listener di Socket.IO
+    initSocketListeners();
+
     // Collega i gestori di click agli eventi
     if (typeof attachEventClickHandlers === 'function') {
         attachEventClickHandlers();

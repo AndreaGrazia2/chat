@@ -71,13 +71,13 @@ function sendMessage() {
         };
         
         // Se è un messaggio diretto E l'utente è John Doe (ID 2), mostra l'indicatore di digitazione
-        if (isDirectMessage && currentUser && currentUser.id === 2) {
+        //if (isDirectMessage && currentUser && currentUser.id === 2) {
             const typingIndicator = document.getElementById('typingIndicator');
             const typingText = document.getElementById('typingText');
-            typingText.textContent = `${currentUser.displayName} is typing...`;
+            typingText.textContent = `${currentUser.displayName} sta scrivendo...`;
             typingIndicator.style.display = 'flex';
             typingIndicator.dataset.startTime = Date.now(); // Aggiungi timestamp
-        }
+        //}
         
         // Invia al server (se connesso)
         if (currentlyConnected) {

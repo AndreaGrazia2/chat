@@ -12,6 +12,7 @@ from chat.models import User, Conversation, Message, ConversationParticipant, Ch
 from chat.database import SessionLocal
 from common.config import OPENROUTER_API_KEY, OPENROUTER_API_URL
 from chat.routes import safe_json, CustomJSONEncoder 
+from agent.chat_agents_middleware import process_message_through_agents, should_generate_assistant_response, get_assistant_response
 
 from contextlib import contextmanager
 from common.db.connection import get_db_session
@@ -21,6 +22,86 @@ def get_db():
     """Context manager per ottenere una sessione del database"""
     with get_db_session(SessionLocal) as db:
         yield db
+
+def check_calendar_intent(message_text, user_id, conversation_id, room):
+    """
+    Verifica se il messaggio contiene un intento calendario e invia la risposta appropriata
+    
+    Args:
+        message_text: Testo del messaggio
+        user_id: ID dell'utente destinatario (per messaggi diretti)
+        conversation_id: ID della conversazione
+        room: Room Socket.IO per emettere eventi
+        
+    Returns:
+        bool: True se è un intento calendario, False altrimenti
+    """
+    # Processa il messaggio attraverso gli agenti
+    agent_result = process_message_through_agents(message_text)
+    
+    # Verifica se è un intento calendario
+    if should_generate_assistant_response(agent_result):
+        # Ottieni la risposta dell'agente
+        response = get_assistant_response(agent_result)
+        
+        if response:
+            with get_db() as db:
+                # Ottieni dati utente AI dal database (useremo John Doe come mittente)
+                ai_user = db.query(User).filter(User.id == 2).first()
+                
+                # Crea messaggio di risposta
+                ai_message = Message(
+                    conversation_id=conversation_id,
+                    user_id=2,  # John Doe
+                    text=response,
+                    message_type='normal'
+                )
+                db.add(ai_message)
+                db.commit()
+                db.refresh(ai_message)
+                
+                ai_message_id = ai_message.id
+                ai_created_at = ai_message.created_at
+                
+                # Invia la risposta dell'agente
+                ai_message_dict = {
+                    'id': ai_message_id,
+                    'conversationId': conversation_id,
+                    'user': {
+                        'id': ai_user.id,
+                        'username': ai_user.username,
+                        'displayName': ai_user.display_name,
+                        'avatarUrl': ai_user.avatar_url,
+                        'status': ai_user.status
+                    },
+                    'text': response,
+                    'timestamp': ai_created_at.isoformat(),
+                    'type': 'normal',
+                    'fileData': None,
+                    'replyTo': None,
+                    'forwardedFrom': None,
+                    'message_metadata': {'calendar_intent': True},  # Aggiungiamo un flag per tracciare
+                    'edited': False,
+                    'editedAt': None,
+                    'isOwn': False
+                }
+                
+                emit('newMessage', prepare_for_socketio(ai_message_dict), room=room)
+                
+                # Emetti un evento Socket.IO per notificare il frontend del calendario
+                if agent_result.get('action') in ['create', 'update', 'delete', 'view']:
+                    calendar_event = {
+                        'type': 'calendar_update',
+                        'action': agent_result.get('action'),
+                        'data': agent_result.get('result', {})
+                    }
+                    
+                    # Broadcast a tutti i client - assicura che anche il calendario sia aggiornato
+                    emit('calendarEvent', calendar_event, broadcast=True)
+            
+            return True
+    
+    return False
 
 def prepare_for_socketio(data):
     """Prepara i dati per essere inviati tramite Socket.IO"""
@@ -584,6 +665,10 @@ def register_handlers(socketio):
             room = f"channel:{channel_name}"
             emit('newMessage', prepare_for_socketio(message_dict), room=room)
             print(f"Broadcasted message {message_id} to room {room}")
+            
+            # NUOVA IMPLEMENTAZIONE: Verifica intento calendario per messaggi di canale
+            message_text = message_data.get('text', '')
+            check_calendar_intent(message_text, None, conversation_id, room)
 
     @socketio.on('directMessage')
     def handle_direct_message(data):
@@ -713,10 +798,14 @@ def register_handlers(socketio):
 
             # Send message to everyone in the room (including sender)
             emit('newMessage', prepare_for_socketio(message_dict), room=room)
-
-            # If message is for AI Assistant (user_id=2), generate a response
-            if int(user_id) == 2:
-                # Show typing indicator
+            
+            # NUOVA IMPLEMENTAZIONE: Verifica intento calendario
+            message_text = message_data.get('text', '')
+            is_calendar_intent = check_calendar_intent(message_text, user_id, conversation_id, room)
+            
+            # Se il messaggio è per John Doe E NON è un intento calendario, procedi con l'inferenza standard
+            if int(user_id) == 2 and not is_calendar_intent:
+                # Mostra indicatore di digitazione
                 emit('typingIndicator', {
                     'userId': 2,
                     'conversationId': conversation_id,
@@ -724,7 +813,7 @@ def register_handlers(socketio):
                 }, room=room)
 
                 try:
-                    # Get AI response
+                    # Get AI response (Resta del codice originale...)
                     ai_response = get_llm_response(message_data.get('text', ''))
 
                     # Simulate typing delay
