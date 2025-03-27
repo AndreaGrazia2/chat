@@ -1,5 +1,6 @@
 //TODO: upload files
 //TODO: aggiungere prompt strutturato all'inferenza di john doe
+//TODO: Aggiungere memoria all'inferenza di john doe
 //TODO: Aggiungere RAG vettoriale
 //TODO: Aggiungere inferenza per agent per RAG sul DB
 //TODO: Aggiungere analisi dei documenti inviati

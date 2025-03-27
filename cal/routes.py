@@ -255,6 +255,38 @@ def delete_event(event_id):
         logger.error(f"Errore durante l'eliminazione dell'evento: {str(e)}")
         return jsonify({"success": False, "message": f"Errore: {str(e)}"}), 500
 
+@calendar_bp.route('/api/events/<event_id>', methods=['GET'])
+def get_event(event_id):
+    """API per ottenere un singolo evento"""
+    try:
+        # Usa il context manager per la sessione
+        with get_db() as db:
+            # Trova l'evento nel database
+            event = db.query(Event).filter(Event.id == uuid.UUID(event_id)).first()
+            
+            if not event:
+                return jsonify({"error": "Evento non trovato"}), 404
+            
+            # Prepara la risposta con lo stesso formato degli altri endpoint
+            event_data = {
+                "id": str(event.id),
+                "titolo": event.title,
+                "descrizione": event.description,
+                "dataInizio": event.start_date.isoformat(),
+                "dataFine": event.end_date.isoformat(),
+                "categoria": event.category_id,
+                "location": event.location,
+                "allDay": event.all_day,
+                "creato": event.created_at.isoformat() if event.created_at else None,
+                "modificato": event.updated_at.isoformat() if event.updated_at else None
+            }
+            
+            return jsonify(event_data)
+    
+    except Exception as e:
+        logger.error(f"Errore durante il recupero dell'evento: {str(e)}")
+        return jsonify({"error": str(e)}), 500        
+
 @calendar_bp.route('/api/categories')
 def get_categories():
     """API per ottenere le categorie di eventi"""

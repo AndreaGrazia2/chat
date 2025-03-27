@@ -1,5 +1,3 @@
-//TODO: Quando mi muovo nel calendario, devo caricare i dati dal database, adesso carica solo quando parte
-
 // Imports from modules/utils.js
 import {
     createDate,
@@ -377,26 +375,30 @@ export function initEventListeners() {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-
+    
             // Prima di cambiare vista, pulisci i timer esistenti
             if (currentTimeIndicatorInterval) {
                 clearInterval(currentTimeIndicatorInterval);
                 currentTimeIndicatorInterval = null;
             }
-
+    
             vistaAttuale = btn.dataset.view;
+            
+            // AGGIUNTO: Carica i dati rilevanti per la nuova vista
+            caricaEventi();
+            
             aggiornaVista();
-
+    
             // Dopo l'aggiornamento della vista, collega i gestori agli eventi
             if (typeof attachEventClickHandlers === 'function') {
                 setTimeout(attachEventClickHandlers, 300);
             }
-
+    
             // Aggiorna l'indicatore dell'ora corrente
             if (typeof updateCurrentTimeIndicator === 'function') {
                 setTimeout(() => {
                     updateCurrentTimeIndicator();
-
+    
                     // Imposta un nuovo intervallo per l'ora corrente
                     currentTimeIndicatorInterval = setInterval(updateCurrentTimeIndicator, 60000);
                 }, 300);
@@ -420,7 +422,7 @@ export function initEventListeners() {
                     break;
                 case 'day':
                     window.dataAttuale.setDate(window.dataAttuale.getDate() - 1);
-
+    
                     // MODIFICATO: Aggiorna anche dataSelezionata per mantenerle sincronizzate
                     if (dataSelezionata) {
                         dataSelezionata = createDate(window.dataAttuale);
@@ -430,8 +432,12 @@ export function initEventListeners() {
                     window.dataAttuale.setDate(window.dataAttuale.getDate() - 1);
                     break;
             }
+            
+            // AGGIUNTO: Carica nuovi dati dal database per il periodo aggiornato
+            caricaEventi();
+            
             aggiornaViste();
-
+    
             // Dopo l'aggiornamento delle viste, collega i gestori agli eventi
             if (typeof attachEventClickHandlers === 'function') {
                 setTimeout(attachEventClickHandlers, 300);
@@ -450,7 +456,7 @@ export function initEventListeners() {
                     break;
                 case 'day':
                     window.dataAttuale.setDate(window.dataAttuale.getDate() + 1);
-
+    
                     // MODIFICATO: Aggiorna anche dataSelezionata per mantenerle sincronizzate
                     if (dataSelezionata) {
                         dataSelezionata = createDate(window.dataAttuale);
@@ -460,8 +466,12 @@ export function initEventListeners() {
                     window.dataAttuale.setDate(window.dataAttuale.getDate() + 1);
                     break;
             }
+            
+            // AGGIUNTO: Carica nuovi dati dal database per il periodo aggiornato
+            caricaEventi();
+            
             aggiornaViste();
-
+    
             // Dopo l'aggiornamento delle viste, collega i gestori agli eventi
             if (typeof attachEventClickHandlers === 'function') {
                 setTimeout(attachEventClickHandlers, 300);
@@ -472,12 +482,15 @@ export function initEventListeners() {
     if (todayBtn) {
         todayBtn.addEventListener('click', () => {
             window.dataAttuale = new Date();
-
+    
             // MODIFICATO: Aggiorna dataSelezionata per tutte le viste, non solo per la vista giornaliera
             dataSelezionata = createDate(window.dataAttuale);
-
+    
+            // AGGIUNTO: Carica nuovi dati dal database per il periodo aggiornato
+            caricaEventi();
+            
             aggiornaViste();
-
+    
             // Dopo l'aggiornamento delle viste, collega i gestori agli eventi
             if (typeof attachEventClickHandlers === 'function') {
                 setTimeout(attachEventClickHandlers, 300);

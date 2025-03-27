@@ -140,7 +140,22 @@ export function mostraNotifica(messaggio, tipo = '') {
     notifica.className = `notification ${tipo}`;
     notifica.textContent = messaggio;
 
-    document.body.appendChild(notifica);
+    // Controlla se esiste già il container delle notifiche
+    let notificationContainer = document.getElementById('notification-container');
+    
+    // Se non esiste, crealo
+    if (!notificationContainer) {
+        notificationContainer = document.createElement('div');
+        notificationContainer.id = 'notification-container';
+        notificationContainer.style.position = 'fixed';
+        notificationContainer.style.top = '10px';
+        notificationContainer.style.right = '10px';
+        notificationContainer.style.zIndex = '1000';
+        document.body.appendChild(notificationContainer);
+    }
+    
+    // Aggiungi la notifica al container invece che direttamente al body
+    notificationContainer.appendChild(notifica);
 
     // Mostra la notifica
     setTimeout(() => {
@@ -151,7 +166,12 @@ export function mostraNotifica(messaggio, tipo = '') {
     setTimeout(() => {
         notifica.classList.remove('show');
         setTimeout(() => {
-            document.body.removeChild(notifica);
+            notificationContainer.removeChild(notifica);
+            
+            // Se non ci sono più notifiche, rimuovi il container
+            if (notificationContainer.children.length === 0) {
+                document.body.removeChild(notificationContainer);
+            }
         }, 300);
     }, 3000);
 }
