@@ -17,10 +17,10 @@ from datetime import datetime, timedelta
 
 # Configurazione del logger - aggiungi dopo gli import
 logging.basicConfig(
-    level=logging.CRITICAL,  # Cambia da DEBUG a CRITICAL (mostra solo errori critici)
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    #filename='calendar_agent.log'
+    level=logging.CRITICAL,
+    handlers=[logging.NullHandler()]
 )
+
 logger = logging.getLogger('calendar_agent')
 
 class CalendarAgent:
