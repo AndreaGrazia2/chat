@@ -38,21 +38,24 @@ def get_engine(schema=None):
         
         # Parametri di connessione migliorati per Render
         connect_args = {
-            "connect_timeout": 30,  # Timeout di connessione in secondi
-            "keepalives": 1,        # Abilita i keepalive
-            "keepalives_idle": 30,  # Tempo di inattività prima di inviare keepalive (secondi)
-            "keepalives_interval": 10,  # Intervallo tra i keepalive (secondi)
-            "keepalives_count": 5,   # Numero di keepalive falliti prima di considerare la connessione persa
+            "connect_timeout": 60,  # Aumentato il timeout di connessione
+            "keepalives": 1,
+            "keepalives_idle": 20,  # Ridotto il tempo di inattività
+            "keepalives_interval": 5,  # Intervalli più frequenti
+            "keepalives_count": 5,
+            "application_name": "myapp",  # Aiuta a identificare la tua app nei log
+            "sslmode": "require",  # Assicurati di usare SSL
         }
         
         # Crea il motore SQLAlchemy con parametri migliorati
         engine = create_engine(
             engine_url, 
             connect_args=connect_args,
-            pool_pre_ping=True,      # Verifica la connessione prima dell'uso
-            pool_recycle=300,        # Ricicla le connessioni dopo 5 minuti
-            pool_timeout=30,         # Timeout per ottenere una connessione dal pool
-            max_overflow=10          # Numero massimo di connessioni oltre il pool_size
+            pool_pre_ping=True,
+            pool_recycle=60,        # Ricicla le connessioni più frequentemente (ogni minuto)
+            pool_timeout=30,
+            pool_size=5,            # Limita il numero di connessioni
+            max_overflow=10
         )
         
         # Imposta lo schema se specificato
@@ -86,6 +89,7 @@ def get_db_session(session_factory):
     session = session_factory()
     max_retries = 3
     retry_count = 0
+    retry_delay = 2  # Aumentare il tempo di attesa tra i tentativi
     
     try:
         while retry_count < max_retries:
@@ -95,13 +99,14 @@ def get_db_session(session_factory):
                 break
             except (OperationalError, DisconnectionError) as e:
                 retry_count += 1
+                session.rollback()
+                
                 if retry_count >= max_retries:
                     logger.error(f"Errore di connessione al database dopo {max_retries} tentativi: {str(e)}")
                     raise
                 
                 logger.warning(f"Errore di connessione al database, tentativo {retry_count}/{max_retries}: {str(e)}")
-                time.sleep(1)  # Attendi prima di riprovare
-                session.rollback()
+                time.sleep(retry_delay * retry_count)  # Attesa esponenziale
             except Exception as e:
                 logger.error(f"Errore durante l'operazione sul database: {str(e)}")
                 session.rollback()

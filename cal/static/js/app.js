@@ -52,80 +52,97 @@ function initSocketListeners() {
     // Verifica se Socket.IO è disponibile
     if (typeof io !== 'undefined') {
         console.log('[CALENDAR_DEBUG] Socket.IO is available');
+        
+        // Usa il socket globale già inizializzato
         const socket = io();
         
         // Aggiungi log per verificare la connessione
         socket.on('connect', function() {
             console.log('[CALENDAR_DEBUG] Socket.IO connected successfully');
+            
+            // Identifica l'utente (per multi-tenancy futuro)
+            // Sostituire con l'ID dell'utente o azienda effettiva quando implementerai l'auth
+            const userId = getUserId(); // Funzione helper da implementare
+            if (userId) {
+                socket.emit('calendar_join_room', userId);
+            }
         });
         
-        // Ascolta gli eventi del calendario
+        // Ascolta gli eventi del calendario con gestione errori migliorata
         socket.on('calendarEvent', function(data) {
-            console.log('[CALENDAR_DEBUG] Received calendarEvent:', data);
-            
-            if (data.type === 'calendar_update') {
-                // Stampa più dettagli per debug
-                console.log('[CALENDAR_DEBUG] Action:', data.action);
-                console.log('[CALENDAR_DEBUG] Data:', data.data);
+            try {
+                console.log('[CALENDAR_DEBUG] Received calendarEvent:', data);
                 
-                // Ricarica eventi - chiama la funzione esistente
-                console.log('[CALENDAR_DEBUG] Calling caricaEventi()');
-                caricaEventi();
-                
-                // Cerca la funzione per aggiornare le viste
-                if (typeof aggiornaViste === 'function') {
-                    console.log('[CALENDAR_DEBUG] Calling aggiornaViste()');
-                    aggiornaViste();
-                } else {
-                    console.error('[CALENDAR_DEBUG] aggiornaViste function not found!');
+                if (data.type === 'calendar_update') {
+                    console.log('[CALENDAR_DEBUG] Action:', data.action);
+                    console.log('[CALENDAR_DEBUG] Data:', data.data);
                     
-                    // Alternativa 1: aggiornaVista (singolare)
-                    if (typeof aggiornaVista === 'function') {
-                        console.log('[CALENDAR_DEBUG] Calling aggiornaVista() instead');
+                    // Carica i nuovi dati ma evita di ricaricare tutto se possibile
+                    if (data.action === 'create' || data.action === 'delete') {
+                        // Per creazione o eliminazione, ricarica tutto
+                        caricaEventi();
+                    } else if (data.action === 'update' && data.data && data.data.id) {
+                        // Per aggiornamenti, potresti aggiornare solo l'evento specifico
+                        updateEventLocally(data.data);
+                    }
+                    
+                    // Aggiorna la vista
+                    if (typeof aggiornaViste === 'function') {
+                        aggiornaViste();
+                    } else if (typeof aggiornaVista === 'function') {
                         aggiornaVista();
-                    } 
-                    
-                    // Alternativa 2: inizializzaViste
-                    else if (typeof inizializzaViste === 'function') {
-                        console.log('[CALENDAR_DEBUG] Calling inizializzaViste() instead');
+                    } else if (typeof inizializzaViste === 'function') {
                         inizializzaViste();
                     }
                     
-                    // Ultima risorsa: ricarica la pagina
-                    else {
-                        console.log('[CALENDAR_DEBUG] No update function found, forcing reload');
-                        setTimeout(function() {
-                            location.reload();
-                        }, 1000);
+                    // Mostra notifica
+                    let message = getMessageForAction(data.action);
+                    if (typeof mostraNotifica === 'function') {
+                        mostraNotifica(message, 'success');
                     }
                 }
-                
-                // Mostra una notifica
-                let message = '';
-                switch (data.action) {
-                    case 'create':
-                        message = 'Nuovo evento creato';
-                        break;
-                    case 'update':
-                        message = 'Evento aggiornato';
-                        break;
-                    case 'delete':
-                        message = 'Evento eliminato';
-                        break;
-                    default:
-                        message = 'Calendario aggiornato';
-                }
-                
-                // Usa mostraNotifica se esiste
-                if (typeof mostraNotifica === 'function') {
-                    mostraNotifica(message, 'success');
-                } else {
-                    console.log('[CALENDAR_DEBUG] Notification:', message);
-                }
+            } catch (error) {
+                console.error('[CALENDAR_DEBUG] Error handling calendar event:', error);
             }
         });
     } else {
         console.error('[CALENDAR_DEBUG] Socket.IO not available!');
+    }
+}
+
+// Funzioni helper
+function getUserId() {
+    // Qui puoi implementare la logica per ottenere l'ID dell'utente
+    // Per ora ritorna null (nessun filtro)
+    return null;
+}
+
+function getMessageForAction(action) {
+    switch (action) {
+        case 'create': return 'Nuovo evento creato';
+        case 'update': return 'Evento aggiornato';
+        case 'delete': return 'Evento eliminato';
+        default: return 'Calendario aggiornato';
+    }
+}
+
+function updateEventLocally(eventData) {
+    // Aggiorna un evento specifico nell'array eventi senza ricaricare tutto
+    if (!eventData || !eventData.id) return;
+    
+    const eventIndex = eventi.findIndex(e => e.id === eventData.id);
+    if (eventIndex !== -1) {
+        // Aggiorna l'evento esistente
+        eventi[eventIndex] = {
+            ...eventi[eventIndex],
+            titolo: eventData.titolo,
+            descrizione: eventData.descrizione,
+            dataInizio: new Date(eventData.dataInizio),
+            dataFine: new Date(eventData.dataFine),
+            categoria: eventData.categoria,
+            location: eventData.location || '',
+            modificato: new Date()
+        };
     }
 }
 
