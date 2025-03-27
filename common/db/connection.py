@@ -3,8 +3,10 @@ Utility di connessione al database basate su SQLAlchemy.
 Sostituisce le vecchie funzioni che utilizzavano psycopg2 con equivalenti SQLAlchemy.
 """
 import logging
+import time  # Add this import for sleep function
 from contextlib import contextmanager
 from sqlalchemy import create_engine, text, event
+from sqlalchemy.exc import OperationalError, DisconnectionError  # Add these imports
 from sqlalchemy.orm import sessionmaker
 from common.config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, CHAT_SCHEMA, CAL_SCHEMA, DATABASE_URL
 
@@ -34,8 +36,27 @@ def get_engine(schema=None):
             masked_url = engine_url.replace(DB_PASSWORD, "***")
         logger.info(f"Connessione database: {masked_url}")
         
-        # Crea il motore SQLAlchemy
-        engine = create_engine(engine_url)
+        # Parametri di connessione migliorati per Render
+        connect_args = {
+            "connect_timeout": 60,  # Aumentato il timeout di connessione
+            "keepalives": 1,
+            "keepalives_idle": 20,  # Ridotto il tempo di inattività
+            "keepalives_interval": 5,  # Intervalli più frequenti
+            "keepalives_count": 5,
+            "application_name": "myapp",  # Aiuta a identificare la tua app nei log
+            "sslmode": "require",  # Assicurati di usare SSL
+        }
+        
+        # Crea il motore SQLAlchemy con parametri migliorati
+        engine = create_engine(
+            engine_url, 
+            connect_args=connect_args,
+            pool_pre_ping=True,
+            pool_recycle=60,        # Ricicla le connessioni più frequentemente (ogni minuto)
+            pool_timeout=30,
+            pool_size=5,            # Limita il numero di connessioni
+            max_overflow=10
+        )
         
         # Imposta lo schema se specificato
         if schema:
@@ -64,23 +85,32 @@ def create_session_factory(engine):
 
 @contextmanager
 def get_db_session(session_factory):
-    """
-    Context manager per ottenere una sessione del database.
-    
-    Args:
-        session_factory: Factory di sessioni SQLAlchemy
-    
-    Yields:
-        Session: Sessione SQLAlchemy
-    """
+    """Context manager per ottenere una sessione del database con gestione degli errori migliorata"""
     session = session_factory()
+    max_retries = 3
+    retry_count = 0
+    retry_delay = 2  # Aumentare il tempo di attesa tra i tentativi
+    
     try:
-        yield session
-        session.commit()
-    except Exception as e:
-        session.rollback()
-        logger.error(f"Errore durante l'operazione sul database: {str(e)}")
-        raise
+        while retry_count < max_retries:
+            try:
+                yield session
+                session.commit()
+                break
+            except (OperationalError, DisconnectionError) as e:
+                retry_count += 1
+                session.rollback()
+                
+                if retry_count >= max_retries:
+                    logger.error(f"Errore di connessione al database dopo {max_retries} tentativi: {str(e)}")
+                    raise
+                
+                logger.warning(f"Errore di connessione al database, tentativo {retry_count}/{max_retries}: {str(e)}")
+                time.sleep(retry_delay * retry_count)  # Attesa esponenziale
+            except Exception as e:
+                logger.error(f"Errore durante l'operazione sul database: {str(e)}")
+                session.rollback()
+                raise
     finally:
         session.close()
 

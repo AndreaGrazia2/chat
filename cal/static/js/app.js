@@ -1,3 +1,5 @@
+//TODO: Quando mi vuovo nel calendario, devo caricare i dati dal database, adesso carica solo quando parte
+
 /**
  * app.js - Inizializzazione e gestione dell'applicazione calendario
  */
@@ -8,6 +10,7 @@ let sidebarVisible = false;
 
 // Variabile per tenere traccia del timer dell'ora corrente
 let currentTimeIndicatorInterval;
+let socket;
 
 // Cache degli elementi DOM frequentemente utilizzati
 const domCache = {
@@ -19,6 +22,38 @@ const domCache = {
     currentDate: null,
     modals: {}
 };
+
+
+// Monkey patch per tracciare tutti gli eventi Socket.IO
+if (typeof io !== 'undefined') {
+    const originalOn = io.Socket.prototype.on;
+    io.Socket.prototype.on = function(eventName, callback) {
+        console.log(`[SOCKET_TRACE] Registrato listener per evento: "${eventName}"`);
+        return originalOn.call(this, eventName, function(...args) {
+            console.log(`[SOCKET_TRACE] Ricevuto evento: "${eventName}"`, args);
+            return callback.apply(this, args);
+        });
+    };
+    console.log('[SOCKET_TRACE] Socket.IO debug patch applicato');
+}
+
+// Monitora attivamente l'arrivo di eventi calendarEvent
+if (typeof io !== 'undefined') {
+    // Crea un socket globale dedicato per la supervisione
+    const supervisorSocket = io();
+    supervisorSocket.on('calendarEvent', function(data) {
+        console.log('[SUPERVISOR] Ricevuto calendarEvent:', data);
+        // Tenta di forzare un aggiornamento della vista
+        if (typeof caricaEventi === 'function') {
+            console.log('[SUPERVISOR] Forzando aggiornamento calendario');
+            caricaEventi();
+            if (typeof aggiornaViste === 'function') {
+                setTimeout(aggiornaViste, 300);
+            }
+        }
+    });
+    console.log('[SUPERVISOR] Socket di supervisione inizializzato');
+}
 
 /**
  * Inizializza la cache degli elementi DOM
@@ -44,6 +79,150 @@ function initDomCache() {
     domCache.eventEndDate = document.getElementById('eventEndDate');
     domCache.eventEndTime = document.getElementById('eventEndTime');
     domCache.eventCategory = document.getElementById('eventCategory');
+}
+
+// Questo file corregge l'inizializzazione di Socket.IO in app.js
+// Sostituisce la funzione initSocketListeners() esistente
+
+function initSocketListeners() {
+    console.log('[CALENDAR_DEBUG] initSocketListeners() called');
+    
+    // Verifica se Socket.IO è disponibile
+    if (typeof io !== 'undefined') {
+        console.log('[CALENDAR_DEBUG] Socket.IO is available');
+        
+        // Inizializza una nuova connessione Socket.IO
+        socket = io();
+        
+        // Aggiungi log per verificare la connessione
+        socket.on('connect', function() {
+            console.log('[CALENDAR_DEBUG] Socket.IO connected successfully', socket.id);
+            
+            // Identifica l'utente (per multi-tenancy futuro)
+            // Sostituire con l'ID dell'utente o azienda effettiva quando implementerai l'auth
+            const userId = getUserId(); // Funzione helper da implementare
+            if (userId) {
+                socket.emit('calendar_join_room', userId);
+            }
+        });
+        
+        socket.on('disconnect', function(reason) {
+            console.log('[CALENDAR_DEBUG] Socket.IO disconnected:', reason);
+        });
+        
+        socket.on('connect_error', function(error) {
+            console.error('[CALENDAR_DEBUG] Socket.IO connection error:', error);
+        });
+        
+        // CORREZIONE: Modifica il nome dell'evento da ascoltare
+        // Da 'calendarEvent' a 'calendar_update' per corrispondere all'evento emesso dal server
+        socket.on('calendarEvent', function(data) {
+            try {
+                console.log('[CALENDAR_DEBUG] Received calendarEvent:', data);
+                
+                if (data.type === 'calendar_update') {
+                    console.log('[CALENDAR_DEBUG] Action:', data.action);
+                    console.log('[CALENDAR_DEBUG] Data:', data.data);
+                    
+                    // Carica i nuovi dati ma evita di ricaricare tutto se possibile
+                    if (data.action === 'create' || data.action === 'delete') {
+                        // Per creazione o eliminazione, ricarica tutto
+                        caricaEventi();
+                    } else if (data.action === 'update' && data.data && data.data.id) {
+                        // Per aggiornamenti, potresti aggiornare solo l'evento specifico
+                        updateEventLocally(data.data);
+                    }
+                    
+                    // Aggiorna la vista
+                    aggiornaViste();
+                    
+                    // Mostra notifica
+                    let message = getMessageForAction(data.action);
+                    mostraNotifica(message, 'success');
+                }
+            } catch (error) {
+                console.error('[CALENDAR_DEBUG] Error handling calendar event:', error);
+            }
+        });
+    } else {
+        console.error('[CALENDAR_DEBUG] Socket.IO not available!');
+    }
+}
+
+// Funzioni helper
+function getUserId() {
+    // Qui puoi implementare la logica per ottenere l'ID dell'utente
+    // Per ora ritorna null (nessun filtro)
+    return null;
+}
+
+function getMessageForAction(action) {
+    switch (action) {
+        case 'create': return 'Nuovo evento creato';
+        case 'update': return 'Evento aggiornato';
+        case 'delete': return 'Evento eliminato';
+        default: return 'Calendario aggiornato';
+    }
+}
+
+// Sostituisci la funzione updateEventLocally in app.js con questa versione migliorata
+function updateEventLocally(eventData) {
+    // Aggiorna un evento specifico nell'array eventi senza ricaricare tutto
+    if (!eventData || !eventData.id) {
+        console.error('[CALENDAR_DEBUG] Impossibile aggiornare evento: dati mancanti o ID mancante', eventData);
+        return;
+    }
+    
+    console.log('[CALENDAR_DEBUG] Aggiornamento locale dell\'evento:', eventData.id);
+    
+    // Compatibilità con diversi formati di dati
+    const eventId = eventData.id;
+    const eventIndex = eventi.findIndex(e => e.id === eventId);
+    
+    if (eventIndex !== -1) {
+        console.log('[CALENDAR_DEBUG] Evento trovato nell\'array locale, indice:', eventIndex);
+        
+        // Estrai i campi necessari con fallback ai valori esistenti
+        const titolo = eventData.titolo || eventData.title || eventi[eventIndex].titolo;
+        const descrizione = eventData.descrizione || eventData.description || eventi[eventIndex].descrizione;
+        
+        // Gestisci sia il formato ISO che gli oggetti Date
+        let dataInizio = eventi[eventIndex].dataInizio;
+        if (eventData.dataInizio) {
+            dataInizio = createDate(eventData.dataInizio);
+        } else if (eventData.start_date) {
+            dataInizio = createDate(eventData.start_date);
+        }
+        
+        let dataFine = eventi[eventIndex].dataFine;
+        if (eventData.dataFine) {
+            dataFine = createDate(eventData.dataFine);
+        } else if (eventData.end_date) {
+            dataFine = createDate(eventData.end_date);
+        }
+        
+        const categoria = eventData.categoria || eventData.category_id || eventi[eventIndex].categoria;
+        const location = eventData.location || eventi[eventIndex].location || '';
+        
+        // Aggiorna l'evento esistente
+        eventi[eventIndex] = {
+            ...eventi[eventIndex],
+            titolo: titolo,
+            descrizione: descrizione,
+            dataInizio: dataInizio,
+            dataFine: dataFine,
+            categoria: categoria,
+            location: location,
+            modificato: new Date()
+        };
+        
+        console.log('[CALENDAR_DEBUG] Evento aggiornato localmente con successo');
+    } else {
+        console.warn('[CALENDAR_DEBUG] Evento non trovato nell\'array locale:', eventId);
+        // L'evento non esiste, ricarichiamo tutti gli eventi
+        console.log('[CALENDAR_DEBUG] Ricaricamento completo degli eventi...');
+        caricaEventi();
+    }
 }
 
 /**
@@ -74,7 +253,10 @@ function initApp() {
     if (typeof enableDragAndDrop === 'function') {
         enableDragAndDrop();
     }
-    
+
+    // Inizializza i listener di Socket.IO
+    initSocketListeners();
+
     // Collega i gestori di click agli eventi
     if (typeof attachEventClickHandlers === 'function') {
         attachEventClickHandlers();
@@ -103,8 +285,10 @@ function initApp() {
     }
 
     initTimeIndicator();
-}
 
+    // Verifica lo stato della connessione Socket.IO dopo un po' di tempo
+    setTimeout( setupSocketIODebug(), 2000);
+}
 
 // In app.js, migliora la gestione dell'intervallo di aggiornamento dell'ora
 function initTimeIndicator() {
@@ -377,6 +561,57 @@ function toggleSidebar() {
         overlay.classList.remove('active');
     }
 }
+
+
+// Funzione di debug migliorata per monitorare gli eventi Socket.IO
+function setupSocketIODebug() {
+    console.log('[SOCKET_DEBUG] Configurazione debug Socket.IO');
+    
+    if (typeof io === 'undefined') {
+        console.error('[SOCKET_DEBUG] ERROR: Socket.IO non è disponibile!');
+        return;
+    }
+    
+    // Salva il riferimento alla connessione originale per debugging
+    const originalConnect = io.connect;
+    io.connect = function() {
+        console.log('[SOCKET_DEBUG] Chiamata a io.connect con parametri:', arguments);
+        return originalConnect.apply(this, arguments);
+    };
+    
+    // Monitora la creazione del socket
+    const originalIO = io;
+    window.io = function() {
+        console.log('[SOCKET_DEBUG] Chiamata a io() con parametri:', arguments);
+        const socket = originalIO.apply(this, arguments);
+        
+        // Monitora eventi di connessione
+        const originalOn = socket.on;
+        socket.on = function(event, callback) {
+            console.log(`[SOCKET_DEBUG] Registrato handler per evento: ${event}`);
+            
+            // Wrapper per monitorare la chiamata dell'evento
+            const wrappedCallback = function() {
+                console.log(`[SOCKET_DEBUG] Ricevuto evento: ${event}`, arguments);
+                return callback.apply(this, arguments);
+            };
+            
+            return originalOn.call(this, event, wrappedCallback);
+        };
+        
+        // Monitora emissione di eventi
+        const originalEmit = socket.emit;
+        socket.emit = function(event) {
+            console.log(`[SOCKET_DEBUG] Emissione evento: ${event}`, Array.from(arguments).slice(1));
+            return originalEmit.apply(this, arguments);
+        };
+        
+        return socket;
+    };
+    
+    console.log('[SOCKET_DEBUG] Debug Socket.IO configurato con successo');
+}
+
 
 // Inizializza l'applicazione quando il DOM è caricato
 document.addEventListener('DOMContentLoaded', initApp);

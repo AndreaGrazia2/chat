@@ -90,7 +90,8 @@ CREATE TABLE tags (
     name VARCHAR(50) NOT NULL,
     color VARCHAR(7),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
 -- Tabella di relazione tra eventi e tag (many-to-many)

@@ -10,6 +10,8 @@ from contextlib import contextmanager
 from .database import SessionLocal
 from .models import Event, User, Category
 from common.db.connection import get_db_session
+from .socket_manager import emit_calendar_update
+
 
 # Configura il logging
 logging.basicConfig(level=logging.INFO)
@@ -143,7 +145,9 @@ def create_event():
                     "creato": new_event.created_at.isoformat() if new_event.created_at else None
                 }
             }
-        
+
+        # Emetti l'evento di aggiornamento via Socket.IO
+        emit_calendar_update('create', response['evento'])
         return jsonify(response)
     
     except SQLAlchemyError as e:
@@ -210,6 +214,9 @@ def update_event(event_id):
                 }
             }
         
+        # Emetti l'evento di aggiornamento via Socket.IO
+        emit_calendar_update('update', response['evento'])
+
         return jsonify(response)
     
     except SQLAlchemyError as e:
@@ -234,6 +241,9 @@ def delete_event(event_id):
             
             # Elimina l'evento
             db.delete(event)
+
+        # Prima di restituire la risposta, emetti l'evento di eliminazione 
+        emit_calendar_update('delete', {'id': event_id})   
         
         return jsonify({"success": True, "message": "Evento eliminato con successo"})
     

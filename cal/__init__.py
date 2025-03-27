@@ -7,10 +7,10 @@ def create_calendar_blueprint():
     from .routes import calendar_bp
     return calendar_bp
 
-def init_app(app):
+def init_app(app, socketio=None):
     """
     Inizializza il modulo calendario con l'app Flask.
     """
-    calendar_bp = create_calendar_blueprint()
-    app.register_blueprint(calendar_bp, url_prefix="/cal")
-   
+    if socketio:
+        from .socket_manager import register_calendar_handlers
+        register_calendar_handlers(socketio)

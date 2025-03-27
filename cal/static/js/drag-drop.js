@@ -32,7 +32,7 @@ function initDragAndDrop(viewName) {
         // Assegna il gestore ondragstart
         event.addEventListener('dragstart', dragFunction);
         
-        console.log('Elemento reso trascinabile:', event);
+        //console.log('Elemento reso trascinabile:', event);
     });
     
     // Selettori per i drop target

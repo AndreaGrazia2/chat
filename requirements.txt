@@ -12,3 +12,4 @@ jinja2
 langchain
 langchain-community
 psycopg2-binary
+langchain_openai
