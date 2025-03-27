@@ -13,7 +13,8 @@ import {
 // Imports from views.js
 import {
     aggiornaViste,
-    apriModal
+    apriModal, 
+    apriModalNuovoEvento
 } from './views.js';
 
 // Imports from drag-drop.js
