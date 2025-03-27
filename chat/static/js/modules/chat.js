@@ -1,3 +1,5 @@
+// TODO: Quando un utente scrive un messaggio, mostra un indicatore di digitazione all'altro utente.
+
 import { sendChannelMessage } from './socket.js'
 import { updateUnreadBadge}  from './uiNavigation.js';
 import { showNotification}  from './utils.js';

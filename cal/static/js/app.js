@@ -1,3 +1,5 @@
+//TODO: Quando mi vuovo nel calendario, devo caricare i dati dal database, adesso carica solo quando parte
+
 /**
  * app.js - Inizializzazione e gestione dell'applicazione calendario
  */
@@ -8,6 +10,7 @@ let sidebarVisible = false;
 
 // Variabile per tenere traccia del timer dell'ora corrente
 let currentTimeIndicatorInterval;
+let socket;
 
 // Cache degli elementi DOM frequentemente utilizzati
 const domCache = {
