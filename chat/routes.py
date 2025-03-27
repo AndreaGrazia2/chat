@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, jsonify, request, send_from_directory
 from common.config import SECRET_KEY
-from sqlalchemy import and_, or_, func, desc
+from sqlalchemy import and_, or_, func, desc, select
 from chat.models import User, Conversation, Message, Channel, ChannelMember, ConversationParticipant, MessageReadStatus
 from chat.database import SessionLocal
 import json
@@ -197,8 +197,8 @@ def get_dm_messages(user_id):
                 db.query(Conversation)
                 .filter(
                     Conversation.type == 'direct',
-                    Conversation.id.in_(current_user_convs),
-                    Conversation.id.in_(target_user_convs)
+                    Conversation.id.in_(select(current_user_convs.c.id)),
+                    Conversation.id.in_(select(target_user_convs.c.id))
                 )
                 .first()
             )

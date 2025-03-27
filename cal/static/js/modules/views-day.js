@@ -1,13 +1,20 @@
 /**
  * views-day.js - Gestione della vista giornaliera del calendario
  */
+import { 
+    isStessoGiorno, 
+    createDate, 
+    formatTimeItalian, 
+    getEuropeanWeekday 
+} from './utils.js';
+import { getEventiGiorno } from './events.js';
 
 /**
  * Posiziona gli eventi sovrapposti nella vista giornaliera
  * @param {Array} eventiGiorno - Eventi del giorno
  * @returns {Array} - Eventi con informazioni di posizionamento
  */
-function posizionaEventiSovrapposti(eventiGiorno) {
+export function posizionaEventiSovrapposti(eventiGiorno) {
     // Clona gli eventi per non modificare gli originali
     const eventi = JSON.parse(JSON.stringify(eventiGiorno));
     
@@ -49,7 +56,7 @@ function posizionaEventiSovrapposti(eventiGiorno) {
 /**
  * Renderizza la vista giornaliera
  */
-function renderizzaVistaGiornaliera() {
+export function renderizzaVistaGiornaliera() {
     const dayGrid = document.getElementById('dayGrid');
     if (!dayGrid) return;
     

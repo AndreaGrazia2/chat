@@ -2,6 +2,14 @@
  * views-week.js - Gestione della vista settimanale del calendario
  */
 
+import { 
+    getPrimoGiornoSettimana, 
+    isStessoGiorno, 
+    createDate, 
+    formatTimeItalian 
+} from './utils.js';
+import { getEventiSettimana } from './events.js';
+
 /**
  * Renderizza la vista settimanale
  */
@@ -10,7 +18,7 @@
  * Risolve il problema della visualizzazione degli eventi sovrapposti
  * e mantiene la funzionalità "+X eventi"
  */
-function renderizzaVistaSettimanale() {
+export function renderizzaVistaSettimanale() {
     const weekGrid = document.getElementById('weekGrid');
     if (!weekGrid) return;
     
@@ -236,7 +244,7 @@ function renderizzaVistaSettimanale() {
 }
 
 // Funzione di supporto per la vista settimanale
-function renderWeekView(date = new Date()) {
+export function renderWeekView(date = new Date()) {
     // Assicurati che dataAttuale sia impostata correttamente
     dataAttuale = createDate(date) || dataAttuale;
     

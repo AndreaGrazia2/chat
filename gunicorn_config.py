@@ -6,11 +6,12 @@ gevent.monkey.patch_all()  # Esegui il monkey patching PRIMA dell'importazione d
 port = int(os.environ.get("PORT", 10000))
 bind = f"0.0.0.0:{port}"
 
-workers = 4
-worker_class = "geventwebsocket.gunicorn.workers.GeventWebSocketWorker"
+# Ridotto a 1 worker per evitare problemi con Socket.IO
+workers = 1
+worker_class = "geventwebsocket.gunicorn.workers.GeventWebSocketWorker"  # Worker specifico per WebSocket
 timeout = 120
 keepalive = 5
-loglevel = "info"  # Modifica a "debug" solo per la risoluzione dei problemi
+loglevel = "debug"  # Temporaneamente impostato a debug per vedere più dettagli
 
 # Imposta l'applicazione per Gunicorn
-wsgi_app = "app:create_app()"
+wsgi_app = "wsgi:app"  # Torniamo a usare l'app standard

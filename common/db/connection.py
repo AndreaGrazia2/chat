@@ -3,10 +3,10 @@ Utility di connessione al database basate su SQLAlchemy.
 Sostituisce le vecchie funzioni che utilizzavano psycopg2 con equivalenti SQLAlchemy.
 """
 import logging
-import time  # Add this import for sleep function
+import time
 from contextlib import contextmanager
 from sqlalchemy import create_engine, text, event
-from sqlalchemy.exc import OperationalError, DisconnectionError  # Add these imports
+from sqlalchemy.exc import OperationalError, DisconnectionError
 from sqlalchemy.orm import sessionmaker
 from common.config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, CHAT_SCHEMA, CAL_SCHEMA, DATABASE_URL
 
@@ -38,13 +38,13 @@ def get_engine(schema=None):
         
         # Parametri di connessione migliorati per Render
         connect_args = {
-            "connect_timeout": 60,  # Aumentato il timeout di connessione
+            "connect_timeout": 60,
             "keepalives": 1,
-            "keepalives_idle": 20,  # Ridotto il tempo di inattività
-            "keepalives_interval": 5,  # Intervalli più frequenti
+            "keepalives_idle": 20,
+            "keepalives_interval": 5,
             "keepalives_count": 5,
-            "application_name": "myapp",  # Aiuta a identificare la tua app nei log
-            "sslmode": "require",  # Assicurati di usare SSL
+            "application_name": "myapp",
+            "sslmode": "require",
         }
         
         # Crea il motore SQLAlchemy con parametri migliorati
@@ -52,9 +52,9 @@ def get_engine(schema=None):
             engine_url, 
             connect_args=connect_args,
             pool_pre_ping=True,
-            pool_recycle=60,        # Ricicla le connessioni più frequentemente (ogni minuto)
+            pool_recycle=60,
             pool_timeout=30,
-            pool_size=5,            # Limita il numero di connessioni
+            pool_size=5,
             max_overflow=10
         )
         
@@ -89,7 +89,7 @@ def get_db_session(session_factory):
     session = session_factory()
     max_retries = 3
     retry_count = 0
-    retry_delay = 2  # Aumentare il tempo di attesa tra i tentativi
+    retry_delay = 2
     
     try:
         while retry_count < max_retries:
@@ -101,12 +101,15 @@ def get_db_session(session_factory):
                 retry_count += 1
                 session.rollback()
                 
-                if retry_count >= max_retries:
+                # Chiudi la sessione corrente e creane una nuova per evitare problemi SSL
+                session.close()
+                if retry_count < max_retries:
+                    logger.warning(f"Errore di connessione al database, tentativo {retry_count}/{max_retries}: {str(e)}")
+                    time.sleep(retry_delay * retry_count)
+                    session = session_factory()  # Crea una nuova sessione
+                else:
                     logger.error(f"Errore di connessione al database dopo {max_retries} tentativi: {str(e)}")
                     raise
-                
-                logger.warning(f"Errore di connessione al database, tentativo {retry_count}/{max_retries}: {str(e)}")
-                time.sleep(retry_delay * retry_count)  # Attesa esponenziale
             except Exception as e:
                 logger.error(f"Errore durante l'operazione sul database: {str(e)}")
                 session.rollback()

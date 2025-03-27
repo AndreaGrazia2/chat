@@ -2,10 +2,18 @@
  * views-month.js - Gestione della vista mensile del calendario
  */
 
+import { 
+    getPrimoGiornoMese, 
+    getGiorniInMese, 
+    createDate, 
+    formatTimeItalian, 
+} from './utils.js';
+import { getEventiGiorno } from './events.js';
+
 /**
  * Renderizza la vista mensile
  */
-function renderizzaVistaMensile() {
+export function renderizzaVistaMensile() {
     const monthGrid = document.getElementById('monthGrid');
     if (!monthGrid) return;
     
@@ -135,7 +143,7 @@ function renderizzaVistaMensile() {
  * @param {number} maxEventi - Numero massimo di eventi da mostrare
  * @returns {string} - HTML degli eventi
  */
-function renderizzaEventiGiorno(eventi, maxEventi = 3) {
+export function renderizzaEventiGiorno(eventi, maxEventi = 3) {
     if (!eventi || eventi.length === 0) return '';
     
     let html = '';
@@ -164,7 +172,7 @@ function renderizzaEventiGiorno(eventi, maxEventi = 3) {
 }
 
 // Funzione di supporto per la vista mensile
-function renderMonthView(date = new Date()) {
+export function renderMonthView(date = new Date()) {
     // Assicurati che dataAttuale sia impostata correttamente
     dataAttuale = createDate(date) || dataAttuale;
     

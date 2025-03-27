@@ -2,10 +2,16 @@
  * views-list.js - Gestione della vista lista del calendario
  */
 
+import { 
+    formatDateItalian, 
+    formatTimeItalian, 
+} from './utils.js';
+import { getEventiGiorno } from './events.js';
+
 /**
  * Renderizza la vista lista
  */
-function renderizzaVistaLista() {
+export function renderizzaVistaLista() {
     const eventsList = document.getElementById('eventsList');
     if (!eventsList) return;
     

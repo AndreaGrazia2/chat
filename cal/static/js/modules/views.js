@@ -2,6 +2,24 @@
  * views.js - Gestione delle viste del calendario
  */
 
+import { caricaEventiPeriodo, getIntervalloVista } from './data-loader.js';
+import { renderizzaVistaMensile } from './views-month.js';
+import { renderizzaVistaSettimanale } from './views-week.js';
+import { renderizzaVistaGiornaliera } from './views-day.js';
+import { renderizzaVistaLista } from './views-list.js';
+import { 
+    formatDateItalian, 
+    formatTimeItalian, 
+    getPrimoGiornoSettimana, 
+    getPrimoGiornoMese,
+    getGiorniInMese,
+    isStessoGiorno,
+    createDate,
+    mostraNotifica
+} from './utils.js';
+
+import { getEventiGiorno, modificaEvento } from './events.js';
+
 // Variabili globali per le viste
 let vistaAttuale = 'month';
 let dataAttuale = new Date();
@@ -10,7 +28,7 @@ let dataSelezionata = null; // variabile per tenere traccia della data seleziona
 /**
  * Inizializza le viste del calendario
  */
-function inizializzaViste() {
+export function inizializzaViste() {
     // Inizializza il mini calendario nella sidebar
     renderizzaMiniCalendario();
     
@@ -24,7 +42,7 @@ function inizializzaViste() {
 /**
  * Aggiorna la vista attuale
  */
-function aggiornaVista() {
+export function aggiornaVista() {
     console.log('Aggiornamento vista:', vistaAttuale);
     
     // Nascondi tutte le viste
@@ -36,7 +54,7 @@ function aggiornaVista() {
     document.getElementById(`${vistaAttuale}View`).classList.add('active');
     
     // Disattiva il drag and drop precedente, se esiste
-    if (window.dragDrop && typeof window.dragDrop.cleanup === 'function') {
+    if (window.dragDrop && typeof window.dragDrop.cleanup === 'export function') {
         window.dragDrop.cleanup();
     }
     
@@ -63,20 +81,20 @@ function aggiornaVista() {
     
     // Inizializza il drag and drop dopo aver renderizzato la vista
     setTimeout(() => {
-        if (window.dragDrop && typeof window.dragDrop.init === 'function') {
+        if (window.dragDrop && typeof window.dragDrop.init === 'export function') {
             window.dragDrop.init(vistaAttuale);
         }
         
         // Attacca i gestori di eventi agli elementi dopo il caricamento completo
-        if (typeof attachEventClickHandlers === 'function') {
+        if (typeof attachEventClickHandlers === 'export function') {
             attachEventClickHandlers();
         }
         
-        if (typeof updateCurrentTimeIndicator === 'function') {
+        if (typeof updateCurrentTimeIndicator === 'export function') {
             updateCurrentTimeIndicator();
         }
         
-        if (typeof initTimeIndicator === 'function') {
+        if (typeof initTimeIndicator === 'export function') {
             setTimeout(initTimeIndicator, 300);
         }
     }, 300);
@@ -91,7 +109,7 @@ function aggiornaVista() {
  * @param {Date} dataFine - Data di fine dell'evento
  * @returns {boolean} - True se le date sono valide, altrimenti false
  */
-function validaDateEvento(dataInizio, dataFine) {
+export function validaDateEvento(dataInizio, dataFine) {
     // Verifica che entrambe le date siano valide
     if (isNaN(dataInizio.getTime()) || isNaN(dataFine.getTime())) {
         mostraNotifica('Date non valide. Controllare il formato.', 'warning');
@@ -110,7 +128,7 @@ function validaDateEvento(dataInizio, dataFine) {
 /**
  * Aggiorna l'intestazione con la data corrente
  */
-function aggiornaIntestazione() {
+export function aggiornaIntestazione() {
     const currentDateElement = document.querySelector('.current-date');
     if (!currentDateElement) return;
     
@@ -142,7 +160,7 @@ function aggiornaIntestazione() {
 /**
  * Renderizza il mini calendario nella sidebar
  */
-function renderizzaMiniCalendario() {
+export function renderizzaMiniCalendario() {
     const miniCalendario = document.getElementById('miniCalendar');
     if (!miniCalendario) return;
     
@@ -220,14 +238,24 @@ function renderizzaMiniCalendario() {
     // Aggiungi gli event listener
     document.getElementById('miniCalendarPrev').addEventListener('click', () => {
         dataAttuale.setMonth(dataAttuale.getMonth() - 1);
-        renderizzaMiniCalendario();
-        aggiornaVista();
+        
+        // Carica i dati per il nuovo mese
+        const intervallo = getIntervalloVista('month', dataAttuale);
+        caricaEventiPeriodo(intervallo).then(() => {
+            renderizzaMiniCalendario();
+            aggiornaVista();
+        });
     });
     
     document.getElementById('miniCalendarNext').addEventListener('click', () => {
         dataAttuale.setMonth(dataAttuale.getMonth() + 1);
-        renderizzaMiniCalendario();
-        aggiornaVista();
+        
+        // Carica i dati per il nuovo mese
+        const intervallo = getIntervalloVista('month', dataAttuale);
+        caricaEventiPeriodo(intervallo).then(() => {
+            renderizzaMiniCalendario();
+            aggiornaVista();
+        });
     });
     
     // Aggiungi gli event listener ai giorni
@@ -236,8 +264,13 @@ function renderizzaMiniCalendario() {
             const [anno, mese, giorno] = day.dataset.date.split('-').map(Number);
             dataSelezionata = createDate({anno, mese, giorno});
             dataAttuale = createDate({anno, mese, giorno});
-            renderizzaMiniCalendario();
-            aggiornaVista();
+            
+            // Carica i dati per il giorno selezionato
+            const intervallo = getIntervalloVista(vistaAttuale, dataAttuale);
+            caricaEventiPeriodo(intervallo).then(() => {
+                renderizzaMiniCalendario();
+                aggiornaVista();
+            });
         });
     });
 }
@@ -246,7 +279,7 @@ function renderizzaMiniCalendario() {
  * Apre il modal per creare un nuovo evento
  * @param {Date} data - Data iniziale per l'evento
  */
-function apriModalNuovoEvento(data) {
+export function apriModalNuovoEvento(data) {
     if (vistaAttuale === 'day') {
         dataSelezionata = createDate(data);
     }
@@ -368,7 +401,7 @@ function apriModalNuovoEvento(data) {
  * Apre il modal per visualizzare tutti gli eventi di un giorno
  * @param {Date} data - Data per cui visualizzare gli eventi
  */
-function apriModalListaEventi(data) {
+export function apriModalListaEventi(data) {
     // Ottieni gli eventi del giorno
     const eventiGiorno = getEventiGiorno(data);
     
@@ -420,7 +453,7 @@ function apriModalListaEventi(data) {
  * Apre il modal per visualizzare/modificare un evento
  * @param {string} id - ID dell'evento da visualizzare
  */
-function apriModalEvento(id) {
+export function apriModalEvento(id) {
     // Trova l'evento
     const evento = eventi.find(e => e.id === id);
     if (!evento) return;
@@ -547,7 +580,7 @@ function apriModalEvento(id) {
  * Apre il modal di conferma eliminazione
  * @param {string} id - ID dell'evento da eliminare
  */
-function apriModalConfermaEliminazione(id) {
+export function apriModalConfermaEliminazione(id) {
     // Crea il modal se non esiste
     let modal = document.getElementById('confirmDeleteModal');
     if (!modal) {
@@ -606,7 +639,7 @@ function apriModalConfermaEliminazione(id) {
  * Apre un modal
  * @param {string} modalId - ID del modal da aprire
  */
-function apriModal(modalId) {
+export function apriModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.style.display = 'block';
@@ -617,7 +650,7 @@ function apriModal(modalId) {
  * Chiude un modal
  * @param {string} modalId - ID del modal da chiudere
  */
-function chiudiModal(modalId) {
+export function chiudiModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.style.display = 'none';
@@ -627,7 +660,7 @@ function chiudiModal(modalId) {
 /**
  * Aggiorna tutte le viste del calendario
  */
-function aggiornaViste() {
+export function aggiornaViste() {
     renderizzaMiniCalendario();
     aggiornaVista();
 }

@@ -2,6 +2,8 @@
  * events.js - Gestione degli eventi del calendario
  */
 
+import { caricaEventiPeriodo, getIntervalloVista } from './data-loader.js';
+
 // Array per memorizzare gli eventi
 let eventi = [];
 
@@ -31,7 +33,7 @@ const categorie = {
  * @param {Object} evento - Dati dell'evento
  * @returns {Object} - Evento creato
  */
-function aggiungiEvento(evento) {
+export function aggiungiEvento(evento) {
     // Utilizza la funzione helper centralizzata per gestire le date
     let dataInizio = createDate(evento.dataInizio);
     let dataFine = createDate(evento.dataFine);
@@ -73,18 +75,22 @@ function aggiungiEvento(evento) {
             // Aggiungi l'evento all'array locale
             eventi.push(nuovoEvento);
             
-            // Aggiorna la vista del calendario
-            aggiornaViste();
-            
-            // Rimuoviamo il flag isNew dopo un po' di tempo
-            setTimeout(() => {
-                const index = eventi.findIndex(e => e.id === data.id);
-                if (index !== -1) {
-                    eventi[index].isNew = false;
-                }
-            }, 2000);
-            
-            return data.id;
+            // Ricarica i dati per assicurarsi che tutto sia aggiornato
+            const intervallo = getIntervalloVista(vistaAttuale, dataAttuale);
+            return caricaEventiPeriodo(intervallo, true).then(() => {
+                // Aggiorna la vista del calendario
+                aggiornaViste();
+                
+                // Rimuoviamo il flag isNew dopo un po' di tempo
+                setTimeout(() => {
+                    const index = eventi.findIndex(e => e.id === data.id);
+                    if (index !== -1) {
+                        eventi[index].isNew = false;
+                    }
+                }, 2000);
+                
+                return data.id;
+            });
         } else {
             throw new Error(data.message || 'Errore sconosciuto durante la creazione dell\'evento');
         }
@@ -102,7 +108,7 @@ function aggiungiEvento(evento) {
  * @param {Object} datiAggiornati - Nuovi dati dell'evento
  * @returns {Object|null} - Evento modificato o null se non trovato
  */
-function modificaEvento(eventoId, datiAggiornati) {
+export function modificaEvento(eventoId, datiAggiornati) {
     // Trova l'indice dell'evento nell'array locale
     const indice = eventi.findIndex(e => e.id === eventoId);
 
@@ -148,10 +154,14 @@ function modificaEvento(eventoId, datiAggiornati) {
             // Sostituisci l'evento nell'array
             eventi[indice] = eventoAggiornato;
             
-            // Aggiorna le viste
-            aggiornaViste();
-            
-            return eventoAggiornato;
+            // Ricarica i dati per assicurarsi che tutto sia aggiornato
+            const intervallo = getIntervalloVista(vistaAttuale, dataAttuale);
+            return caricaEventiPeriodo(intervallo, true).then(() => {
+                // Aggiorna le viste
+                aggiornaViste();
+                
+                return eventoAggiornato;
+            });
         } else {
             throw new Error(data.message || 'Errore sconosciuto durante l\'aggiornamento dell\'evento');
         }
@@ -168,7 +178,7 @@ function modificaEvento(eventoId, datiAggiornati) {
  * @param {string} id - ID dell'evento da eliminare
  * @returns {boolean} - True se l'evento è stato eliminato, false altrimenti
  */
-function eliminaEvento(id) {
+export function eliminaEvento(id) {
     // Trova l'indice dell'evento nell'array locale
     const indice = eventi.findIndex(e => e.id === id);
     
@@ -190,10 +200,14 @@ function eliminaEvento(id) {
             // Rimuovi l'evento dall'array locale
             eventi.splice(indice, 1);
             
-            // Aggiorna le viste
-            aggiornaViste();
-            
-            return true;
+            // Ricarica i dati per assicurarsi che tutto sia aggiornato
+            const intervallo = getIntervalloVista(vistaAttuale, dataAttuale);
+            return caricaEventiPeriodo(intervallo, true).then(() => {
+                // Aggiorna le viste
+                aggiornaViste();
+                
+                return true;
+            });
         } else {
             throw new Error(data.message || 'Errore sconosciuto durante l\'eliminazione dell\'evento');
         }
@@ -209,7 +223,7 @@ function eliminaEvento(id) {
  * Ottiene tutti gli eventi
  * @returns {Array} - Array di eventi
  */
-function getEventi() {
+export function getEventi() {
     return [...eventi];
 }
 
@@ -218,7 +232,7 @@ function getEventi() {
  * @param {Date} data - Data per cui cercare gli eventi
  * @returns {Array} - Eventi del giorno
  */
-function getEventiGiorno(data) {
+export function getEventiGiorno(data) {
     return eventi.filter(evento => {
         const dataEvento = createDate(evento.dataInizio);
         return isStessoGiorno(dataEvento, data);
@@ -231,7 +245,7 @@ function getEventiGiorno(data) {
  * @param {number} mese - Mese (0-11)
  * @returns {Array} - Eventi del mese
  */
-function getEventiMese(anno, mese) {
+export function getEventiMese(anno, mese) {
     return eventi.filter(evento => {
         const dataEvento = createDate(evento.dataInizio);
         return dataEvento.getFullYear() === anno && dataEvento.getMonth() === mese;
@@ -244,7 +258,7 @@ function getEventiMese(anno, mese) {
  * @param {Date} dataFine - Data di fine della settimana
  * @returns {Array} - Eventi della settimana
  */
-function getEventiSettimana(dataInizio, dataFine) {
+export function getEventiSettimana(dataInizio, dataFine) {
     return eventi.filter(evento => {
         const dataEvento = createDate(evento.dataInizio);
         return dataEvento >= dataInizio && dataEvento <= dataFine;
@@ -255,7 +269,7 @@ function getEventiSettimana(dataInizio, dataFine) {
  * Carica gli eventi dal localStorage (o da un'API in un'implementazione reale)
  */
 // Carica gli eventi dal localStorage
-function caricaEventi() {
+export function caricaEventi() {
     // Calcola l'intervallo di date per cui caricare gli eventi (da 1 mese fa a 2 mesi dopo)
     const startDate = new Date();
     startDate.setMonth(startDate.getMonth() - 1);
@@ -316,7 +330,7 @@ function caricaEventi() {
  * Genera eventi di test
  * @param {number} numEventi - Numero di eventi da generare
  */
-function generaEventiTest(numEventi = 15) {
+export function generaEventiTest(numEventi = 15) {
     const categorie = ['work', 'personal', 'family', 'health'];
     
     // Titoli più realistici per gli eventi
@@ -439,7 +453,7 @@ function generaEventiTest(numEventi = 15) {
 }
 
 // Funzione per salvare le modifiche agli eventi
-function saveEventChanges(eventId, changes) {
+export function saveEventChanges(eventId, changes) {
     // Qui implementa la logica per salvare le modifiche
     console.log('Evento aggiornato:', eventId, changes);
     
@@ -462,13 +476,13 @@ function saveEventChanges(eventId, changes) {
 }
 
 // Inizializza il drag and drop quando la vista cambia
-function initializeEventHandlers() {
+export function initializeEventHandlers() {
     // Inizializza il drag and drop
     enableDragAndDrop();
 }
 
 // Funzione per collegare i gestori di click agli eventi del calendario
-function attachEventClickHandlers() {
+export function attachEventClickHandlers() {
     //console.log('Attaching event click handlers');
     
     // Rimuovi prima tutti i listener esistenti, in modo più efficace
@@ -495,7 +509,7 @@ function attachEventClickHandlers() {
     //console.log('Event handlers attached via event delegation');
 }
 
-function handleContainerClick(e) {
+export function handleContainerClick(e) {
     // Controlla se il click è su un evento o un elemento "più eventi"
     const eventElement = e.target.closest('.event, .time-event, .list-event');
     const moreEventsElement = e.target.closest('.more-events');
@@ -561,7 +575,7 @@ function handleContainerClick(e) {
 
 
 // Funzione per rimuovere i gestori di click dagli eventi
-function removeEventClickHandlers() {
+export function removeEventClickHandlers() {
     // Utilizziamo la delegazione degli eventi, quindi dobbiamo rimuovere
     // solo i listener dai container principali
     const containers = [
@@ -581,7 +595,7 @@ function removeEventClickHandlers() {
 }
 
 // Funzione per gestire il click su un evento
-function handleEventClick(e) {
+export function handleEventClick(e) {
     console.log('Event clicked!', this);
     e.preventDefault();
     e.stopPropagation();
@@ -634,7 +648,7 @@ function handleEventClick(e) {
 }
 
 // Funzione per ottenere la data corrente in formato YYYY-MM-DD
-function getCurrentDate() {
+export function getCurrentDate() {
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -645,7 +659,7 @@ function getCurrentDate() {
 /**
  * Aggiorna l'indicatore dell'ora corrente nelle viste giornaliera e settimanale
  */
-function updateCurrentTimeIndicator() {
+export function updateCurrentTimeIndicator() {
     //console.log('Updating current time indicator');
     
     // Rimuovi eventuali indicatori esistenti per evitare duplicati
@@ -732,7 +746,7 @@ function updateCurrentTimeIndicator() {
     }
 }
 
-function handleDayClick(e) {
+export function handleDayClick(e) {
     // Get the date from the clicked day
     const clickedDay = this.getAttribute('data-date');
     

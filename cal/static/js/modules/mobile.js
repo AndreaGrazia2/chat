@@ -3,25 +3,25 @@
  */
 
 // Handler functions defined outside to be able to remove them
-function handleMobilePrevClick() {
+export function handleMobilePrevClick() {
     const prevBtn = document.getElementById('prevBtn');
     if (prevBtn) prevBtn.click();
     updateMobileCurrentDate();
 }
 
-function handleMobileNextClick() {
+export function handleMobileNextClick() {
     const nextBtn = document.getElementById('nextBtn');
     if (nextBtn) nextBtn.click();
     updateMobileCurrentDate();
 }
 
-function handleMobileTodayClick() {
+export function handleMobileTodayClick() {
     const todayBtn = document.getElementById('todayBtn');
     if (todayBtn) todayBtn.click();
     updateMobileCurrentDate();
 }
 
-function handleMobileViewChange() {
+export function handleMobileViewChange() {
     const viewType = this.dataset.view;
     
     document.querySelectorAll('.view-btn').forEach(viewBtn => {
@@ -36,7 +36,7 @@ function handleMobileViewChange() {
 /**
  * Inizializza le funzionalità mobile
  */
-function initMobile() {
+export function initMobile() {
     // Crea il selettore di vista mobile se non esiste già
     if (!document.querySelector('.mobile-view-selector')) {
         createMobileViewSelector();
@@ -58,7 +58,7 @@ function initMobile() {
 /**
  * Adatta il mini calendario per dispositivi mobili
  */
-function adjustMiniCalendarForMobile() {
+export function adjustMiniCalendarForMobile() {
     // Verifica se siamo su dispositivo mobile
     if (window.innerWidth <= 768) {
         // Aggiungi classe specifica per dispositivi mobili al mini calendario
@@ -92,7 +92,7 @@ function adjustMiniCalendarForMobile() {
 /**
  * Crea il selettore di vista mobile
  */
-function createMobileViewSelector() {
+export function createMobileViewSelector() {
     // Rimuovi eventuali selettori esistenti
     const existingSelector = document.querySelector('.mobile-view-selector');
     if (existingSelector) {
@@ -178,7 +178,7 @@ function createMobileViewSelector() {
 /**
  * Aggiorna la data corrente nel selettore mobile
  */
-function updateMobileCurrentDate() {
+export function updateMobileCurrentDate() {
     const mobileCurrentDate = document.querySelector('.mobile-current-date');
     const currentDate = document.querySelector('.current-date');
     
@@ -190,7 +190,7 @@ function updateMobileCurrentDate() {
 /**
  * Aggiorna il selettore di vista mobile
  */
-function updateMobileViewSelector() {
+export function updateMobileViewSelector() {
     document.querySelectorAll('.mobile-view-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.view === vistaAttuale);
     });

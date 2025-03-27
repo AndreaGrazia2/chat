@@ -1,7 +1,13 @@
+import { 
+    createDate, 
+    getPrimoGiornoSettimana 
+} from './utils.js';
+import { modificaEvento } from './events.js';
+
 /**
  * drag-drop.js - Gestione del drag and drop per gli eventi del calendario
  */
-function initDragAndDrop(viewName) {
+export function initDragAndDrop(viewName) {
     console.log('Inizializzazione drag and drop per vista:', viewName);
     
     // Selettori specifici per le diverse viste
@@ -64,18 +70,18 @@ function initDragAndDrop(viewName) {
 }
 
 // Funzione per gestire il dragover
-function handleDragOver(e) {
+export function handleDragOver(e) {
     e.preventDefault(); // Necessario per permettere il drop
     this.classList.add('drag-over');
 }
 
 // Funzione per gestire il dragleave
-function handleDragLeave() {
+export function handleDragLeave() {
     this.classList.remove('drag-over');
 }
 
 // Funzione per gestire il drop
-function handleDrop(e) {
+export function handleDrop(e) {
     e.preventDefault();
     this.classList.remove('drag-over');
     
@@ -211,7 +217,7 @@ function handleDrop(e) {
 }
 
 // Funzione richiamata all'inizio del trascinamento
-function dragFunction(event) {
+export function dragFunction(event) {
     // Verifica che l'elemento abbia un ID
     const id = this.dataset.id;
     if (!id) {
@@ -243,7 +249,7 @@ document.addEventListener('dragend', function(e) {
 });
 
 // Funzione per il codice esistente
-function enableDragAndDrop() {
+export function enableDragAndDrop() {
     // Rimuovi prima i listener di drag and drop esistenti
     cleanupDragAndDrop();
     
@@ -252,7 +258,7 @@ function enableDragAndDrop() {
 }
 
 // Funzione per ripulire i listener di drag and drop
-function cleanupDragAndDrop() {
+export function cleanupDragAndDrop() {
     // Rimuovi le classi drag-over
     document.querySelectorAll('.drag-over').forEach(el => {
         el.classList.remove('drag-over');

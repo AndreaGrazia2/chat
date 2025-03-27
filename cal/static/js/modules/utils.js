@@ -8,7 +8,7 @@
  * @param {boolean} includeWeekday - Se includere il giorno della settimana
  * @returns {string} - Data formattata
  */
-function formatDateItalian(date, includeWeekday = true) {
+export function formatDateItalian(date, includeWeekday = true) {
     if (typeof date === 'string') {
         date = new Date(date);
     }
@@ -33,7 +33,7 @@ function formatDateItalian(date, includeWeekday = true) {
  * @param {Date} date - Data da formattare
  * @returns {string} - Orario formattato
  */
-function formatTimeItalian(date) {
+export function formatTimeItalian(date) {
     if (typeof date === 'string') {
         date = new Date(date);
     }
@@ -49,7 +49,7 @@ function formatTimeItalian(date) {
  * @param {Date} date - Data da formattare
  * @returns {string} - Data e orario formattati
  */
-function formatDateTimeItalian(date) {
+export function formatDateTimeItalian(date) {
     if (typeof date === 'string') {
         date = new Date(date);
     }
@@ -63,7 +63,7 @@ function formatDateTimeItalian(date) {
  * @param {number} mese - Mese (0-11)
  * @returns {Date} - Primo giorno del mese
  */
-function getPrimoGiornoMese(anno, mese) {
+export function getPrimoGiornoMese(anno, mese) {
     return new Date(anno, mese, 1);
 }
 
@@ -73,7 +73,7 @@ function getPrimoGiornoMese(anno, mese) {
  * @param {number} mese - Mese (0-11)
  * @returns {Date} - Ultimo giorno del mese
  */
-function getUltimoGiornoMese(anno, mese) {
+export function getUltimoGiornoMese(anno, mese) {
     return new Date(anno, mese + 1, 0);
 }
 
@@ -83,7 +83,7 @@ function getUltimoGiornoMese(anno, mese) {
  * @param {number} mese - Mese (0-11)
  * @returns {number} - Numero di giorni nel mese
  */
-function getGiorniInMese(anno, mese) {
+export function getGiorniInMese(anno, mese) {
     return new Date(anno, mese + 1, 0).getDate();
 }
 
@@ -92,7 +92,7 @@ function getGiorniInMese(anno, mese) {
  * @param {Date} date - Data di riferimento
  * @returns {Date} - Primo giorno della settimana (lunedì)
  */
-function getPrimoGiornoSettimana(date) {
+export function getPrimoGiornoSettimana(date) {
     const giorno = date.getDay();
     const diff = date.getDate() - giorno + (giorno === 0 ? -6 : 1); // Aggiusta per iniziare da lunedì
     return new Date(date.setDate(diff));
@@ -104,7 +104,7 @@ function getPrimoGiornoSettimana(date) {
  * @param {Date} date2 - Seconda data
  * @returns {boolean} - True se le date sono nello stesso giorno
  */
-function isStessoGiorno(date1, date2) {
+export function isStessoGiorno(date1, date2) {
     return date1.getFullYear() === date2.getFullYear() &&
            date1.getMonth() === date2.getMonth() &&
            date1.getDate() === date2.getDate();
@@ -114,7 +114,7 @@ function isStessoGiorno(date1, date2) {
  * Genera un ID univoco per gli eventi, verificando che non sia già in uso
  * @returns {string} - ID univoco
  */
-function generateUniqueId() {
+export function generateUniqueId() {
     let id;
     let isUnique = false;
     
@@ -135,7 +135,7 @@ function generateUniqueId() {
  * @param {string} messaggio - Messaggio da mostrare
  * @param {string} tipo - Tipo di notifica (success, error, warning)
  */
-function mostraNotifica(messaggio, tipo = '') {
+export function mostraNotifica(messaggio, tipo = '') {
     const notifica = document.createElement('div');
     notifica.className = `notification ${tipo}`;
     notifica.textContent = messaggio;
@@ -162,7 +162,7 @@ function mostraNotifica(messaggio, tipo = '') {
  * @param {Date} inizioGiornata - Inizio della giornata
  * @returns {Object} - Posizione e altezza dell'evento
  */
-function calcolaPosizioneEvento(evento, inizioGiornata) {
+export function calcolaPosizioneEvento(evento, inizioGiornata) {
     const oraInizio = new Date(evento.dataInizio);
     const oraFine = new Date(evento.dataFine);
     
@@ -186,7 +186,7 @@ function calcolaPosizioneEvento(evento, inizioGiornata) {
  * @param {number} hours - Numero di ore da aggiungere
  * @returns {Date} - Nuova data
  */
-function addHour(date, hours) {
+export function addHour(date, hours) {
     const newDate = new Date(date);
     newDate.setHours(newDate.getHours() + hours);
     return newDate;
@@ -201,7 +201,7 @@ function addHour(date, hours) {
  * @param {number} minutes - Minuti (default 0)
  * @returns {Date} - Data locale
  */
-function createLocalDate(year, month, day, hours = 0, minutes = 0) {
+export function createLocalDate(year, month, day, hours = 0, minutes = 0) {
     // Mese in JavaScript è 0-based (0 = gennaio, 11 = dicembre)
     return new Date(year, month - 1, day, hours, minutes, 0, 0);
 }
@@ -211,7 +211,7 @@ function createLocalDate(year, month, day, hours = 0, minutes = 0) {
  * @param {Date} date - Data da cui estrarre il giorno della settimana
  * @returns {number} - Indice del giorno in formato europeo
  */
-function getEuropeanWeekday(date) {
+export function getEuropeanWeekday(date) {
     // Converti da 0-6 (domenica-sabato) a 0-6 (lunedì-domenica)
     return date.getDay() === 0 ? 6 : date.getDay() - 1;
 }
@@ -228,7 +228,7 @@ function getEuropeanWeekday(date) {
  * utils.js - Miglioramento della funzione createDate
  * Questa soluzione centralizzata risolve problemi di timezone e incoerenze
  */
-function createDate(data) {
+export function createDate(data) {
     // Caso 1: Se è già un oggetto Date, ritorna una copia
     if (data instanceof Date) {
         return new Date(data.getTime());
