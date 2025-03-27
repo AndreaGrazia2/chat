@@ -57,7 +57,7 @@ function initSocketListeners() {
         console.log('[CALENDAR_DEBUG] Socket.IO is available');
         
         // Usa il socket globale già inizializzato
-        const socket = io();
+        socket = io();
         
         // Aggiungi log per verificare la connessione
         socket.on('connect', function() {
@@ -129,23 +129,63 @@ function getMessageForAction(action) {
     }
 }
 
+// Sostituisci la funzione updateEventLocally in app.js con questa versione migliorata
 function updateEventLocally(eventData) {
     // Aggiorna un evento specifico nell'array eventi senza ricaricare tutto
-    if (!eventData || !eventData.id) return;
+    if (!eventData || !eventData.id) {
+        console.error('[CALENDAR_DEBUG] Impossibile aggiornare evento: dati mancanti o ID mancante', eventData);
+        return;
+    }
     
-    const eventIndex = eventi.findIndex(e => e.id === eventData.id);
+    console.log('[CALENDAR_DEBUG] Aggiornamento locale dell\'evento:', eventData.id);
+    
+    // Compatibilità con diversi formati di dati
+    const eventId = eventData.id;
+    const eventIndex = eventi.findIndex(e => e.id === eventId);
+    
     if (eventIndex !== -1) {
+        console.log('[CALENDAR_DEBUG] Evento trovato nell\'array locale, indice:', eventIndex);
+        
+        // Estrai i campi necessari con fallback ai valori esistenti
+        const titolo = eventData.titolo || eventData.title || eventi[eventIndex].titolo;
+        const descrizione = eventData.descrizione || eventData.description || eventi[eventIndex].descrizione;
+        
+        // Gestisci sia il formato ISO che gli oggetti Date
+        let dataInizio = eventi[eventIndex].dataInizio;
+        if (eventData.dataInizio) {
+            dataInizio = createDate(eventData.dataInizio);
+        } else if (eventData.start_date) {
+            dataInizio = createDate(eventData.start_date);
+        }
+        
+        let dataFine = eventi[eventIndex].dataFine;
+        if (eventData.dataFine) {
+            dataFine = createDate(eventData.dataFine);
+        } else if (eventData.end_date) {
+            dataFine = createDate(eventData.end_date);
+        }
+        
+        const categoria = eventData.categoria || eventData.category_id || eventi[eventIndex].categoria;
+        const location = eventData.location || eventi[eventIndex].location || '';
+        
         // Aggiorna l'evento esistente
         eventi[eventIndex] = {
             ...eventi[eventIndex],
-            titolo: eventData.titolo,
-            descrizione: eventData.descrizione,
-            dataInizio: new Date(eventData.dataInizio),
-            dataFine: new Date(eventData.dataFine),
-            categoria: eventData.categoria,
-            location: eventData.location || '',
+            titolo: titolo,
+            descrizione: descrizione,
+            dataInizio: dataInizio,
+            dataFine: dataFine,
+            categoria: categoria,
+            location: location,
             modificato: new Date()
         };
+        
+        console.log('[CALENDAR_DEBUG] Evento aggiornato localmente con successo');
+    } else {
+        console.warn('[CALENDAR_DEBUG] Evento non trovato nell\'array locale:', eventId);
+        // L'evento non esiste, ricarichiamo tutti gli eventi
+        console.log('[CALENDAR_DEBUG] Ricaricamento completo degli eventi...');
+        caricaEventi();
     }
 }
 
@@ -209,6 +249,12 @@ function initApp() {
     }
 
     initTimeIndicator();
+
+    // Verifica lo stato della connessione Socket.IO dopo un po' di tempo
+    setTimeout(checkSocketConnection, 2000);
+    
+    // Ricontrolla periodicamente la connessione Socket.IO
+    setInterval(checkSocketConnection, 30000);
 }
 
 
@@ -483,6 +529,29 @@ function toggleSidebar() {
         overlay.classList.remove('active');
     }
 }
+
+function checkSocketConnection() {
+    console.log('[CALENDAR_DEBUG] Checking socket connection status...');
+    
+    if (!socket) {
+        console.error('[CALENDAR_DEBUG] Socket object not initialized!');
+        return false;
+    }
+    
+    console.log('[CALENDAR_DEBUG] Socket object exists');
+    console.log('[CALENDAR_DEBUG] Socket connected:', socket.connected);
+    
+    if (!socket.connected) {
+        console.log('[CALENDAR_DEBUG] Attempting to reconnect...');
+        socket.connect();
+    }
+    
+    return socket.connected;
+}
+
+// Aggiungi questo al fondo della funzione initApp() in app.js
+// Dopo la riga "initSocketListeners();"
+setTimeout(checkSocketConnection, 2000); // Controlla lo stato della connessione dopo 2 secondi
 
 // Inizializza l'applicazione quando il DOM è caricato
 document.addEventListener('DOMContentLoaded', initApp);

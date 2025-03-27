@@ -26,6 +26,11 @@ def register_calendar_handlers(socketio):
     
     logger.info("Socket.IO handlers del calendario registrati")
 
+"""
+Miglioramento della funzione emit_calendar_update in socket_manager.py
+per garantire una corretta serializzazione dei dati e un formato uniforme
+"""
+
 def emit_calendar_update(action, data, company_id=None):
     """
     Emette un evento di aggiornamento del calendario
@@ -37,11 +42,30 @@ def emit_calendar_update(action, data, company_id=None):
     """
     # Importa socketio dal modulo principale per evitare dipendenze circolari
     from app import socketio
+    import json
+    
+    # Assicurati che i dati siano serializzabili
+    if hasattr(data, 'to_dict'):
+        # Se l'oggetto ha un metodo to_dict, usalo
+        event_data_dict = data.to_dict()
+    elif isinstance(data, dict):
+        # Se è già un dizionario, usalo direttamente
+        event_data_dict = data
+    else:
+        # Altrimenti, converti in stringa l'ID
+        event_data_dict = {'id': str(data)}
+        
+    # Assicurati che l'ID sia sempre una stringa
+    if 'id' in event_data_dict and not isinstance(event_data_dict['id'], str):
+        event_data_dict['id'] = str(event_data_dict['id'])
+    
+    # Log dettagliato dei dati che stiamo emettendo
+    logger.info(f"Emissione evento calendario {action} con dati: {json.dumps(event_data_dict, default=str)}")
     
     event_data = {
         'type': 'calendar_update',
         'action': action,
-        'data': data
+        'data': event_data_dict
     }
     
     # Se è specificato un company_id, emetti solo alla room dell'azienda
