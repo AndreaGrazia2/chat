@@ -12,7 +12,7 @@ import requests
 from datetime import datetime, timedelta
 
 class CalendarAgent:
-    def __init__(self, llm, calendar_api_base_url="http://localhost:5000/cal/api"):
+    def __init__(self, llm, calendar_api_base_url=None):        
         """
         Inizializza l'agente calendario
         
@@ -21,7 +21,13 @@ class CalendarAgent:
             calendar_api_base_url: URL base delle API calendario
         """
         self.llm = llm
-        self.calendar_api_base_url = calendar_api_base_url
+        
+        # Se non viene fornito un URL base, usa quello dalla configurazione
+        if calendar_api_base_url is None:
+            from common.config import API_BASE_URL
+            self.calendar_api_base_url = f"{API_BASE_URL}/cal/api"
+        else:
+            self.calendar_api_base_url = calendar_api_base_url
         
         # Import qui per evitare dipendenze circolari
         from agent.calendar_intent import create_calendar_intent_chain, parse_intent_response
