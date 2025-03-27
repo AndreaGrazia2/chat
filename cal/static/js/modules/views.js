@@ -18,12 +18,23 @@ import {
     mostraNotifica
 } from './utils.js';
 
-import { getEventiGiorno, modificaEvento } from './events.js';
+import { initDragAndDrop, cleanupDragAndDrop } from './drag-drop.js';
+import { attachEventClickHandlers, getEventiGiorno, modificaEvento, aggiungiEvento, eliminaEvento,  updateCurrentTimeIndicator } from './events.js';
+import { initTimeIndicator } from '../app.js';
 
 // Variabili globali per le viste
 let vistaAttuale = 'month';
 let dataAttuale = new Date();
 let dataSelezionata = null; // variabile per tenere traccia della data selezionata
+
+// Categorie di eventi (da spostare in un modulo separato in futuro)
+const categorie = {
+    work: { nome: 'Lavoro', colore: '#4285f4' },
+    personal: { nome: 'Personale', colore: '#34a853' },
+    family: { nome: 'Famiglia', colore: '#fbbc05' },
+    health: { nome: 'Salute', colore: '#ea4335' },
+    other: { nome: 'Altro', colore: '#9e9e9e' }
+};
 
 /**
  * Inizializza le viste del calendario
@@ -54,9 +65,7 @@ export function aggiornaVista() {
     document.getElementById(`${vistaAttuale}View`).classList.add('active');
     
     // Disattiva il drag and drop precedente, se esiste
-    if (window.dragDrop && typeof window.dragDrop.cleanup === 'export function') {
-        window.dragDrop.cleanup();
-    }
+    cleanupDragAndDrop();
     
     // Aggiorna la vista in base al tipo
     switch (vistaAttuale) {
@@ -81,26 +90,21 @@ export function aggiornaVista() {
     
     // Inizializza il drag and drop dopo aver renderizzato la vista
     setTimeout(() => {
-        if (window.dragDrop && typeof window.dragDrop.init === 'export function') {
-            window.dragDrop.init(vistaAttuale);
-        }
+
+            initDragAndDrop(vistaAttuale);
         
-        // Attacca i gestori di eventi agli elementi dopo il caricamento completo
-        if (typeof attachEventClickHandlers === 'export function') {
             attachEventClickHandlers();
-        }
         
-        if (typeof updateCurrentTimeIndicator === 'export function') {
             updateCurrentTimeIndicator();
-        }
         
-        if (typeof initTimeIndicator === 'export function') {
             setTimeout(initTimeIndicator, 300);
-        }
     }, 300);
     
     // Aggiorna l'intestazione
     aggiornaIntestazione();
+    
+    // Renderizza gli eventi
+    renderEventi();
 }
 
 /**
@@ -324,10 +328,10 @@ export function apriModalNuovoEvento(data) {
     document.getElementById('eventEndDate').value = dataFineStr;
     document.getElementById('eventEndTime').value = oraFineStr;
     
-    // Rimuovi il pulsante elimina se presente
+    // Rimuovi il pulsante nascondi se presente
     const deleteButton = document.getElementById('deleteEvent');
     if (deleteButton) {
-        deleteButton.remove();
+        deleteButton.style.display = 'none'; // Nascondi invece di rimuovere
     }
     
     // Aggiorna l'event listener del pulsante salva
@@ -455,7 +459,7 @@ export function apriModalListaEventi(data) {
  */
 export function apriModalEvento(id) {
     // Trova l'evento
-    const evento = eventi.find(e => e.id === id);
+    const evento = window.eventi.find(e => e.id === id);
     if (!evento) return;
     
     // Aggiorna il titolo del modal
@@ -658,9 +662,258 @@ export function chiudiModal(modalId) {
 }
 
 /**
- * Aggiorna tutte le viste del calendario
+ * Renderizza gli eventi nel calendario
  */
-export function aggiornaViste() {
-    renderizzaMiniCalendario();
-    aggiornaVista();
+export function renderEventi() {
+    console.log('%c[RENDER] Rendering eventi nel calendario', 'background: #16a085; color: white; padding: 2px 5px; border-radius: 3px;');
+    
+    // Verifica che gli eventi siano disponibili
+    if (!window.eventi || window.eventi.length === 0) {
+        console.log('[RENDER] Nessun evento da visualizzare');
+        return;
+    }
+    
+    console.log('[RENDER] Rendering di', window.eventi.length, 'eventi');
+    
+    // Rimuovi tutti gli eventi esistenti dal DOM
+    const eventiEsistenti = document.querySelectorAll('.event');
+    eventiEsistenti.forEach(evento => evento.remove());
+    console.log('[RENDER] Rimossi', eventiEsistenti.length, 'eventi esistenti');
+    
+    // Ottieni tutti i giorni del calendario
+    const giorniCalendario = document.querySelectorAll('.calendar-day');
+    console.log('[RENDER] Trovati', giorniCalendario.length, 'giorni nel calendario');
+    
+    // Crea una mappa dei giorni per data
+    const mappaGiorni = new Map();
+    giorniCalendario.forEach(giorno => {
+        const dataGiorno = giorno.getAttribute('data-date');
+        if (dataGiorno) {
+            mappaGiorni.set(dataGiorno, giorno);
+        }
+    });
+    
+    // Per ogni evento, trova il giorno corrispondente e aggiungi l'evento
+    window.eventi.forEach(evento => {
+        // Formatta la data dell'evento nello stesso formato dell'attributo data-date
+        const dataEvento = evento.dataInizio.toISOString().split('T')[0]; // YYYY-MM-DD
+        
+        // Trova il giorno corrispondente
+        const giorno = mappaGiorni.get(dataEvento);
+        
+        if (giorno) {
+            // Trova o crea il contenitore degli eventi
+            let contenitoreEventi = giorno.querySelector('.day-events');
+            
+            if (!contenitoreEventi) {
+                // Se non esiste, crealo
+                contenitoreEventi = document.createElement('div');
+                contenitoreEventi.className = 'day-events';
+                giorno.appendChild(contenitoreEventi);
+            }
+            
+            // Crea l'elemento evento
+            const elementoEvento = document.createElement('div');
+            elementoEvento.className = `event category-${evento.categoria}`;
+            elementoEvento.setAttribute('data-event-id', evento.id);
+            
+            // Formatta l'ora dell'evento (se disponibile)
+            let orarioEvento = '';
+            if (evento.dataInizio) {
+                const ore = evento.dataInizio.getHours().toString().padStart(2, '0');
+                const minuti = evento.dataInizio.getMinutes().toString().padStart(2, '0');
+                orarioEvento = `${ore}:${minuti}`;
+            }
+            
+            // Aggiungi il contenuto dell'evento
+            elementoEvento.innerHTML = `
+                <div class="event-time">${orarioEvento}</div>
+                <div class="event-title">${evento.titolo}</div>
+            `;
+            
+            // Aggiungi l'evento al contenitore
+            contenitoreEventi.appendChild(elementoEvento);
+            
+            // Aggiungi event listener per il click
+            elementoEvento.addEventListener('click', () => {
+                console.log('[EVENT] Click su evento:', evento);
+                // Qui puoi aggiungere la logica per mostrare i dettagli dell'evento
+                apriModalEvento(evento.id);
+            });
+        } else {
+            console.log('[RENDER] Nessun giorno trovato per la data:', dataEvento);
+        }
+    });
+    
+    console.log('[RENDER] Rendering eventi completato');
 }
+
+/**
+ * Funzione per aggiornare l'indicatore dell'ora corrente nelle viste
+ */
+export function aggiornaIndicatoreOraCorrente() {
+    // Ottieni l'ora corrente
+    const oraCorrente = new Date();
+    
+    // Calcola la posizione dell'indicatore in base all'ora
+    const ore = oraCorrente.getHours();
+    const minuti = oraCorrente.getMinutes();
+    const percentualeGiorno = (ore * 60 + minuti) / (24 * 60);
+    
+    // Aggiorna l'indicatore nella vista giornaliera
+    const indicatoreGiornaliero = document.querySelector('.current-time-indicator.day-view');
+    if (indicatoreGiornaliero) {
+        const altezzaContenitore = document.querySelector('.day-hours-container').offsetHeight;
+        const posizione = percentualeGiorno * altezzaContenitore;
+        indicatoreGiornaliero.style.top = `${posizione}px`;
+        
+        // Aggiorna l'etichetta dell'ora
+        const etichettaOra = indicatoreGiornaliero.querySelector('.time-label');
+        if (etichettaOra) {
+            etichettaOra.textContent = `${ore.toString().padStart(2, '0')}:${minuti.toString().padStart(2, '0')}`;
+        }
+    }
+    
+    // Aggiorna l'indicatore nella vista settimanale
+    const indicatoreSettimanale = document.querySelector('.current-time-indicator.week-view');
+    if (indicatoreSettimanale) {
+        const altezzaContenitore = document.querySelector('.week-hours-container').offsetHeight;
+        const posizione = percentualeGiorno * altezzaContenitore;
+        indicatoreSettimanale.style.top = `${posizione}px`;
+        
+        // Aggiorna l'etichetta dell'ora
+        const etichettaOra = indicatoreSettimanale.querySelector('.time-label');
+        if (etichettaOra) {
+            etichettaOra.textContent = `${ore.toString().padStart(2, '0')}:${minuti.toString().padStart(2, '0')}`;
+        }
+    }
+}
+
+/**
+ * Inizializza l'indicatore dell'ora corrente e imposta l'aggiornamento periodico
+ */
+export function inizializzaIndicatoreOraCorrente() {
+    // Crea l'indicatore per la vista giornaliera se non esiste
+    let indicatoreGiornaliero = document.querySelector('.current-time-indicator.day-view');
+    if (!indicatoreGiornaliero && document.querySelector('.day-hours-container')) {
+        indicatoreGiornaliero = document.createElement('div');
+        indicatoreGiornaliero.className = 'current-time-indicator day-view';
+        indicatoreGiornaliero.innerHTML = '<div class="time-label"></div>';
+        document.querySelector('.day-hours-container').appendChild(indicatoreGiornaliero);
+    }
+    
+    // Crea l'indicatore per la vista settimanale se non esiste
+    let indicatoreSettimanale = document.querySelector('.current-time-indicator.week-view');
+    if (!indicatoreSettimanale && document.querySelector('.week-hours-container')) {
+        indicatoreSettimanale = document.createElement('div');
+        indicatoreSettimanale.className = 'current-time-indicator week-view';
+        indicatoreSettimanale.innerHTML = '<div class="time-label"></div>';
+        document.querySelector('.week-hours-container').appendChild(indicatoreSettimanale);
+    }
+    
+    // Aggiorna subito l'indicatore
+    aggiornaIndicatoreOraCorrente();
+    
+    // Imposta l'aggiornamento periodico (ogni minuto)
+    setInterval(aggiornaIndicatoreOraCorrente, 60000);
+}
+
+/**
+ * Cambia la vista del calendario
+ * @param {string} nuovaVista - La nuova vista da mostrare ('month', 'week', 'day', 'list')
+ */
+export function cambiaVista(nuovaVista) {
+    // Verifica che la vista sia valida
+    if (!['month', 'week', 'day', 'list'].includes(nuovaVista)) {
+        console.error('Vista non valida:', nuovaVista);
+        return;
+    }
+    
+    // Aggiorna la vista attuale
+    vistaAttuale = nuovaVista;
+    
+    // Aggiorna la classe attiva nei pulsanti di selezione vista
+    document.querySelectorAll('.view-selector button').forEach(button => {
+        button.classList.remove('active');
+    });
+    
+    document.querySelector(`.view-selector button[data-view="${nuovaVista}"]`).classList.add('active');
+    
+    // Carica i dati per la nuova vista
+    const intervallo = getIntervalloVista(nuovaVista, dataAttuale);
+    caricaEventiPeriodo(intervallo).then(() => {
+        // Aggiorna la vista
+        aggiornaVista();
+    });
+}
+
+/**
+ * Naviga alla data precedente nella vista corrente
+ */
+export function navigaDataPrecedente() {
+    switch (vistaAttuale) {
+        case 'month':
+            dataAttuale.setMonth(dataAttuale.getMonth() - 1);
+            break;
+        case 'week':
+            dataAttuale.setDate(dataAttuale.getDate() - 7);
+            break;
+        case 'day':
+            dataAttuale.setDate(dataAttuale.getDate() - 1);
+            break;
+        case 'list':
+            dataAttuale.setDate(dataAttuale.getDate() - 7);
+            break;
+    }
+    
+    // Carica i dati per la nuova data
+    const intervallo = getIntervalloVista(vistaAttuale, dataAttuale);
+    caricaEventiPeriodo(intervallo).then(() => {
+        // Aggiorna la vista
+        aggiornaVista();
+    });
+}
+
+/**
+ * Naviga alla data successiva nella vista corrente
+ */
+export function navigaDataSuccessiva() {
+    switch (vistaAttuale) {
+        case 'month':
+            dataAttuale.setMonth(dataAttuale.getMonth() + 1);
+            break;
+        case 'week':
+            dataAttuale.setDate(dataAttuale.getDate() + 7);
+            break;
+        case 'day':
+            dataAttuale.setDate(dataAttuale.getDate() + 1);
+            break;
+        case 'list':
+            dataAttuale.setDate(dataAttuale.getDate() + 7);
+            break;
+    }
+    
+    // Carica i dati per la nuova data
+    const intervallo = getIntervalloVista(vistaAttuale, dataAttuale);
+    caricaEventiPeriodo(intervallo).then(() => {
+        // Aggiorna la vista
+        aggiornaVista();
+    });
+}
+
+/**
+ * Naviga alla data odierna
+ */
+export function navigaDataOggi() {
+    dataAttuale = new Date();
+    
+    // Carica i dati per la data odierna
+    const intervallo = getIntervalloVista(vistaAttuale, dataAttuale);
+    caricaEventiPeriodo(intervallo).then(() => {
+        // Aggiorna la vista
+        aggiornaVista();
+    });
+}
+
+// Esporta le variabili globali per l'accesso da altri moduli
+export { vistaAttuale, dataAttuale, dataSelezionata };

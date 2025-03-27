@@ -4,14 +4,7 @@
 
 import { caricaEventiPeriodo, getIntervalloVista } from './modules/data-loader.js';
 import { enableDragAndDrop } from './modules/drag-drop.js';
-import { 
-    inizializzaViste, 
-    aggiornaViste, 
-    aggiornaVista, 
-    apriModalNuovoEvento, 
-    chiudiModal 
-} from './modules/views.js';
-
+import { inizializzaViste, aggiornaVista, apriModalNuovoEvento, chiudiModal } from './modules/views.js';
 import { createDate, mostraNotifica } from './modules/utils.js';
 import { attachEventClickHandlers  } from './modules/events.js';
 
@@ -113,7 +106,7 @@ function initSocketListeners() {
                         const intervallo = getIntervalloVista(window.vistaAttuale, window.dataAttuale);
                         caricaEventiPeriodo(intervallo, true).then(() => {
                             // Aggiorna la vista
-                            aggiornaViste();
+                            aggiornaVista();
                             
                             // Mostra notifica
                             let message = getMessageForAction(data.action);
@@ -132,7 +125,7 @@ function initSocketListeners() {
                             if (eventDateObj >= intervallo.dataInizio && eventDateObj <= intervallo.dataFine) {
                                 caricaEventiPeriodo(intervallo, true).then(() => {
                                     // Aggiorna la vista
-                                    aggiornaViste();
+                                    aggiornaVista();
                                     
                                     // Mostra notifica
                                     let message = getMessageForAction(data.action);
@@ -147,7 +140,7 @@ function initSocketListeners() {
                             // Se non abbiamo informazioni sulla data, ricarica comunque
                             const intervallo = getIntervalloVista(window.vistaAttuale, window.dataAttuale);
                             caricaEventiPeriodo(intervallo, true).then(() => {
-                                aggiornaViste();
+                                aggiornaVista();
                                 
                                 let message = getMessageForAction(data.action);
                                 mostraNotifica(message, 'success');
@@ -236,7 +229,7 @@ function updateEventLocally(eventData) {
         // Aggiorna la vista se l'evento è visibile
         const intervallo = getIntervalloVista(window.vistaAttuale, window.dataAttuale);
         if (dataInizio >= intervallo.dataInizio && dataInizio <= intervallo.dataFine) {
-            aggiornaViste();
+            aggiornaVista();
             mostraNotifica('Evento aggiornato', 'success');
         }
     } else {
@@ -246,7 +239,9 @@ function updateEventLocally(eventData) {
     }
 }
 
-// In app.js, migliora la gestione dell'intervallo di aggiornamento dell'ora
+/**
+ * Inizializza il time indicator
+ */
 function initTimeIndicator() {
     // Pulisci eventuali timer esistenti
     if (window.currentTimeIndicatorInterval) {
@@ -375,7 +370,7 @@ function initEventListeners() {
             // Verifica se è necessario caricare nuovi dati
             const intervallo = getIntervalloVista(window.vistaAttuale, window.dataAttuale);
             caricaEventiPeriodo(intervallo).then(() => {
-                aggiornaViste();
+                aggiornaVista();
                 
                 // Dopo l'aggiornamento delle viste, collega i gestori agli eventi
                 if (typeof attachEventClickHandlers === 'function') {
@@ -414,7 +409,7 @@ function initEventListeners() {
             // Verifica se è necessario caricare nuovi dati
             const intervallo = getIntervalloVista(window.vistaAttuale, window.dataAttuale);
             caricaEventiPeriodo(intervallo).then(() => {
-                aggiornaViste();
+                aggiornaVista();
                 
                 // Dopo l'aggiornamento delle viste, collega i gestori agli eventi
                 if (typeof attachEventClickHandlers === 'function') {
@@ -435,7 +430,7 @@ function initEventListeners() {
             // Carica gli eventi per la data odierna
             const intervallo = getIntervalloVista(window.vistaAttuale, window.dataAttuale);
             caricaEventiPeriodo(intervallo).then(() => {
-                aggiornaViste();
+                aggiornaVista();
                 
                 // Dopo l'aggiornamento delle viste, collega i gestori agli eventi
                 if (typeof attachEventClickHandlers === 'function') {

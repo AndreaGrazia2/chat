@@ -210,7 +210,7 @@ export function handleDrop(e) {
     }
     
     // Aggiorna le viste
-    aggiornaViste();
+    aggiornaVista();
     
     // Mostra una notifica di conferma
     mostraNotifica('Evento spostato con successo', 'success');
@@ -269,9 +269,3 @@ export function cleanupDragAndDrop() {
         el.classList.remove('dragging');
     });
 }
-
-// Esponi le funzioni
-window.dragDrop = {
-    init: initDragAndDrop,
-    cleanup: cleanupDragAndDrop
-};

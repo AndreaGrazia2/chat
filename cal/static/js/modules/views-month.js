@@ -2,14 +2,9 @@
  * views-month.js - Gestione della vista mensile del calendario
  */
 
-import { 
-    getPrimoGiornoMese, 
-    getGiorniInMese, 
-    createDate, 
-    formatTimeItalian, 
-} from './utils.js';
+import { getPrimoGiornoMese, getGiorniInMese, createDate, formatTimeItalian, } from './utils.js';
 import { getEventiGiorno } from './events.js';
-
+import { dataAttuale, apriModalNuovoEvento, apriModalEvento, apriModalListaEventi } from './views.js';
 /**
  * Renderizza la vista mensile
  */
@@ -174,7 +169,7 @@ export function renderizzaEventiGiorno(eventi, maxEventi = 3) {
 // Funzione di supporto per la vista mensile
 export function renderMonthView(date = new Date()) {
     // Assicurati che dataAttuale sia impostata correttamente
-    dataAttuale = createDate(date) || dataAttuale;
+    dataAttuale = createDate(date);
     
     // Renderizza la vista
     renderizzaVistaMensile();

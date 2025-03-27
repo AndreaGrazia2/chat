@@ -3,9 +3,8 @@
  */
 
 import { caricaEventiPeriodo, getIntervalloVista } from './data-loader.js';
-
-// Array per memorizzare gli eventi
-let eventi = [];
+import { getPrimoGiornoSettimana, isStessoGiorno, createDate, mostraNotifica } from './utils.js';
+import { aggiornaVista, vistaAttuale, dataAttuale, dataSelezionata, apriModalNuovoEvento } from './views.js';
 
 // Categorie di eventi disponibili
 // Definizione delle categorie
@@ -79,7 +78,7 @@ export function aggiungiEvento(evento) {
             const intervallo = getIntervalloVista(vistaAttuale, dataAttuale);
             return caricaEventiPeriodo(intervallo, true).then(() => {
                 // Aggiorna la vista del calendario
-                aggiornaViste();
+                aggiornaVista();
                 
                 // Rimuoviamo il flag isNew dopo un po' di tempo
                 setTimeout(() => {
@@ -158,7 +157,7 @@ export function modificaEvento(eventoId, datiAggiornati) {
             const intervallo = getIntervalloVista(vistaAttuale, dataAttuale);
             return caricaEventiPeriodo(intervallo, true).then(() => {
                 // Aggiorna le viste
-                aggiornaViste();
+                aggiornaVista();
                 
                 return eventoAggiornato;
             });
@@ -204,7 +203,7 @@ export function eliminaEvento(id) {
             const intervallo = getIntervalloVista(vistaAttuale, dataAttuale);
             return caricaEventiPeriodo(intervallo, true).then(() => {
                 // Aggiorna le viste
-                aggiornaViste();
+                aggiornaVista();
                 
                 return true;
             });
@@ -311,7 +310,7 @@ export function caricaEventi() {
             console.log(`Caricati ${eventi.length} eventi dall'API`);
             
             // Aggiorna le viste
-            aggiornaViste();
+            aggiornaVista();
         })
         .catch(error => {
             console.error('Errore durante il caricamento degli eventi:', error);
@@ -449,7 +448,7 @@ export function generaEventiTest(numEventi = 15) {
     //console.log(`Generati ${numEventi} eventi di test realistici`);
     
     // Aggiorna le viste
-    aggiornaViste();
+    aggiornaVista();
 }
 
 // Funzione per salvare le modifiche agli eventi

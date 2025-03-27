@@ -1,13 +1,9 @@
 /**
  * views-day.js - Gestione della vista giornaliera del calendario
  */
-import { 
-    isStessoGiorno, 
-    createDate, 
-    formatTimeItalian, 
-    getEuropeanWeekday 
-} from './utils.js';
+import { isStessoGiorno, createDate, formatTimeItalian, getEuropeanWeekday } from './utils.js';
 import { getEventiGiorno } from './events.js';
+import { dataAttuale, dataSelezionata, apriModalNuovoEvento } from './views.js';
 
 /**
  * Posiziona gli eventi sovrapposti nella vista giornaliera

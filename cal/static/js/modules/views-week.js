@@ -2,13 +2,9 @@
  * views-week.js - Gestione della vista settimanale del calendario
  */
 
-import { 
-    getPrimoGiornoSettimana, 
-    isStessoGiorno, 
-    createDate, 
-    formatTimeItalian 
-} from './utils.js';
+import { getPrimoGiornoSettimana, isStessoGiorno, createDate, formatTimeItalian } from './utils.js';
 import { getEventiSettimana } from './events.js';
+import { dataAttuale, apriModalNuovoEvento } from './views.js';
 
 /**
  * Renderizza la vista settimanale

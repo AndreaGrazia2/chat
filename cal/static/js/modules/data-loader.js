@@ -7,7 +7,7 @@ import {
     getPrimoGiornoSettimana, 
     mostraNotifica 
 } from './utils.js';
-import { aggiornaViste } from './views.js';
+import { aggiornaVista } from './views.js';
 
 // Variabile per tenere traccia dell'intervallo attualmente caricato
 let intervalloCaricato = null;
@@ -98,15 +98,18 @@ export function isIntervalliSovrapposti(intervallo1, intervallo2) {
  * @returns {Promise} - Promise che si risolve quando gli eventi sono caricati
  */
 export function caricaEventiPeriodo(intervallo, forzaRicarica = false) {
+    console.log('%c[LOADER] Inizio caricaEventiPeriodo', 'background: #3498db; color: white; padding: 2px 5px; border-radius: 3px;');
+    console.log('[LOADER] Parametri:', { intervallo, forzaRicarica });
+    
     // Se è già in corso un caricamento, ritorna una promise che si risolve immediatamente
     if (caricamentoInCorso) {
-        console.log('Caricamento già in corso, richiesta ignorata');
+        console.log('[LOADER] Caricamento già in corso, richiesta ignorata');
         return Promise.resolve();
     }
     
     // Se l'intervallo è già completamente caricato e non è richiesta una ricarica forzata, non fare nulla
     if (!forzaRicarica && intervalloCaricato && isIntervalloContenuto(intervallo, intervalloCaricato)) {
-        console.log('Intervallo già caricato:', 
+        console.log('[LOADER] Intervallo già caricato:', 
             intervallo.dataInizio.toLocaleDateString(), 'al', 
             intervallo.dataFine.toLocaleDateString());
         return Promise.resolve();
@@ -125,7 +128,7 @@ export function caricaEventiPeriodo(intervallo, forzaRicarica = false) {
             intervalloRichiesto.dataFine = intervalloCaricato.dataFine;
         }
         
-        console.log('Espansione intervallo da', 
+        console.log('[LOADER] Espansione intervallo da', 
             intervallo.dataInizio.toLocaleDateString(), '-', intervallo.dataFine.toLocaleDateString(),
             'a', intervalloRichiesto.dataInizio.toLocaleDateString(), '-', 
             intervalloRichiesto.dataFine.toLocaleDateString());
@@ -133,6 +136,7 @@ export function caricaEventiPeriodo(intervallo, forzaRicarica = false) {
     
     // Segna che è in corso un caricamento
     caricamentoInCorso = true;
+    console.log('[LOADER] Caricamento iniziato, flag caricamentoInCorso =', caricamentoInCorso);
     
     // Mostra l'indicatore di caricamento
     mostraLoaderCalendario();
@@ -141,22 +145,29 @@ export function caricaEventiPeriodo(intervallo, forzaRicarica = false) {
     const startIso = intervalloRichiesto.dataInizio.toISOString();
     const endIso = intervalloRichiesto.dataFine.toISOString();
     
-    console.log('Caricamento eventi dal', intervalloRichiesto.dataInizio.toLocaleDateString(), 
+    console.log('[LOADER] Caricamento eventi dal', intervalloRichiesto.dataInizio.toLocaleDateString(), 
         'al', intervalloRichiesto.dataFine.toLocaleDateString());
+    console.log('[LOADER] URL API:', `/cal/api/events?start=${encodeURIComponent(startIso)}&end=${encodeURIComponent(endIso)}`);
     
     // Carica gli eventi dall'API
     return fetch(`/cal/api/events?start=${encodeURIComponent(startIso)}&end=${encodeURIComponent(endIso)}`)
         .then(response => {
+            console.log('[LOADER] Risposta API ricevuta:', response.status, response.statusText);
             if (!response.ok) {
+                console.error('[LOADER] Risposta API non valida:', response.status, response.statusText);
                 throw new Error('Errore durante il caricamento degli eventi');
             }
             return response.json();
         })
         .then(data => {
+            console.log('%c[LOADER] Dati JSON ricevuti', 'background: #2ecc71; color: white; padding: 2px 5px; border-radius: 3px;');
+            console.log('[LOADER] API ha restituito:', data.length, 'eventi');
+            
             // Se è una ricarica forzata o non c'è un intervallo caricato, sostituisci gli eventi
             if (forzaRicarica || !intervalloCaricato) {
                 // Pulisce l'array degli eventi
                 window.eventi = [];
+                console.log('[LOADER] Array eventi pulito per ricarica forzata o primo caricamento');
             }
             
             // Mantieni gli eventi esistenti che non sono nell'intervallo richiesto
@@ -171,37 +182,64 @@ export function caricaEventiPeriodo(intervallo, forzaRicarica = false) {
             
             // Converti le stringhe di data in oggetti Date e aggiungi i nuovi eventi
             data.forEach(evento => {
+                // Verifica che l'evento abbia tutti i campi necessari
+                if (!evento.id) {
+                    console.warn('[LOADER] Evento senza ID:', evento);
+                    return; // Salta questo evento
+                }
+                
+                // Controlla i campi di data
+                if (!evento.start_date && !evento.dataInizio) {
+                    console.warn('[LOADER] Evento senza data inizio:', evento);
+                    return; // Salta questo evento
+                }
+                
+                if (!evento.end_date && !evento.dataFine) {
+                    console.warn('[LOADER] Evento senza data fine:', evento);
+                    return; // Salta questo evento
+                }
+                
                 // Controlla se l'evento esiste già (per ID)
                 const eventoEsistente = window.eventi.find(e => e.id === evento.id);
                 
                 // Se l'evento non esiste o se è una ricarica forzata, aggiungilo
                 if (!eventoEsistente || forzaRicarica) {
-                    window.eventi.push({
+                    // Assicurati che tutti i campi siano presenti con valori di default se necessario
+                    const nuovoEvento = {
                         id: evento.id,
-                        titolo: evento.titolo,
-                        descrizione: evento.descrizione || '',
-                        dataInizio: createDate(evento.dataInizio),
-                        dataFine: createDate(evento.dataFine),
-                        categoria: evento.categoria,
+                        titolo: evento.titolo || evento.title || 'Evento senza titolo',
+                        descrizione: evento.descrizione || evento.description || '',
+                        dataInizio: createDate(evento.dataInizio || evento.start_date),
+                        dataFine: createDate(evento.dataFine || evento.end_date),
+                        categoria: evento.categoria || evento.category_id || 'default',
                         location: evento.location || '',
-                        creato: evento.creato ? createDate(evento.creato) : null,
-                        modificato: evento.modificato ? createDate(evento.modificato) : null
-                    });
+                        creato: evento.creato || evento.created_at ? createDate(evento.creato || evento.created_at) : null,
+                        modificato: evento.modificato || evento.updated_at ? createDate(evento.modificato || evento.updated_at) : null
+                    };
+                    
+                    window.eventi.push(nuovoEvento);
+                    console.log('[LOADER] Aggiunto evento:', nuovoEvento.id, nuovoEvento.titolo);
                 }
             });
             
             // Aggiorna l'intervallo caricato
             intervalloCaricato = { ...intervalloRichiesto };
             
-            console.log(`Caricati ${data.length} eventi dall'API, totale eventi in memoria: ${window.eventi.length}`);
+            console.log(`[LOADER] Caricati ${data.length} eventi dall'API, totale eventi in memoria: ${window.eventi.length}`);
             
             // Aggiorna le viste
-            if (typeof aggiornaViste === 'function') {
-                aggiornaViste();
+            if (typeof aggiornaVista === 'function') {
+                console.log('[LOADER] Chiamata aggiornaVista()');
+                aggiornaVista();
+            } else {
+                console.error('[LOADER] ERRORE: funzione aggiornaVista non disponibile');
             }
+            
+            return data;
         })
         .catch(error => {
-            console.error('Errore durante il caricamento degli eventi:', error);
+            console.error('%c[LOADER] ERRORE', 'background: #e74c3c; color: white; padding: 2px 5px; border-radius: 3px;');
+            console.error('[LOADER] Errore durante il caricamento degli eventi:', error);
             if (typeof mostraNotifica === 'function') {
                 mostraNotifica('Errore durante il caricamento degli eventi.', 'error');
             }
@@ -209,6 +247,7 @@ export function caricaEventiPeriodo(intervallo, forzaRicarica = false) {
         .finally(() => {
             // Segna che il caricamento è terminato
             caricamentoInCorso = false;
+            console.log('[LOADER] Caricamento terminato, flag caricamentoInCorso =', caricamentoInCorso);
             
             // Nascondi l'indicatore di caricamento
             nascondiLoaderCalendario();
@@ -230,6 +269,9 @@ export function mostraLoaderCalendario() {
         newLoader.innerHTML = '<div class="loader-spinner"></div>';
         document.body.appendChild(newLoader);
     }
+    
+    // Debug
+    console.log('[LOADER] Loader calendario mostrato');
 }
 
 /**
@@ -240,6 +282,9 @@ export function nascondiLoaderCalendario() {
     const loader = document.querySelector('.loader');
     if (loader) {
         loader.classList.remove('active');
+        console.log('[LOADER] Loader calendario nascosto');
+    } else {
+        console.warn('[LOADER] Loader calendario non trovato');
     }
 }
 
@@ -247,9 +292,29 @@ export function nascondiLoaderCalendario() {
  * Sostituisce la funzione caricaEventi originale per usare il nuovo sistema
  */
 export function caricaEventi() {
+    console.log('%c[CALENDAR] caricaEventi chiamata', 'background: #9b59b6; color: white; padding: 2px 5px; border-radius: 3px;');
+    
+    // Verifica che le variabili globali siano definite
+    if (typeof window.vistaAttuale === 'undefined' || typeof window.dataAttuale === 'undefined') {
+        console.error('[CALENDAR] ERRORE: vistaAttuale o dataAttuale non definite', {
+            vistaAttuale: window.vistaAttuale,
+            dataAttuale: window.dataAttuale
+        });
+        return Promise.reject(new Error('Variabili globali mancanti'));
+    }
+    
     // Calcola l'intervallo di date per cui caricare gli eventi basato sulla vista attuale
     const intervallo = getIntervalloVista(window.vistaAttuale, window.dataAttuale);
+    console.log('[CALENDAR] Intervallo calcolato:', {
+        vistaAttuale: window.vistaAttuale,
+        dataAttuale: window.dataAttuale,
+        intervallo: {
+            dataInizio: intervallo.dataInizio.toLocaleDateString(),
+            dataFine: intervallo.dataFine.toLocaleDateString()
+        }
+    });
     
     // Carica gli eventi per l'intervallo specificato, forzando la ricarica
     return caricaEventiPeriodo(intervallo, true);
 }
+
