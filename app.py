@@ -1,3 +1,5 @@
+# TODO: Autenticazione
+# TODO: Analisi delle email e allegati
 import gevent.monkey
 gevent.monkey.patch_all()
 

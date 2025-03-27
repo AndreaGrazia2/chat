@@ -1,3 +1,10 @@
+//TODO: upload files
+//TODO: aggiungere prompt strutturato all'inferenza di john doe
+//TODO: Aggiungere RAG vettoriale
+//TODO: Aggiungere inferenza per agent per RAG sul DB
+//TODO: Aggiungere analisi dei documenti inviati
+//TODO: Invio di report nella chat in formato pdf
+
 /**
  * app.js - File bridge per rendere disponibili le funzioni dei moduli
  */

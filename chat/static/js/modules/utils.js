@@ -5,7 +5,7 @@
  */
 
 function debug(message, ...args) {
-	let DEBUG = true;
+	let DEBUG = false;
 	if (DEBUG) {
 		console.log(`[DEBUG] ${message}`, ...args);
 	}

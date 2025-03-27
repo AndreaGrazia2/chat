@@ -1,4 +1,4 @@
-//TODO: Quando mi vuovo nel calendario, devo caricare i dati dal database, adesso carica solo quando parte
+//TODO: Quando mi muovo nel calendario, devo caricare i dati dal database, adesso carica solo quando parte
 
 // Imports from modules/utils.js
 import {
