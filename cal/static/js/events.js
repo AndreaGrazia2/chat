@@ -432,7 +432,7 @@ function generaEventiTest(numEventi = 15) {
         });
     }
     
-    console.log(`Generati ${numEventi} eventi di test realistici`);
+    //console.log(`Generati ${numEventi} eventi di test realistici`);
     
     // Aggiorna le viste
     aggiornaViste();
@@ -469,7 +469,7 @@ function initializeEventHandlers() {
 
 // Funzione per collegare i gestori di click agli eventi del calendario
 function attachEventClickHandlers() {
-    console.log('Attaching event click handlers');
+    //console.log('Attaching event click handlers');
     
     // Rimuovi prima tutti i listener esistenti, in modo più efficace
     removeEventClickHandlers();
@@ -492,7 +492,7 @@ function attachEventClickHandlers() {
         }
     });
     
-    console.log('Event handlers attached via event delegation');
+    //console.log('Event handlers attached via event delegation');
 }
 
 function handleContainerClick(e) {
@@ -508,7 +508,7 @@ function handleContainerClick(e) {
     if (eventElement) {
         const id = eventElement.dataset.id;
         if (id) {
-            console.log('Event clicked:', id);
+            //console.log('Event clicked:', id);
             apriModalEvento(id);
             return;
         }
@@ -520,7 +520,7 @@ function handleContainerClick(e) {
         if (parentDay) {
             const dataStr = parentDay.dataset.date;
             if (dataStr) {
-                console.log('More events clicked for date:', dataStr);
+                //console.log('More events clicked for date:', dataStr);
                 // Converti la stringa in oggetto data
                 const [anno, mese, giorno] = dataStr.split('-').map(Number);
                 const data = createDate({anno, mese, giorno});
@@ -536,7 +536,7 @@ function handleContainerClick(e) {
         const ora = dayElement.dataset.ora;
         
         if (dataStr) {
-            console.log('Day/slot clicked for new event:', dataStr, ora);
+            //console.log('Day/slot clicked for new event:', dataStr, ora);
             // Converti la stringa in oggetto data
             let data;
             
@@ -646,7 +646,7 @@ function getCurrentDate() {
  * Aggiorna l'indicatore dell'ora corrente nelle viste giornaliera e settimanale
  */
 function updateCurrentTimeIndicator() {
-    console.log('Updating current time indicator');
+    //console.log('Updating current time indicator');
     
     // Rimuovi eventuali indicatori esistenti per evitare duplicati
     document.querySelectorAll('.current-time-indicator').forEach(el => el.remove());

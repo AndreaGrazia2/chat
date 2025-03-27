@@ -8,10 +8,17 @@ from flask_socketio import join_room, leave_room
 # Configura il logging
 logger = logging.getLogger(__name__)
 
+# Riferimento globale all'oggetto socketio
+_socketio = None
+
 def register_calendar_handlers(socketio):
     """
     Registra i gestori di eventi Socket.IO per il calendario
     """
+    global _socketio
+    # Salva il riferimento a socketio per uso futuro
+    _socketio = socketio
+    
     @socketio.on('connect')
     def handle_connect():
         logger.info(f"Nuovo client connesso: {request.sid}")
@@ -26,23 +33,17 @@ def register_calendar_handlers(socketio):
     
     logger.info("Socket.IO handlers del calendario registrati")
 
-"""
-Miglioramento della funzione emit_calendar_update in socket_manager.py
-per garantire una corretta serializzazione dei dati e un formato uniforme
-"""
-
 def emit_calendar_update(action, data, company_id=None):
     """
     Emette un evento di aggiornamento del calendario
-    
-    Args:
-        action: Tipo di azione ('create', 'update', 'delete')
-        data: Dati dell'evento modificato
-        company_id: ID dell'azienda (per filtro multi-aziendale, opzionale)
     """
-    # Importa socketio dal modulo principale per evitare dipendenze circolari
-    from app import socketio
+    # Usa la variabile globale invece di importare da app
+    global _socketio
     import json
+    
+    if _socketio is None:
+        logger.error("Socket.IO non inizializzato. Impossibile emettere eventi.")
+        return False
     
     # Assicurati che i dati siano serializzabili
     if hasattr(data, 'to_dict'):
@@ -68,11 +69,21 @@ def emit_calendar_update(action, data, company_id=None):
         'data': event_data_dict
     }
     
-    # Se è specificato un company_id, emetti solo alla room dell'azienda
-    if company_id:
-        logger.info(f"Emissione evento calendario a company-{company_id}: {action}")
-        socketio.emit('calendarEvent', event_data, room=f"company-{company_id}")
-    else:
-        # Altrimenti emetti a tutti
-        logger.info(f"Emissione evento calendario globale: {action}")
-        socketio.emit('calendarEvent', event_data)
+    try:
+        # IMPORTANTE: Aggiungiamo una traccia del socketio
+        logger.info(f"Socket ID: {id(_socketio)}, Socket clients: {len(_socketio.server.eio.sockets) if hasattr(_socketio, 'server') and hasattr(_socketio.server, 'eio') else 'unknown'}")
+        
+        # Se è specificato un company_id, emetti solo alla room dell'azienda
+        if company_id:
+            logger.info(f"Emissione evento calendario a company-{company_id}: {action}")
+            _socketio.emit('calendarEvent', event_data, room=f"company-{company_id}")
+        else:
+            # Altrimenti emetti a tutti
+            logger.info(f"Emissione evento calendario globale: {action}")
+            _socketio.emit('calendarEvent', event_data)
+            
+        logger.info("Evento emesso con successo")
+        return True
+    except Exception as e:
+        logger.error(f"Errore durante l'emissione dell'evento: {str(e)}")
+        return False

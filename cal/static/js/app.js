@@ -23,6 +23,38 @@ const domCache = {
     modals: {}
 };
 
+
+// Monkey patch per tracciare tutti gli eventi Socket.IO
+if (typeof io !== 'undefined') {
+    const originalOn = io.Socket.prototype.on;
+    io.Socket.prototype.on = function(eventName, callback) {
+        console.log(`[SOCKET_TRACE] Registrato listener per evento: "${eventName}"`);
+        return originalOn.call(this, eventName, function(...args) {
+            console.log(`[SOCKET_TRACE] Ricevuto evento: "${eventName}"`, args);
+            return callback.apply(this, args);
+        });
+    };
+    console.log('[SOCKET_TRACE] Socket.IO debug patch applicato');
+}
+
+// Monitora attivamente l'arrivo di eventi calendarEvent
+if (typeof io !== 'undefined') {
+    // Crea un socket globale dedicato per la supervisione
+    const supervisorSocket = io();
+    supervisorSocket.on('calendarEvent', function(data) {
+        console.log('[SUPERVISOR] Ricevuto calendarEvent:', data);
+        // Tenta di forzare un aggiornamento della vista
+        if (typeof caricaEventi === 'function') {
+            console.log('[SUPERVISOR] Forzando aggiornamento calendario');
+            caricaEventi();
+            if (typeof aggiornaViste === 'function') {
+                setTimeout(aggiornaViste, 300);
+            }
+        }
+    });
+    console.log('[SUPERVISOR] Socket di supervisione inizializzato');
+}
+
 /**
  * Inizializza la cache degli elementi DOM
  */
@@ -49,6 +81,9 @@ function initDomCache() {
     domCache.eventCategory = document.getElementById('eventCategory');
 }
 
+// Questo file corregge l'inizializzazione di Socket.IO in app.js
+// Sostituisce la funzione initSocketListeners() esistente
+
 function initSocketListeners() {
     console.log('[CALENDAR_DEBUG] initSocketListeners() called');
     
@@ -56,12 +91,12 @@ function initSocketListeners() {
     if (typeof io !== 'undefined') {
         console.log('[CALENDAR_DEBUG] Socket.IO is available');
         
-        // Usa il socket globale già inizializzato
+        // Inizializza una nuova connessione Socket.IO
         socket = io();
         
         // Aggiungi log per verificare la connessione
         socket.on('connect', function() {
-            console.log('[CALENDAR_DEBUG] Socket.IO connected successfully');
+            console.log('[CALENDAR_DEBUG] Socket.IO connected successfully', socket.id);
             
             // Identifica l'utente (per multi-tenancy futuro)
             // Sostituire con l'ID dell'utente o azienda effettiva quando implementerai l'auth
@@ -71,7 +106,16 @@ function initSocketListeners() {
             }
         });
         
-        // Ascolta gli eventi del calendario con gestione errori migliorata
+        socket.on('disconnect', function(reason) {
+            console.log('[CALENDAR_DEBUG] Socket.IO disconnected:', reason);
+        });
+        
+        socket.on('connect_error', function(error) {
+            console.error('[CALENDAR_DEBUG] Socket.IO connection error:', error);
+        });
+        
+        // CORREZIONE: Modifica il nome dell'evento da ascoltare
+        // Da 'calendarEvent' a 'calendar_update' per corrispondere all'evento emesso dal server
         socket.on('calendarEvent', function(data) {
             try {
                 console.log('[CALENDAR_DEBUG] Received calendarEvent:', data);
@@ -90,19 +134,11 @@ function initSocketListeners() {
                     }
                     
                     // Aggiorna la vista
-                    if (typeof aggiornaViste === 'function') {
-                        aggiornaViste();
-                    } else if (typeof aggiornaVista === 'function') {
-                        aggiornaVista();
-                    } else if (typeof inizializzaViste === 'function') {
-                        inizializzaViste();
-                    }
+                    aggiornaViste();
                     
                     // Mostra notifica
                     let message = getMessageForAction(data.action);
-                    if (typeof mostraNotifica === 'function') {
-                        mostraNotifica(message, 'success');
-                    }
+                    mostraNotifica(message, 'success');
                 }
             } catch (error) {
                 console.error('[CALENDAR_DEBUG] Error handling calendar event:', error);
@@ -251,12 +287,8 @@ function initApp() {
     initTimeIndicator();
 
     // Verifica lo stato della connessione Socket.IO dopo un po' di tempo
-    setTimeout(checkSocketConnection, 2000);
-    
-    // Ricontrolla periodicamente la connessione Socket.IO
-    setInterval(checkSocketConnection, 30000);
+    setTimeout( setupSocketIODebug(), 2000);
 }
-
 
 // In app.js, migliora la gestione dell'intervallo di aggiornamento dell'ora
 function initTimeIndicator() {
@@ -530,28 +562,56 @@ function toggleSidebar() {
     }
 }
 
-function checkSocketConnection() {
-    console.log('[CALENDAR_DEBUG] Checking socket connection status...');
+
+// Funzione di debug migliorata per monitorare gli eventi Socket.IO
+function setupSocketIODebug() {
+    console.log('[SOCKET_DEBUG] Configurazione debug Socket.IO');
     
-    if (!socket) {
-        console.error('[CALENDAR_DEBUG] Socket object not initialized!');
-        return false;
+    if (typeof io === 'undefined') {
+        console.error('[SOCKET_DEBUG] ERROR: Socket.IO non è disponibile!');
+        return;
     }
     
-    console.log('[CALENDAR_DEBUG] Socket object exists');
-    console.log('[CALENDAR_DEBUG] Socket connected:', socket.connected);
+    // Salva il riferimento alla connessione originale per debugging
+    const originalConnect = io.connect;
+    io.connect = function() {
+        console.log('[SOCKET_DEBUG] Chiamata a io.connect con parametri:', arguments);
+        return originalConnect.apply(this, arguments);
+    };
     
-    if (!socket.connected) {
-        console.log('[CALENDAR_DEBUG] Attempting to reconnect...');
-        socket.connect();
-    }
+    // Monitora la creazione del socket
+    const originalIO = io;
+    window.io = function() {
+        console.log('[SOCKET_DEBUG] Chiamata a io() con parametri:', arguments);
+        const socket = originalIO.apply(this, arguments);
+        
+        // Monitora eventi di connessione
+        const originalOn = socket.on;
+        socket.on = function(event, callback) {
+            console.log(`[SOCKET_DEBUG] Registrato handler per evento: ${event}`);
+            
+            // Wrapper per monitorare la chiamata dell'evento
+            const wrappedCallback = function() {
+                console.log(`[SOCKET_DEBUG] Ricevuto evento: ${event}`, arguments);
+                return callback.apply(this, arguments);
+            };
+            
+            return originalOn.call(this, event, wrappedCallback);
+        };
+        
+        // Monitora emissione di eventi
+        const originalEmit = socket.emit;
+        socket.emit = function(event) {
+            console.log(`[SOCKET_DEBUG] Emissione evento: ${event}`, Array.from(arguments).slice(1));
+            return originalEmit.apply(this, arguments);
+        };
+        
+        return socket;
+    };
     
-    return socket.connected;
+    console.log('[SOCKET_DEBUG] Debug Socket.IO configurato con successo');
 }
 
-// Aggiungi questo al fondo della funzione initApp() in app.js
-// Dopo la riga "initSocketListeners();"
-setTimeout(checkSocketConnection, 2000); // Controlla lo stato della connessione dopo 2 secondi
 
 // Inizializza l'applicazione quando il DOM è caricato
 document.addEventListener('DOMContentLoaded', initApp);
