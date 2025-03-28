@@ -498,15 +498,26 @@ function handleUserTyping(data) {
     const typingIndicator = document.getElementById('typingIndicator');
     const typingText = document.getElementById('typingText');
     
-    // AGGIUNTO: Se l'utente sta digitando localmente, ignora gli eventi di typing
-    if (window.isLocalTyping) {
-        console.log('Utente sta digitando localmente, ignoro evento typing');
+    const currentUserId = 1; // o qualsiasi logica per ottenere l'ID dell'utente corrente
+    if (window.isLocalTyping && typingUserId == currentUserId) {
+        console.log('Ignoro evento typing perché proviene da me stesso');
+        return;
+    }
+ 
+    // Ignora solo se è il mio stesso evento di typing E non c'è un'inferenza in corso
+    if (window.isLocalTyping && typingUserId == currentUserId && !window.isModelInferring) {
+        console.log('Ignoro evento typing perché proviene da me stesso e non è in corso un\'inferenza');
         return;
     }
     
-    // Manteniamo la modalità testing
-    const TESTING_MODE = true;
+    // Non ignorare eventi di typing da altri utenti, anche se sto digitando io
     
+    // Se c'è un'inferenza in corso, dai priorità a quell'indicatore
+    if (window.isModelInferring) {
+        console.log('Inferenza in corso, l\'indicatore di typing rimane per l\'inferenza');
+        return;
+    }
+      
     // Trova l'utente
     const user = users.find(u => u.id == typingUserId);
     if (!user) {
@@ -550,15 +561,12 @@ function handleModelInference(data) {
             }
         }
 
-        // AGGIUNTO: Forza la visualizzazione dell'indicatore per gli eventi di modello,
-        // anche se l'utente sta digitando localmente
-        const wasLocalTyping = window.isLocalTyping;
-        if (wasLocalTyping) {
-            console.log('Mostrando indicatore di inferenza anche durante digitazione locale');
-            // Salviamo lo stato di digitazione locale ma forziamo il display dell'indicatore
-        }
-
-        // Mostra l'indicatore di typing
+        // IMPORTANTE: Salva lo stato corrente di digitazione e imposta una flag globale
+        // per indicare che un'inferenza è in corso
+        window.previousTypingState = window.isLocalTyping;
+        window.isModelInferring = true;
+        
+        // Forza la visualizzazione dell'indicatore indipendentemente dallo stato locale
         typingText.textContent = `${userName} sta elaborando...`;
         typingIndicator.style.display = 'flex';
         
@@ -577,6 +585,11 @@ function handleModelInference(data) {
         // Nascondi l'indicatore di typing quando l'inferenza è completata
         typingIndicator.style.display = 'none';
         delete typingIndicator.dataset.startTime;
+        
+        // IMPORTANTE: Ripristina lo stato precedente e rimuovi la flag di inferenza
+        window.isModelInferring = false;
+        window.isLocalTyping = window.previousTypingState || false;
+        
         console.log('Typing indicator hidden after model inference completed');
     }
 }

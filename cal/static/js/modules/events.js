@@ -645,7 +645,7 @@ export function updateCurrentTimeIndicator() {
     //console.log('Updating current time indicator');
 
     // Rimuovi eventuali indicatori esistenti per evitare duplicati
-    document.querySelectorAll('.current-time-indicator').forEach(el => el.remove());
+    document.querySelectorAll('.current-time-indicator, .current-time-marker').forEach(el => el.remove());
 
     // Ottieni l'ora corrente con precisione ai secondi
     const now = createDate(new Date());
@@ -712,6 +712,7 @@ export function updateCurrentTimeIndicator() {
                         indicator.style.top = `${topPosition}px`;
                         indicator.style.left = `${leftPosition}px`;
                         indicator.style.width = `${columnWidth}px`;
+                        indicator.id = 'weekTimeIndicator'; // Aggiungi un ID per riferimento facile
 
                         weekGrid.appendChild(indicator);
 
@@ -720,6 +721,7 @@ export function updateCurrentTimeIndicator() {
                         marker.className = 'current-time-marker';
                         marker.style.top = `${topPosition - 5}px`;
                         marker.style.left = `${leftPosition + (columnWidth / 2) - 5}px`;
+                        marker.id = 'weekTimeMarker'; // Aggiungi un ID per riferimento facile
                         weekGrid.appendChild(marker);
                     }
                 }
@@ -727,6 +729,22 @@ export function updateCurrentTimeIndicator() {
         }
     }
 }
+
+// Aggiungi questa nuova funzione per gestire il ridimensionamento della finestra
+export function handleWindowResize() {
+    // Aggiorna l'indicatore dell'ora corrente quando la finestra viene ridimensionata
+    if (window.vistaAttuale === 'week' || window.vistaAttuale === 'day') {
+        updateCurrentTimeIndicator();
+    }
+}
+
+// Inizializza il listener per il ridimensionamento della finestra
+document.addEventListener('DOMContentLoaded', () => {
+    // Usa debounce per evitare troppe chiamate durante il ridimensionamento
+    const debouncedResize = handleWindowResize;
+    window.addEventListener('resize', debouncedResize);
+    console.log('Resize handler initialized for time indicator');
+});
 
 export function handleDayClick(e) {
     // Get the date from the clicked day

@@ -339,7 +339,28 @@ export function initTimeIndicator() {
             // Dopo il primo allineamento, aggiorna ogni minuto esatto
             window.currentTimeIndicatorInterval = setInterval(updateCurrentTimeIndicator, 60000);
         }, msToNextMinute);
+        
+        // Aggiungi event listener per il ridimensionamento della finestra
+        if (typeof handleWindowResize === 'function') {
+            // Rimuovi eventuali listener esistenti per evitare duplicati
+            window.removeEventListener('resize', handleWindowResize);
+            // Aggiungi il nuovo listener con throttling per prestazioni migliori
+            window.addEventListener('resize', debounce(handleWindowResize, 250));
+        }
     }
+}
+
+// Funzione di debounce per limitare la frequenza di chiamate durante il ridimensionamento
+function debounce(func, wait) {
+    let timeout;
+    return function() {
+        const context = this;
+        const args = arguments;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+            func.apply(context, args);
+        }, wait);
+    };
 }
 
 /**

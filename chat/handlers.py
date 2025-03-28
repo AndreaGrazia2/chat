@@ -37,6 +37,9 @@ def check_calendar_intent(message_text, user_id, conversation_id, room, original
     Returns:
         bool: True se è un intento calendario, False altrimenti
     """
+    # NUOVO: Emetti evento modelInference 'started' all'inizio dell'elaborazione
+    emit('modelInference', {'status': 'started', 'userId': user_id or 2}, room=room)
+    
     # Processa il messaggio attraverso gli agenti
     agent_result = process_message_through_agents(message_text)
     
@@ -126,8 +129,12 @@ def check_calendar_intent(message_text, user_id, conversation_id, room, original
                     # Broadcast a tutti i client - assicura che anche il calendario sia aggiornato
                     emit('calendarEvent', calendar_event, broadcast=True)
             
+            # NUOVO: Emetti evento modelInference 'completed' prima di restituire True
+            emit('modelInference', {'status': 'completed', 'userId': user_id or 2}, room=room)
             return True
     
+    # NUOVO: Emetti evento modelInference 'completed' anche se non è un intento calendario
+    emit('modelInference', {'status': 'completed', 'userId': user_id or 2}, room=room)
     return False
 
 def prepare_for_socketio(data):
