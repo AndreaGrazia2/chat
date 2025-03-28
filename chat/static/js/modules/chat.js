@@ -1,5 +1,3 @@
-// TODO: Quando un utente scrive un messaggio, deve mostrare un indicatore di digitazione all'altro utente.
-
 import { sendChannelMessage } from './socket.js'
 import { updateUnreadBadge}  from './uiNavigation.js';
 import { showNotification}  from './utils.js';
@@ -133,12 +131,12 @@ function setupTypingEvents() {
             // Emetti evento solo se siamo connessi e abbiamo una conversazione attiva
             if (currentlyConnected && socket) {
                 if (isDirectMessage && currentUser) {
-                    socket.emit('userStopTyping', {
+                    socket.emit('userStartTyping', {  // CORRETTO: userStartTyping
                         userId: currentUser.id,
                         isDirect: true
                     });
                 } else if (currentChannel) {
-                    socket.emit('userStopTyping', {
+                    socket.emit('userStartTyping', {  // CORRETTO: userStartTyping
                         channelName: currentChannel,
                         isDirect: false,
                         // Invia comunque l'user ID corrente
