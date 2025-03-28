@@ -840,10 +840,9 @@ def register_handlers(socketio):
             # Se il messaggio è per John Doe E NON è un intento calendario, procedi con l'inferenza standard
             if int(user_id) == 2 and not is_calendar_intent:
                 # Mostra indicatore di digitazione
-                emit('typingIndicator', {
-                    'userId': 2,
-                    'conversationId': conversation_id,
-                    'isTyping': True
+                emit('modelInference', {
+                    'status': 'started',
+                    'userId': 2
                 }, room=room)
 
                 try:
@@ -921,10 +920,9 @@ def register_handlers(socketio):
                     emit('newMessage', prepare_for_socketio(ai_message_dict), room=room)
                 finally:
                     # Hide typing indicator
-                    emit('typingIndicator', {
-                        'userId': 2,
-                        'conversationId': conversation_id,
-                        'isTyping': False
+                    emit('modelInference', {
+                        'status': 'completed',
+                        'userId': 2
                     }, room=room)
 
     @socketio.on('deleteMessage')
