@@ -337,7 +337,7 @@ export function initTimeIndicator() {
         setTimeout(() => {
             updateCurrentTimeIndicator();
             // Dopo il primo allineamento, aggiorna ogni minuto esatto
-            currentTimeIndicatorInterval = setInterval(updateCurrentTimeIndicator, 60000);
+            window.currentTimeIndicatorInterval = setInterval(updateCurrentTimeIndicator, 60000);
         }, msToNextMinute);
     }
 }
@@ -377,9 +377,9 @@ export function initEventListeners() {
             btn.classList.add('active');
     
             // Prima di cambiare vista, pulisci i timer esistenti
-            if (currentTimeIndicatorInterval) {
-                clearInterval(currentTimeIndicatorInterval);
-                currentTimeIndicatorInterval = null;
+            if (window.currentTimeIndicatorInterval) {
+                clearInterval(window.currentTimeIndicatorInterval);
+                window.currentTimeIndicatorInterval = null;
             }
     
             vistaAttuale = btn.dataset.view;
@@ -400,7 +400,7 @@ export function initEventListeners() {
                     updateCurrentTimeIndicator();
     
                     // Imposta un nuovo intervallo per l'ora corrente
-                    currentTimeIndicatorInterval = setInterval(updateCurrentTimeIndicator, 60000);
+                    window.currentTimeIndicatorInterval = setInterval(updateCurrentTimeIndicator, 60000);
                 }, 300);
             }
         });

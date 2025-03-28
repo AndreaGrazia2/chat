@@ -42,7 +42,7 @@ class CalendarAgent:
             self.calendar_api_base_url = calendar_api_base_url
         
         # Import qui per evitare dipendenze circolari
-        from agent.calendar_intent import create_calendar_intent_chain, parse_intent_response
+        from agent.cal.calendar_intent import create_calendar_intent_chain, parse_intent_response
         self.intent_chain = create_calendar_intent_chain(llm)
         self.parse_intent_response = parse_intent_response
         
@@ -70,7 +70,7 @@ class CalendarAgent:
         logger.info("Invocazione della chain di intento")
         raw_intent = self.intent_chain.invoke({"user_input": user_input, "current_year": datetime.now().year})
         
-        from agent.calendar_intent import parse_intent_response
+        from agent.cal.calendar_intent import parse_intent_response
         intent_data = parse_intent_response(raw_intent)
         
         # Log dell'intento rilevato (per debug)
@@ -93,7 +93,7 @@ class CalendarAgent:
         
         try:
             # Import qui per evitare dipendenze circolari
-            from agent.calendar_utils import format_event_response
+            from agent.cal.calendar_utils import format_event_response
             
             if action == 'create':
                 logger.info("Esecuzione creazione evento")
@@ -140,7 +140,7 @@ class CalendarAgent:
     def _create_event(self, intent_data):
         """Crea un nuovo evento nel calendario"""
         # Import qui per evitare dipendenze circolari
-        from agent.calendar_utils import parse_relative_date, parse_time
+        from agent.cal.calendar_utils import parse_relative_date, parse_time
         
         # Estrai e normalizza i dati dall'intent
         title = intent_data.get('title')
@@ -228,7 +228,7 @@ class CalendarAgent:
                             "Specifica almeno il titolo o la data dell'evento da modificare.")
         
         # Import qui per evitare dipendenze circolari
-        from agent.calendar_utils import parse_relative_date, parse_time
+        from agent.cal.calendar_utils import parse_relative_date, parse_time
         
         # Gestisci la data originale per la ricerca
         start_date = None
@@ -386,7 +386,7 @@ class CalendarAgent:
         logger = logging.getLogger('calendar_agent')
         
         # Import qui per evitare dipendenze circolari
-        from agent.calendar_utils import parse_relative_date, parse_time
+        from agent.cal.calendar_utils import parse_relative_date, parse_time
         
         logger.info(f"Tentativo di aggiornamento evento con dati: {json.dumps(intent_data, indent=2)}")
         
@@ -589,7 +589,7 @@ class CalendarAgent:
     def _view_events(self, intent_data):
         """Visualizza eventi in un determinato periodo"""
         # Import qui per evitare dipendenze circolari
-        from agent.calendar_utils import parse_relative_date, get_period_dates
+        from agent.cal.calendar_utils import parse_relative_date, get_period_dates
         
         period = intent_data.get('period')
         date_str = intent_data.get('date')
