@@ -1,199 +1,239 @@
+# agent/db_agent/db_query_agent.py
 """
-Agente per l'esecuzione di query sul database dei messaggi della chat.
-Converte richieste in linguaggio naturale in query SQL e restituisce i risultati.
-"""
+Agente Database - Gestione delle query al database attraverso comandi in linguaggio naturale
 
-import logging
+Questo modulo fornisce un agente IA che:
+1. Analizza i messaggi degli utenti per rilevare intenti relativi a query database
+2. Genera query SQL appropriate
+3. Esegue le query sul database
+4. Genera risposte naturali per l'utente
+"""
 import json
-import os
+import logging
 import traceback
+import requests
 from datetime import datetime
-from sqlalchemy import text, create_engine
-from sqlalchemy.orm import sessionmaker
-from common.config import CHAT_SCHEMA, DATABASE_URL
-from langchain_openai import ChatOpenAI
-from langchain.prompts import ChatPromptTemplate
-from langchain.output_parsers import PydanticOutputParser
-from pydantic import BaseModel, Field
-from typing import List, Optional
 
-# Configurazione logging
-logger = logging.getLogger('db_query_agent')
-logger.setLevel(logging.INFO)
-if not logger.handlers:
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+# Configurazione del logger
+logging.basicConfig(
+    level=logging.INFO,
+    handlers=[logging.StreamHandler()]
+)
 
-class SQLQuery(BaseModel):
-    """Modello per la query SQL generata"""
-    query: str = Field(description="La query SQL da eseguire")
-    description: str = Field(description="Descrizione in linguaggio naturale di ciò che fa la query")
-    parameters: Optional[dict] = Field(default=None, description="Parametri per la query SQL")
+logger = logging.getLogger('db_agent_middleware')
 
 class DBQueryAgent:
-    """Agente per l'esecuzione di query sul database dei messaggi"""
-    
-    def __init__(self, model_name="google/gemma-3-27b-it:free"):
-        """Inizializza l'agente di query"""
-        self.model_name = model_name
-        self.engine = create_engine(DATABASE_URL)
-        self.Session = sessionmaker(bind=self.engine)
-        
-        # Inizializza il modello LLM
-        self.llm = ChatOpenAI(model=model_name)
-        
-        # Parser per l'output
-        self.parser = PydanticOutputParser(pydantic_object=SQLQuery)
-        
-        # Carica il prompt template
-        self.prompt_template = self._create_prompt_template()
-        
-        logger.info(f"DBQueryAgent inizializzato con modello {model_name}")
-    
-    def _create_prompt_template(self):
-        """Crea il template per il prompt"""
-        template = """
-        Sei un assistente esperto in SQL che aiuta a generare query per un database di messaggi di chat.
-        
-        Schema del database (schema: {schema}):
-        
-        - users: Tabella degli utenti
-          - id: ID utente (chiave primaria)
-          - username: Nome utente
-          - display_name: Nome visualizzato
-          - status: Stato dell'utente (online, offline, ecc.)
-        
-        - messages: Tabella dei messaggi
-          - id: ID messaggio (chiave primaria)
-          - conversation_id: ID della conversazione (chiave esterna)
-          - user_id: ID dell'utente che ha inviato il messaggio (chiave esterna)
-          - text: Testo del messaggio
-          - message_type: Tipo di messaggio (normal, file, ecc.)
-          - file_data: Dati del file (JSON)
-          - created_at: Data e ora di creazione
-          - edited: Se il messaggio è stato modificato
-          - reply_to_id: ID del messaggio a cui si risponde
-        
-        - conversations: Tabella delle conversazioni
-          - id: ID conversazione (chiave primaria)
-          - name: Nome della conversazione
-          - type: Tipo di conversazione (direct, channel)
-          - created_at: Data e ora di creazione
-        
-        - conversation_participants: Tabella dei partecipanti alle conversazioni
-          - conversation_id: ID della conversazione (chiave esterna)
-          - user_id: ID dell'utente partecipante (chiave esterna)
-          - joined_at: Data e ora di ingresso
-        
-        Richiesta dell'utente: {user_query}
-        
-        Genera una query SQL che risponda alla richiesta dell'utente. La query deve essere sicura, efficiente e rispettare lo schema del database.
-        
-        {format_instructions}
+    def __init__(self, llm, db_api_base_url=None):
         """
+        Inizializza l'agente database
         
-        format_instructions = self.parser.get_format_instructions()
-        return ChatPromptTemplate.from_template(template).partial(
-            schema=CHAT_SCHEMA,
-            format_instructions=format_instructions
-        )
+        Args:
+            llm: Modello di linguaggio (LangChain)
+            db_api_base_url: URL base delle API database
+        """
+        self.llm = llm
+        
+        # Se non viene fornito un URL base, usa quello dalla configurazione
+        if db_api_base_url is None:
+            from common.config import API_BASE_URL
+            self.db_api_base_url = f"{API_BASE_URL}/db/api"
+        else:
+            self.db_api_base_url = db_api_base_url
+        
+        # Import qui per evitare dipendenze circolari
+        from agent.db_agent.db_intent import create_db_intent_chain, parse_intent_response
+        self.intent_chain = create_db_intent_chain(llm)
+        self.parse_intent_response = parse_intent_response
+        
+        # Utente di default per le richieste
+        self.default_user_id = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
     
-    def generate_sql_query(self, user_query):
-        """Genera una query SQL a partire da una richiesta in linguaggio naturale"""
-        try:
-            logger.info(f"Generazione query SQL per: {user_query}")
+    def process_message(self, user_input, user_id=None):
+        """
+        Processa un messaggio dell'utente e determina se è relativo al database
+        
+        Args:
+            user_input: Messaggio dell'utente
+            user_id: ID dell'utente (opzionale)
             
-            # Crea il messaggio per il modello
-            messages = self.prompt_template.format_messages(user_query=user_query)
-            
-            # Ottieni la risposta dal modello
-            response = self.llm.invoke(messages)
-            
-            # Estrai la query SQL dalla risposta
-            sql_query = self.parser.parse(response.content)
-            
-            logger.info(f"Query SQL generata: {sql_query.query}")
-            return sql_query
-            
-        except Exception as e:
-            logger.error(f"Errore nella generazione della query SQL: {str(e)}")
-            logger.error(traceback.format_exc())
-            raise
+        Returns:
+            dict: Risultato dell'elaborazione con risposta
+        """
+        logger.info(f"Elaborazione messaggio: '{user_input}'")
+        
+        if user_id:
+            self.default_user_id = user_id
+            logger.info(f"Impostato user_id: {user_id}")
+
+        # Emetti un evento al frontend tramite socketio
+        from flask_socketio import emit
+        emit('modelInference', {'status': 'started', 'userId': user_id or self.default_user_id}, broadcast=True)
     
-    def execute_query(self, sql_query):
-        """Esegue una query SQL e restituisce i risultati"""
-        try:
-            logger.info(f"Esecuzione query: {sql_query.query}")
-            
-            # Crea una sessione
-            session = self.Session()
-            
-            try:
-                # Esegui la query
-                result = session.execute(text(sql_query.query), sql_query.parameters or {})
-                
-                # Converti i risultati in un formato serializzabile
-                columns = result.keys()
-                rows = [dict(zip(columns, row)) for row in result.fetchall()]
-                
-                # Chiudi la sessione
-                session.close()
-                
-                logger.info(f"Query eseguita con successo. Risultati: {len(rows)} righe")
-                return {
-                    "success": True,
-                    "query": sql_query.query,
-                    "description": sql_query.description,
-                    "columns": list(columns),
-                    "rows": rows,
-                    "count": len(rows)
-                }
-                
-            except Exception as e:
-                session.rollback()
-                session.close()
-                logger.error(f"Errore nell'esecuzione della query: {str(e)}")
-                logger.error(traceback.format_exc())
-                return {
-                    "success": False,
-                    "query": sql_query.query,
-                    "error": str(e)
-                }
-                
-        except Exception as e:
-            logger.error(f"Errore generale nell'esecuzione della query: {str(e)}")
-            logger.error(traceback.format_exc())
-            raise
-    
-    def process_query(self, user_query):
-        """Processa una query in linguaggio naturale e restituisce i risultati"""
-        try:
-            # Genera la query SQL
-            sql_query = self.generate_sql_query(user_query)
-            
-            # Esegui la query
-            results = self.execute_query(sql_query)
-            
-            return results
-            
-        except Exception as e:
-            logger.error(f"Errore nel processamento della query: {str(e)}")
-            logger.error(traceback.format_exc())
+        # Analizza l'intento
+        logger.info("Invocazione della chain di intento DB")
+        raw_intent = self.intent_chain.invoke({"user_input": user_input})
+        
+        intent_data = self.parse_intent_response(raw_intent)
+        
+        # Log dell'intento rilevato
+        logger.info(f"DB intent detected: {json.dumps(intent_data, indent=2)}")
+        
+        # Se non è un intento database, ritorna subito
+        if not intent_data.get('needs_query', False):
+            logger.info("Non è un intento database")
+            emit('modelInference', {'status': 'completed', 'userId': user_id or self.default_user_id}, broadcast=True)
             return {
+                "is_db_intent": False,
+                "response": None,
+                "reasoning": intent_data.get('reasoning', 'Non è una richiesta relativa al database')
+            }
+        
+        # Processa l'intento database
+        query = intent_data.get('query', 'SELECT 1')
+        title = intent_data.get('title', 'Risultato query')
+        description = intent_data.get('description', '')
+        visualization_type = intent_data.get('visualization_type', 'table')
+        
+        logger.info(f"Query generata: {query}")
+        
+        result = None
+        response = None
+        
+        try:
+            # Esegui la query
+            result = self._execute_query(query)
+            
+            # Genera una risposta basata sui risultati
+            if result.get('success', False):
+                # Crea una visualizzazione
+                visualization = self._create_visualization(
+                    title=title,
+                    description=description,
+                    query=query,
+                    data=result.get('results', []),
+                    visualization_type=visualization_type
+                )
+                
+                # Crea una risposta testuale
+                response = self._format_response(result, visualization)
+            else:
+                # Se c'è stato un errore, restituisci una risposta di errore
+                response = f"Si è verificato un errore nell'esecuzione della query: {result.get('error', 'Errore sconosciuto')}"
+                logger.error(f"Errore nell'esecuzione della query: {result.get('error')}")
+        
+        except Exception as e:
+            logger.error(f"Errore in db agent: {str(e)}")
+            logger.error(traceback.format_exc())
+
+            response = f"Mi dispiace, c'è stato un errore: {str(e)}"
+            
+            emit('modelInference', {'status': 'completed', 'userId': user_id or self.default_user_id}, broadcast=True)
+            
+            return {
+                "is_db_intent": True,
                 "success": False,
+                "response": response,
                 "error": str(e)
             }
+        
+        # Emetti evento completed
+        emit('modelInference', {'status': 'completed', 'userId': user_id or self.default_user_id}, broadcast=True)
+        
+        logger.info(f"Operazione completata con successo. Risposta: {response}")
 
-# Funzione di utilità per test
-def test_query(query_text):
-    """Funzione per testare l'agente con una query di esempio"""
-    agent = DBQueryAgent()
-    result = agent.process_query(query_text)
-    print(json.dumps(result, indent=2, default=str))
-    return result
-
-if __name__ == "__main__":
-    # Test dell'agente
-    test_query("Mostrami gli ultimi 5 messaggi inviati dall'utente John Doe")
+        return {
+            "is_db_intent": True,
+            "success": True,
+            "response": response,
+            "result": result,
+            "visualization": visualization if 'visualization' in locals() else None,
+            "intent": intent_data
+        }
+    
+    def _execute_query(self, query):
+        """Esegue una query SQL sul database"""
+        try:
+            # Chiamata API per eseguire la query
+            url = f"{self.db_api_base_url}/execute-query"
+            
+            payload = {
+                "query": query,
+                "user_id": self.default_user_id
+            }
+            
+            logger.info(f"Invio richiesta POST a {url}")
+            response = requests.post(url, json=payload)
+            
+            if not response.ok:
+                logger.error(f"Errore API ({response.status_code}): {response.text}")
+                return {
+                    "success": False,
+                    "error": f"Errore API ({response.status_code}): {response.text}"
+                }
+                
+            result = response.json()
+            return {
+                "success": True,
+                "results": result.get('results', []),
+                "columns": result.get('columns', []),
+                "query": query
+            }
+        except Exception as e:
+            logger.error(f"Errore nell'esecuzione della query: {str(e)}")
+            return {
+                "success": False,
+                "error": f"Errore nell'esecuzione della query: {str(e)}"
+            }
+    
+    def _create_visualization(self, title, description, query, data, visualization_type='table'):
+        """Crea una visualizzazione per i risultati della query"""
+        try:
+            url = f"{self.db_api_base_url}/visualizations"
+            
+            payload = {
+                "title": title,
+                "description": description,
+                "query": query,
+                "data": data,
+                "type": visualization_type,
+                "user_id": self.default_user_id
+            }
+            
+            logger.info(f"Creazione visualizzazione di tipo {visualization_type}")
+            response = requests.post(url, json=payload)
+            
+            if not response.ok:
+                logger.error(f"Errore creazione visualizzazione ({response.status_code}): {response.text}")
+                return None
+                
+            visualization = response.json()
+            logger.info(f"Visualizzazione creata con ID: {visualization.get('id')}")
+            
+            return visualization
+        except Exception as e:
+            logger.error(f"Errore nella creazione della visualizzazione: {str(e)}")
+            return None
+    
+    def _format_response(self, result, visualization):
+        """Formatta la risposta per l'utente"""
+        if not result.get('success', False):
+            return f"Si è verificato un errore: {result.get('error', 'Errore sconosciuto')}"
+        
+        if not visualization:
+            return "Ho eseguito la query, ma non è stato possibile creare una visualizzazione dei risultati."
+        
+        # Recupera i dettagli della visualizzazione
+        viz_id = visualization.get('id')
+        viz_type = visualization.get('type', 'table')
+        viz_url = f"{self.db_api_base_url}/visualizations/{viz_id}"
+        
+        # Conta i risultati
+        count = len(result.get('results', []))
+        
+        # Formatta la risposta
+        response = f"✅ Ho trovato {count} risultati per la tua query."
+        
+        if viz_id:
+            response += f"\n\nHo creato una visualizzazione di tipo {viz_type} che puoi vedere al seguente link: {viz_url}"
+        
+        return response

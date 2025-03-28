@@ -1,170 +1,139 @@
+# agent/db_agent/db_agent_middleware.py
 """
-Middleware per l'agente di query sul database.
-Intercetta i messaggi della chat e li invia all'agente di query.
-"""
+Middleware per l'agente database - intercetta i messaggi della chat e li invia all'agente appropriato
 
-import logging
-import json
-import re
+Questo modulo:
+1. Intercetta i messaggi della chat
+2. Verifica se sono richieste relative al database
+3. Esegue query e genera risposte appropriate
+"""
 import os
-from datetime import datetime
-from agent.db_agent.db_query_agent import DBQueryAgent
-from agent.db_agent.pdf_generator import PDFGenerator
+import logging
+import re
+from langchain_openai import ChatOpenAI
 
-# Configurazione logging
-logger = logging.getLogger('db_agent_middleware')
-logger.setLevel(logging.INFO)
-if not logger.handlers:
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+# Inizializza il logger
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Singleton per l'agente di query
+# Variabile globale per l'agente (lazy loading)
 _db_query_agent = None
 
 def get_db_query_agent():
     """
-    Ottiene l'istanza dell'agente di query (lazy loading)
+    Ottiene l'istanza dell'agente database (lazy loading)
     
     Returns:
-        DBQueryAgent: Istanza dell'agente di query
+        DBQueryAgent: Istanza dell'agente database
     """
     global _db_query_agent
+    
     if _db_query_agent is None:
-        _db_query_agent = DBQueryAgent()
+        try:
+            # Importazione locale per evitare dipendenze circolari
+            from agent.db_agent.db_query_agent import DBQueryAgent
+            
+            # Ottieni la chiave API dall'ambiente
+            api_key = os.getenv("OPENROUTER_API_KEY")
+            if not api_key:
+                logger.error("OPENROUTER_API_KEY non impostata nell'ambiente")
+                raise ValueError("API key non configurata")
+                
+            # Inizializza il modello LLM
+            llm = ChatOpenAI(
+                api_key=api_key,
+                base_url="https://openrouter.ai/api/v1",
+                model="google/gemma-3-27b-it:free",
+                max_tokens=2000
+            )
+            
+            # Crea l'agente database
+            _db_query_agent = DBQueryAgent(llm)
+            logger.info("DB Query Agent inizializzato con successo")
+            
+        except Exception as e:
+            logger.error(f"Error initializing DB Query Agent: {e}")
+            logger.error(f"{str(e)}")
+            
+            # Fallback a un agente dummy
+            logger.warning("Using DummyDBQueryAgent due to initialization error")
+            from agent.db_agent.dummy_db_agent import DummyDBQueryAgent
+            _db_query_agent = DummyDBQueryAgent()
+    
     return _db_query_agent
 
 class DBAgentMiddleware:
-    """Middleware per l'agente di query sul database"""
+    """Middleware per l'integrazione dell'agente database nella chat"""
     
     def __init__(self):
-        """Inizializza il middleware"""
-        self.db_agent = get_db_query_agent()
-        self.pdf_generator = PDFGenerator()
         logger.info("DBAgentMiddleware inizializzato")
+        
+        # Patterns per riconoscere intenti database comuni
+        self.db_intent_patterns = [
+            # Pattern per mostrare ultimi messaggi
+            r'(?i)mostra(mi)?\s+(?:gli|i|le)?\s*ultimi\s+\d+\s+(?:messaggi|conversazioni)',
+            # Pattern per contare messaggi
+            r'(?i)quanti\s+messaggi\s+(?:ha\s+inviato|sono\s+stati\s+inviati\s+da)?\s+(?:l\'utente\s+)?(\w+)',
+            # Pattern per statistiche
+            r'(?i)(?:mostra|visualizza|fammi\s+vedere)\s+(?:le\s+)?statistiche',
+            # Pattern per utenti attivi/top
+            r'(?i)(?:chi\s+sono\s+)?(?:gli|i)\s+utenti\s+più\s+attivi',
+            # Pattern per canali attivi/top
+            r'(?i)(?:quali\s+sono\s+)?(?:i|gli)\s+canali\s+più\s+attivi'
+        ]
     
     def detect_db_query_intent(self, message_text):
         """
-        Rileva se il messaggio contiene un intento di query sul database
+        Verifica se il messaggio contiene un intento database
         
         Args:
             message_text: Testo del messaggio
             
         Returns:
-            bool: True se il messaggio contiene un intento di query, False altrimenti
+            bool: True se è un intento database
         """
-        # Pattern per rilevare intenti di query
-        db_query_patterns = [
-            r"(?i)mostra(mi)?\s+(?:i|gli|le|tutti\s+(?:i|gli|le))?\s*(?:messaggi|conversazioni|utenti)",
-            r"(?i)(?:cerca|trova(mi)?|elenca(mi)?)\s+(?:i|gli|le|tutti\s+(?:i|gli|le))?\s*(?:messaggi|conversazioni|utenti)",
-            r"(?i)quanti\s+(?:messaggi|conversazioni|utenti)",
-            r"(?i)chi\s+ha\s+(?:scritto|inviato|mandato)",
-            r"(?i)(?:statistiche|report|analisi)\s+(?:dei|delle|sui|sulle|di)\s+(?:messaggi|conversazioni|utenti|chat)",
-            r"(?i)(?:genera|crea|produci)\s+(?:un|il|lo|la)?\s*(?:report|pdf|documento|analisi)",
-            r"(?i)(?:database|db)\s+query"
-        ]
-        
-        # Verifica se il messaggio corrisponde a uno dei pattern
-        for pattern in db_query_patterns:
-            if re.search(pattern, message_text):
-                logger.info(f"Rilevato intento di query database: '{message_text}'")
+        for pattern in self.db_intent_patterns:
+            match = re.search(pattern, message_text)
+            if match:
+                matched_text = match.group(0)
+                print(f"Pattern corrispondente: '{pattern}'")
+                print(f"Match trovato: '{matched_text}'")
+                logger.info(f"Rilevato intento di query database tramite pattern: '{message_text}'")
                 return True
-        
+                
         return False
     
-    def process_message(self, message_text, user_id=None, conversation_id=None):
+    def process_message(self, message_text, message_id=None, user_id=None, conversation_id=None):
         """
-        Processa un messaggio e genera una risposta se contiene un intento di query
+        Processa un messaggio e restituisce una risposta se è un intento database
         
         Args:
             message_text: Testo del messaggio
-            user_id: ID dell'utente che ha inviato il messaggio
+            message_id: ID del messaggio a cui rispondere
+            user_id: ID dell'utente
             conversation_id: ID della conversazione
             
         Returns:
-            dict: Risposta dell'agente o None se il messaggio non contiene un intento di query
+            dict: Risultato dell'elaborazione con risposta
         """
+        print(f"Rilevato intento di query database: '{message_text}'")
+        logger.info(f"Processamento messaggio: '{message_text}'")
+            
+        # Ottieni o inizializza l'agente database
+        db_agent = get_db_query_agent()
+            
+        # Processa il messaggio con l'agente
         try:
-            # Verifica se il messaggio contiene un intento di query
-            if not self.detect_db_query_intent(message_text):
-                return None
-            
-            logger.info(f"Processamento messaggio: '{message_text}'")
-            
-            # Esegui la query
-            query_results = self.db_agent.process_query(message_text)
-            
-            # Se la query ha avuto successo, genera un PDF
-            if query_results.get('success'):
-                # Genera un titolo per il report
-                title = f"Report: {message_text}"
-                
-                # Genera il PDF
-                pdf_result = self.pdf_generator.generate_pdf(
-                    query_results,
-                    title=title,
-                    description=query_results.get('description')
-                )
-                
-                if pdf_result.get('success'):
-                    # Prepara la risposta con il link al PDF
-                    response = {
-                        "type": "db_query_response",
-                        "text": f"Ecco il report richiesto sui dati della chat.",
-                        "file_data": {
-                            "name": os.path.splitext(pdf_result['filename'])[0],
-                            "ext": "pdf",
-                            "size": os.path.getsize(pdf_result['filepath']),
-                            "icon": "fa-file-pdf",
-                            "url": pdf_result['url']
-                        },
-                        "query_results": {
-                            "count": query_results.get('count', 0),
-                            "description": query_results.get('description', '')
-                        }
-                    }
-                    
-                    logger.info(f"Risposta generata con PDF: {pdf_result['filepath']}")
-                    return response
-                else:
-                    # Errore nella generazione del PDF
-                    logger.error(f"Errore nella generazione del PDF: {pdf_result.get('error')}")
-                    return {
-                        "type": "db_query_response",
-                        "text": f"Ho eseguito la query richiesta, ma si è verificato un errore nella generazione del PDF: {pdf_result.get('error')}",
-                        "query_results": query_results
-                    }
-            else:
-                # Errore nell'esecuzione della query
-                logger.error(f"Errore nell'esecuzione della query: {query_results.get('error')}")
-                return {
-                    "type": "db_query_response",
-                    "text": f"Si è verificato un errore nell'esecuzione della query: {query_results.get('error')}",
-                    "query_results": query_results
-                }
-                
+            return db_agent.process_message(message_text, user_id)
         except Exception as e:
-            logger.error(f"Errore nel processamento del messaggio: {str(e)}")
-            import traceback
-            logger.error(traceback.format_exc())
+            error_msg = f"Non è stato possibile connettersi al database. Riprova più tardi."
+            logger.error(f"Errore nell'esecuzione della query: {error_msg}")
             return {
-                "type": "db_query_response",
-                "text": f"Si è verificato un errore durante l'elaborazione della richiesta: {str(e)}"
+                "type": "db_query_response", 
+                "text": f"Si è verificato un errore nell'esecuzione della query: {error_msg}",
+                "query_results": {
+                    "success": False,
+                    "error": error_msg,
+                    "description": f"Tentativo di eseguire la query: {message_text}"
+                }
             }
-
-# Funzione di utilità per test
-def test_middleware():
-    """Test del middleware"""
-    middleware = DBAgentMiddleware()
-    
-    # Test con un messaggio che contiene un intento di query
-    test_message = "Mostrami gli ultimi 5 messaggi inviati da John Doe"
-    result = middleware.process_message(test_message)
-    
-    print(json.dumps(result, indent=2, default=str))
-    return result
-
-if __name__ == "__main__":
-    # Test del middleware
-    test_middleware()

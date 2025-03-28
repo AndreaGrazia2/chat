@@ -167,6 +167,28 @@ def ensure_users_exist():
             db.commit()
             print("Updated AI user")
 
+        # Check if Database Agent user exists
+        db_agent_user = db.query(User).filter(User.id == 3).first()
+        if not db_agent_user:
+            db_agent_user = User(
+                id=3,
+                username='dbagent',
+                display_name='Database Agent',
+                avatar_url='https://ui-avatars.com/api/?name=DB+Agent&background=4A235A&color=fff',
+                status='online'
+            )
+            db.add(db_agent_user)
+            db.commit()
+            print("Created Database Agent user")
+        else:
+            # Update Database Agent user
+            db_agent_user.username = 'dbagent'
+            db_agent_user.display_name = 'Database Agent'
+            db_agent_user.avatar_url = 'https://ui-avatars.com/api/?name=DB+Agent&background=4A235A&color=fff'
+            db_agent_user.status = 'online'
+            db.commit()
+            print("Updated Database Agent user")
+
         # Check if current user exists
         current_user = db.query(User).filter(User.id == 1).first()
         if not current_user:
@@ -700,9 +722,13 @@ def register_handlers(socketio):
             emit('newMessage', prepare_for_socketio(message_dict), room=room)
             print(f"Broadcasted message {message_id} to room {room}")
             
-            # NUOVA IMPLEMENTAZIONE: Verifica intento calendario per messaggi di canale
+            # Verifica intento calendario per messaggi di canale
             message_text = message_data.get('text', '')
-            check_calendar_intent(message_text, None, conversation_id, room, message_id)
+            is_calendar_intent = check_calendar_intent(message_text, None, conversation_id, room, message_id)
+            
+            # Verifica intento query database se non è un intento calendario
+            if not is_calendar_intent:
+                check_db_query_intent(message_text, None, conversation_id, room, message_id)
 
     @socketio.on('directMessage')
     def handle_direct_message(data):
@@ -837,8 +863,13 @@ def register_handlers(socketio):
             message_text = message_data.get('text', '')
             is_calendar_intent = check_calendar_intent(message_text, user_id, conversation_id, room, message_id)
             
+            # Verifica intento query database se non è un intento calendario
+            is_db_query_intent = False
+            if not is_calendar_intent:
+                is_db_query_intent = check_db_query_intent(message_text, user_id, conversation_id, room, message_id)
+
             # Se il messaggio è per John Doe E NON è un intento calendario, procedi con l'inferenza standard
-            if int(user_id) == 2 and not is_calendar_intent:
+            if int(user_id) == 2 and not is_calendar_intent and not is_db_query_intent:
                 # Mostra indicatore di digitazione
                 emit('modelInference', {
                     'status': 'started',
@@ -918,6 +949,10 @@ def register_handlers(socketio):
 
                     print(f"Sending AI response with user data: {ai_message_dict['user']}")
                     emit('newMessage', prepare_for_socketio(ai_message_dict), room=room)
+
+                    if ai_user.id == 2:  # ID di John Doe
+                        # Broadcast del messaggio a tutti i client 
+                        emit('newMessage', prepare_for_socketio(ai_message_dict), broadcast=True)
                 finally:
                     # Hide typing indicator
                     emit('modelInference', {
@@ -1219,3 +1254,155 @@ def ensure_channel_conversations_exist():
                     print(f"Added welcome message to channel {channel.name}")
         finally:
             db.close()
+
+def check_db_query_intent(message_text, user_id, conversation_id, room, original_message_id=None):
+    """
+    Verifica se il messaggio contiene un intento di query database e invia la risposta appropriata
+    
+    Args:
+        message_text: Testo del messaggio
+        user_id: ID dell'utente destinatario (per messaggi diretti)
+        conversation_id: ID della conversazione
+        room: Room Socket.IO per emettere eventi
+        original_message_id: ID del messaggio a cui rispondere
+        
+    Returns:
+        bool: True se il messaggio contiene un intento di query database, False altrimenti
+    """
+    try:
+        # Importa qui per evitare dipendenze circolari
+        from agent.db_agent.db_agent_middleware import DBAgentMiddleware
+        from app import socketio  # Importa socketio dall'app principale
+        
+        # Inizializza l'agente database
+        db_agent = DBAgentMiddleware()
+        
+        # Verifica se il messaggio contiene un intento di query database
+        if not db_agent.detect_db_query_intent(message_text):
+            print(f"Nessun intento di query database rilevato per: '{message_text}'")
+            return False
+        
+        print(f"Rilevato intento di query database: '{message_text}'")
+        
+        # Emetti evento di inferenza iniziata
+        socketio.emit('modelInference', {
+            'status': 'started',
+            'userId': 3,  # ID dell'utente "Database Agent"
+            'conversationId': conversation_id
+        }, room=room)
+        
+        # Processa il messaggio
+        print(f"Inizio processamento messaggio per query database: '{message_text}'")
+        response = db_agent.process_message(message_text, user_id, conversation_id)
+        print(f"Risposta ricevuta dall'agente database: {response}")
+        
+        if response:
+            # Crea un messaggio di risposta
+            with get_db() as db:
+                try:
+                    # Crea il messaggio
+                    new_message = Message(
+                        conversation_id=conversation_id,
+                        user_id=3,  # ID dell'utente "Database Agent"
+                        text=response.get('text', 'Ecco i risultati della tua query.'),
+                        message_type='file' if response.get('file_data') else 'normal',
+                        file_data=response.get('file_data'),
+                        reply_to_id=original_message_id
+                    )
+                    
+                    db.add(new_message)
+                    db.commit()
+                    db.refresh(new_message)
+                    
+                    # Ottieni l'utente Database Agent
+                    db_agent_user = db.query(User).filter(User.id == 3).first()
+                    
+                    # Prepara il messaggio per l'invio
+                    message_dict = {
+                        'id': new_message.id,
+                        'conversationId': conversation_id,
+                        'user': {
+                            'id': db_agent_user.id,
+                            'username': db_agent_user.username,
+                            'displayName': db_agent_user.display_name,
+                            'avatarUrl': db_agent_user.avatar_url,
+                            'status': db_agent_user.status
+                        },
+                        'text': new_message.text,
+                        'timestamp': new_message.created_at.isoformat(),
+                        'type': new_message.message_type,
+                        'fileData': new_message.file_data,
+                        'replyTo': None,  # Aggiungeremo il riferimento al messaggio originale
+                        'forwardedFrom': None,
+                        'message_metadata': {'db_query_intent': True},
+                        'edited': False,
+                        'editedAt': None,
+                        'isOwn': False
+                    }
+                    
+                    # Aggiungi il riferimento al messaggio originale se presente
+                    if original_message_id:
+                        original_message = db.query(Message).get(original_message_id)
+                        if original_message:
+                            original_user = db.query(User).get(original_message.user_id)
+                            if original_user:
+                                message_dict['replyTo'] = {
+                                    'id': original_message.id,
+                                    'text': original_message.text,
+                                    'message_type': original_message.message_type,
+                                    'fileData': original_message.file_data,
+                                    'user': {
+                                        'id': original_user.id,
+                                        'username': original_user.username,
+                                        'displayName': original_user.display_name,
+                                        'avatarUrl': original_user.avatar_url,
+                                        'status': original_user.status
+                                    }
+                                }
+                    
+                    # Emetti il messaggio
+                    print(f"Invio risposta dell'agente database: {message_dict}")
+                    socketio.emit('newMessage', prepare_for_socketio(message_dict), room=room)
+                    
+                    # Emetti evento di inferenza completata
+                    socketio.emit('modelInference', {
+                        'status': 'completed',
+                        'userId': 3,  # ID dell'utente "Database Agent"
+                        'conversationId': conversation_id
+                    }, room=room)
+                    
+                    print(f"Inviata risposta dell'agente database per la query: '{message_text}'")
+                    return True
+                except Exception as e:
+                    db.rollback()
+                    print(f"Errore nel salvataggio della risposta dell'agente database: {str(e)}")
+                    import traceback
+                    print(traceback.format_exc())
+        
+        # Emetti evento di inferenza completata anche in caso di errore
+        print("Nessuna risposta valida dall'agente database, emetto evento di inferenza completata")
+        socketio.emit('modelInference', {
+            'status': 'completed',
+            'userId': 3,  # ID dell'utente "Database Agent"
+            'conversationId': conversation_id
+        }, room=room)
+        
+        return False
+        
+    except Exception as e:
+        print(f"Errore nel processamento dell'intento di query database: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
+        
+        # Assicurati che l'indicatore di inferenza venga nascosto anche in caso di errore
+        try:
+            from app import socketio
+            socketio.emit('modelInference', {
+                'status': 'completed',
+                'userId': 3,  # ID dell'utente "Database Agent"
+                'conversationId': conversation_id
+            }, room=room)
+        except Exception as emit_error:
+            print(f"Errore nell'emissione dell'evento modelInference: {str(emit_error)}")
+        
+        return False
