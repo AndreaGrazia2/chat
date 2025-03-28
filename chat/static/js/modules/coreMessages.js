@@ -43,7 +43,7 @@ function loadOlderMessages() {
     
     // Costruisci l'URL in base al tipo di conversazione
     // In coreMessages.js, modifichiamo la costruzione dell'URL:
-    //FIXME: problemi con il backend (boh!)
+    //FIXME: da refattorizzare la parte in cui si richiamano le vecchie conversazioni
    
     let url;
     if (isChannel) {
