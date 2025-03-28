@@ -42,11 +42,20 @@ function loadOlderMessages() {
     const scrollHeight = chatMessages.scrollHeight;
     
     // Costruisci l'URL in base al tipo di conversazione
+    // In coreMessages.js, modifichiamo la costruzione dell'URL:
+    //FIXME: problemi con il backend (boh!)
+   
     let url;
     if (isChannel) {
-        url = `/chat/api/messages/channel/${currentConversationId}?before_id=${oldestMessageId || ''}&limit=20`;
+        url = `/chat/api/messages/channel/${currentConversationId}?limit=20`;
+        if (oldestMessageId) {
+            url += `&before_id=${oldestMessageId}`;
+        }
     } else {
-        url = `/chat/api/messages/dm/${currentConversationId}?before_id=${oldestMessageId || ''}&limit=20`;
+        url = `/chat/api/messages/dm/${currentConversationId}?limit=20`;
+        if (oldestMessageId) {
+            url += `&before_id=${oldestMessageId}`;
+        }
     }
     
     console.log("Fetching older messages from URL:", url);

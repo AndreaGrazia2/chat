@@ -111,6 +111,30 @@ nextPageBtn.addEventListener('click', () => {
 });
 
 // Inizializzazione
+// Function to fetch dashboard stats
+function fetchDashboardStats() {
+    fetch('/dashboard/api/stats')  // Updated URL to match the blueprint prefix
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Update the messages count in the dashboard
+            const messagesCountElement = document.getElementById('messagesCount');
+            if (messagesCountElement) {
+                messagesCountElement.textContent = data.messages_count;
+            } else {
+                console.warn('Element with ID "messagesCount" not found in the DOM');
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching dashboard stats:', error);
+        });
+}
+
+// Inizializzazione
 document.addEventListener('DOMContentLoaded', () => {
     // Carica preferenza Dark Mode all'avvio
     const savedDarkMode = localStorage.getItem('dashboardDarkMode');
@@ -135,4 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updatePagination(filteredData, currentPage, rowsPerPage, paginationInfo, prevPageBtn, nextPageBtn, 
         (totalPages, currentPage) => renderPaginationPages(totalPages, currentPage, paginationPages, goToPage));
     renderLogTable(filteredData, currentPage, rowsPerPage, logTableBody);
+    
+    // Fetch dashboard stats
+    fetchDashboardStats();
 });

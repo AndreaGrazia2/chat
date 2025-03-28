@@ -36,6 +36,10 @@ window.isChannel = false;
 window.currentlyConnected = false;
 window.socket = null;
 window.messagesLoaded = null;
+// Gestione typing
+window.typingTimeout = null;
+window.isTyping = false;
+window.typingDebounceTime = 1000; // 1 secondo di debounce
 
 // Dati utenti - Assicurati che siano disponibili ovunque
 window.users = [{

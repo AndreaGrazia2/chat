@@ -36,6 +36,9 @@ function setupSocketIOEvents() {
     // Aggiunti nuovi eventi per gestire le features mancanti
     socket.on('messageDeleted', handleMessageDeleted); 
     socket.on('messageEdited', handleMessageEdited);
+
+    socket.on('userStartTyping', (data) => handleUserTyping({...data, isTyping: true}));
+    socket.on('userStopTyping', (data) => handleUserTyping({...data, isTyping: false}));
 }
 
 function handleSocketConnect() {
@@ -488,15 +491,43 @@ function handleMessageEdited(data) {
 }
 
 function handleUserTyping(data) {
-	const userId = data.userId;
-	const isTyping = data.isTyping;
-
-	// Find the user
-	const user = users.find(u => u.id == userId);
-	if (user) {
-		// Show/hide typing indicator
-		// You can implement this UI element
-	}
+    console.log('User typing event received:', data);
+    
+    const typingUserId = data.userId;
+    const isTyping = data.isTyping;  // Ripristinato invece di forzare a true
+    const typingIndicator = document.getElementById('typingIndicator');
+    const typingText = document.getElementById('typingText');
+    
+    // Manteniamo la modalità testing
+    const TESTING_MODE = true;
+    
+    if (typingUserId === 1 && !TESTING_MODE) {
+        console.log('Not showing typing indicator for current user');
+        return;
+    }
+    
+    // Trova l'utente
+    const user = users.find(u => u.id == typingUserId);
+    if (!user) {
+        console.warn('User not found for typing indicator:', typingUserId);
+        return;
+    }
+    
+    if (isTyping) {
+        // Mostro l'indicatore di digitazione
+        typingText.textContent = `${user.displayName} is typing...`;
+        typingIndicator.style.display = 'flex';
+        typingIndicator.dataset.startTime = Date.now();
+        console.log('Typing indicator shown for', user.displayName);
+    } else {
+        // Se l'indicatore è relativo allo stesso utente, nascondilo
+        if (typingIndicator.style.display === 'flex' && 
+            typingText.textContent === `${user.displayName} is typing...`) {
+            typingIndicator.style.display = 'none';
+            delete typingIndicator.dataset.startTime;
+            console.log('Typing indicator hidden for', user.displayName);
+        }
+    }
 }
 
 function handleModelInference(data) {
