@@ -1,13 +1,19 @@
+# TODO: Autenticazione
+# TODO: Analisi delle email e allegati
 import gevent.monkey
 gevent.monkey.patch_all()
 
 import os
 import sys
-import threading
-import time
 from flask import Flask, request, jsonify, redirect, Blueprint
 from flask_socketio import SocketIO
 from sqlalchemy import text
+import logging
+
+# Disabilita i log di geventwebsocket
+logging.getLogger('geventwebsocket.handler').setLevel(logging.ERROR)
+# Opzionalmente, puoi anche disabilitare i log di werkzeug
+logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
 # Imposta un limite di ricorsione sicura
 sys.setrecursionlimit(1000)
@@ -32,25 +38,6 @@ from chat.handlers import register_handlers
 
 # Importa le funzionalità di database
 from common.db.connection import get_engine
-
-# Funzione per fare ping al database
-def ping_database(engine):
-    """Esegue una query semplice per verificare la connessione al database"""
-    try:
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
-            print("Ping al database riuscito")
-        return True
-    except Exception as e:
-        print(f"Errore durante il ping al database: {str(e)}")
-        return False
-
-# Funzione per eseguire il ping periodicamente
-def periodic_ping(engine, interval=30):
-    """Esegue un ping periodico al database per mantenere attiva la connessione"""
-    while True:
-        ping_database(engine)
-        time.sleep(interval)
 
 # Crea l'applicazione Flask
 app = Flask(__name__)
@@ -91,18 +78,11 @@ register_handlers(socketio)
 from cal import init_app as init_calendar
 init_calendar(app, socketio)
 
-# Ping al database all'avvio
+# Semplice verifica della connessione al database all'avvio del client
 @socketio.on('connect')
 def handle_connect():
     """Handler per la connessione di un client Socket.IO"""
     print(f"Client connesso: {request.sid}")
-    
-    # Verifica la connessione al database
-    engine = get_engine()
-    if ping_database(engine):
-        print("Connessione al database verificata")
-    else:
-        print("ATTENZIONE: problemi di connessione al database")
 
 # Gestore eccezioni per Flask
 @app.errorhandler(Exception)
@@ -142,22 +122,9 @@ def page_not_found(e):
     # Restituisci la risposta 404 standard
     return f"404 Not Found: {requested_url}", 404
 
-# Thread per il ping periodico al database
-engine_ping = None
-
 # Funzione per creare l'applicazione Flask (per Gunicorn)
 def create_app():
     """Restituisce l'applicazione Flask configurata per Gunicorn"""
-    global engine_ping
-    
-    # Avvia il thread di ping solo se non è già in esecuzione
-    if engine_ping is None or not engine_ping.is_alive():
-        engine = get_engine()
-        engine_ping = threading.Thread(target=periodic_ping, args=(engine, 30))
-        engine_ping.daemon = True
-        engine_ping.start()
-        print("Thread di ping al database avviato")
-    
     # Registra informazioni di configurazione
     log_config_info()
     return app
@@ -167,20 +134,13 @@ if __name__ == '__main__':
     # Registra informazioni di configurazione
     log_config_info()
     
-    # Avvia il thread di ping al database
-    engine = get_engine()
-    engine_ping = threading.Thread(target=periodic_ping, args=(engine, 30))
-    engine_ping.daemon = True
-    engine_ping.start()
-    print("Thread di ping al database avviato")
-    
     # Assicurati che PORT sia un intero
     port = int(PORT)
     
     # In modalità sviluppo, usa il server integrato di Flask
     if FLASK_ENV == 'development':
         print(f"Avvio del server di sviluppo su http://0.0.0.0:{port}")
-        socketio.run(app, host='0.0.0.0', port=port, debug=DEBUG, use_reloader=False)
+        socketio.run(app, host='0.0.0.0', port=port, debug=DEBUG, use_reloader=True)
     else:
         # In produzione, il server sarà gestito da Gunicorn
         # Questo codice non verrà eseguito quando si usa Gunicorn

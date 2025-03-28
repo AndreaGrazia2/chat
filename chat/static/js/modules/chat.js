@@ -1,5 +1,3 @@
-// TODO: Quando un utente scrive un messaggio, mostra un indicatore di digitazione all'altro utente.
-
 import { sendChannelMessage } from './socket.js'
 import { updateUnreadBadge}  from './uiNavigation.js';
 import { showNotification}  from './utils.js';
@@ -8,6 +6,9 @@ import { sendDirectMessage } from './socket.js'
 import { createMessageElement } from './messageRenderer.js';
 
 function sendMessage() {
+    // Interrompi lo stato di digitazione quando si invia un messaggio
+    stopTyping();
+
     const input = document.getElementById('messageInput');
     const text = input.value.trim();
     
@@ -111,7 +112,115 @@ function sendMessage() {
     }
 }
 
+/**
+ * Gestisce gli eventi di digitazione dell'utente
+ * Invia notifiche "typing" ad altri utenti con debounce
+ */
+function setupTypingEvents() {
+    console.log("setupTypingEvents è stata chiamata!");
+
+    const input = document.getElementById('messageInput');
+    
+    // Quando l'utente inizia a digitare
+    input.addEventListener('input', function() {
+        // Se non stiamo già segnalando che stiamo digitando
+        console.log("Event listener 'input' triggato, isTyping:", isTyping);
+        if (!isTyping) {
+            isTyping = true;
+            
+            // Emetti evento solo se siamo connessi e abbiamo una conversazione attiva
+            if (currentlyConnected && socket) {
+                if (isDirectMessage && currentUser) {
+                    socket.emit('userStartTyping', {  // CORRETTO: userStartTyping
+                        userId: currentUser.id,
+                        isDirect: true
+                    });
+                } else if (currentChannel) {
+                    socket.emit('userStartTyping', {  // CORRETTO: userStartTyping
+                        channelName: currentChannel,
+                        isDirect: false,
+                        // Invia comunque l'user ID corrente
+                        userId: 1
+                    });
+                }
+            }
+        }
+        
+        // Resetta il timeout se esiste
+        if (typingTimeout) {
+            clearTimeout(typingTimeout);
+        }
+        
+        // Imposta un nuovo timeout
+        typingTimeout = setTimeout(function() {
+            // Quando il timeout scade, l'utente non sta più digitando
+            isTyping = false;
+            
+            // Emetti evento di fine digitazione
+            if (currentlyConnected && socket) {
+                if (isDirectMessage && currentUser) {
+                    socket.emit('userStopTyping', {
+                        userId: currentUser.id,
+                        isDirect: true
+                    });
+                } else if (currentChannel) {
+                    socket.emit('userStopTyping', {
+                        channelName: currentChannel,
+                        isDirect: false
+                    });
+                }
+            }
+        }, typingDebounceTime);
+    });
+    
+    // Quando viene inviato un messaggio, interrompiamo subito lo stato di digitazione
+    document.getElementById('sendButton').addEventListener('click', stopTyping);
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            stopTyping();
+        }
+    });
+}
+
+/**
+ * Interrompe lo stato di digitazione
+ */
+function stopTyping() {
+    // Pulisci il timeout esistente
+    if (typingTimeout) {
+        clearTimeout(typingTimeout);
+    }
+    
+    // Solo se stavamo già digitando, inviamo l'evento di stop
+    if (isTyping) {
+        isTyping = false;
+        
+        if (currentlyConnected && socket) {
+            if (isDirectMessage && currentUser) {
+                socket.emit('userStopTyping', {
+                    userId: currentUser.id,
+                    isDirect: true
+                });
+            } else if (currentChannel) {
+                socket.emit('userStopTyping', {
+                    channelName: currentChannel,
+                    isDirect: false
+                });
+            }
+        }
+    }
+    
+    // Nascondi direttamente l'indicatore di digitazione locale
+    const typingIndicator = document.getElementById('typingIndicator');
+    if (typingIndicator) {
+        typingIndicator.style.display = 'none';
+        delete typingIndicator.dataset.startTime;
+    }
+}
+
 // Export functions
 export {
-    sendMessage
+    sendMessage,
+    setupTypingEvents,
+    stopTyping
 };

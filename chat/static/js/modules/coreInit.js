@@ -11,6 +11,8 @@ import { debug, hideLoader } from './utils.js';
 import { initializeSocketIO } from './socket.js';
 import { handleReply, forwardMessage, copyMessageText, editMessage } from './messageActions.js';
 import { sendMessage } from './chat.js';
+import { setupTypingEvents } from './chat.js';
+
 /**
  * coreInit.js - Initialization functions
  * 
@@ -45,6 +47,9 @@ function initializeApp() {
     initializeSocketIO();
 
     setupTypingTimeoutChecker();
+
+    // Inizializza eventi di digitazione
+    setupTypingEvents();   
     
     debug("Chat initialization complete");
 }

@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, jsonify, request, send_from_directory
 from common.config import SECRET_KEY
-from sqlalchemy import and_, or_, func, desc
+from sqlalchemy import and_, or_, func, desc, select
 from chat.models import User, Conversation, Message, Channel, ChannelMember, ConversationParticipant, MessageReadStatus
 from chat.database import SessionLocal
 import json
@@ -72,9 +72,14 @@ def get_channel_messages(channel_name):
                 .filter(Message.conversation_id == conversation_id)
             )
             
-            # Aggiunta filtro paginazione
+              # Aggiunta filtro paginazione con controllo validità
             if before_id:
-                query = query.filter(Message.id < before_id)
+                try:
+                    before_id_int = int(before_id)
+                    query = query.filter(Message.id < before_id_int)
+                except (ValueError, TypeError):
+                    # Log dell'errore, continuiamo senza filtro
+                    print(f"Valore before_id non valido per il canale {channel_name}: {before_id}")
                 
             # Ordina e limita
             query = query.order_by(desc(Message.created_at)).limit(limit)
@@ -178,9 +183,7 @@ def get_dm_messages(user_id):
     
     try:
         with get_db() as db: 
-            # Find the DM conversation using SQLAlchemy
-            # Usa una sottoquery per trovare le conversazioni dirette
-            # dove entrambi gli utenti sono partecipanti
+            # Find the DM conversation
             current_user_convs = (
                 db.query(ConversationParticipant.conversation_id)
                 .filter(ConversationParticipant.user_id == 1)
@@ -193,33 +196,63 @@ def get_dm_messages(user_id):
                 .subquery()
             )
             
+            # Versione semplificata della query
             conversation = (
                 db.query(Conversation)
+                .join(ConversationParticipant, Conversation.id == ConversationParticipant.conversation_id)
                 .filter(
                     Conversation.type == 'direct',
-                    Conversation.id.in_(current_user_convs),
-                    Conversation.id.in_(target_user_convs)
+                    ConversationParticipant.user_id == 1  # Current user
+                )
+                .filter(
+                    # Trova la conversazione con l'altro utente
+                    Conversation.id.in_(
+                        db.query(ConversationParticipant.conversation_id)
+                        .filter(ConversationParticipant.user_id == user_id)
+                    )
                 )
                 .first()
             )
             
+            # Se non esiste la conversazione, creala
             if not conversation:
-                return jsonify([])
+                conversation = Conversation(
+                    name=f"DM with user {user_id}",
+                    type="direct"
+                )
+                db.add(conversation)
+                db.commit()
+                db.refresh(conversation)
                 
+                # Aggiungi i partecipanti
+                participants = [
+                    ConversationParticipant(conversation_id=conversation.id, user_id=1),
+                    ConversationParticipant(conversation_id=conversation.id, user_id=user_id)
+                ]
+                db.add_all(participants)
+                db.commit()
+                
+                return jsonify([])  # Restituisci lista vuota per conversazione appena creata
+            
             conversation_id = conversation.id
             
-            # Build query to get messages using SQLAlchemy
+            # Costruisci query di base
             query = (
                 db.query(Message, User)
                 .join(User, Message.user_id == User.id)
                 .filter(Message.conversation_id == conversation_id)
             )
             
-            # Add pagination filter if specified
+            # Aggiungi filtro paginazione solo se before_id è valido
             if before_id:
-                query = query.filter(Message.id < before_id)
-                
-            # Order and limit
+                try:
+                    before_id_int = int(before_id)
+                    query = query.filter(Message.id < before_id_int)
+                except (ValueError, TypeError):
+                    # Log, ma continua senza filtro
+                    print(f"Valore before_id non valido: {before_id}")
+            
+            # Ordina e limita
             query = query.order_by(desc(Message.created_at)).limit(limit)
             
             # Execute query

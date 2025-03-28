@@ -11,7 +11,7 @@
  * In un'implementazione reale, questa funzione potrebbe essere usata
  * per sincronizzare gli eventi con un backend.
  */
-function sincronizzaEventi() {
+export function sincronizzaEventi() {
     // Implementazione futura per sincronizzare con API
     console.log('Sincronizzazione eventi con il backend...');
     // Esempio di chiamata API

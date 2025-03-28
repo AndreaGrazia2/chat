@@ -1103,6 +1103,76 @@ def register_handlers(socketio):
                 db.rollback()
                 print(f"Error during message edit: {str(e)}")
 
+    @socketio.on('userStartTyping')
+    def handle_start_typing(data):
+        """Handle user typing event start"""
+        print(f"Received typing start event: {data}")
+        channelName = data.get('channelName')
+        userId = data.get('userId')
+        isDirect = data.get('isDirect', False)
+        
+        # Determina la stanza corretta
+        room = None
+        if isDirect:
+            # Per messaggi diretti, invia all'altro utente
+            room = f"dm:{userId}"
+        elif channelName:
+            # Per canali, invia a tutti nel canale
+            room = f"channel:{channelName}"
+        
+        if not room:
+            print("Error: Could not determine room for typing event")
+            return
+            
+        # Trova l'utente corrente (ID 1)
+        with get_db() as db:
+            current_user = db.query(User).filter(User.id == 1).first()
+            if not current_user:
+                print("Error: Current user not found")
+                return
+                
+            # Propaga l'evento agli altri utenti nella stanza, escludendo mittente
+            emit('userStartTyping', {
+                'userId': current_user.id,  # ID utente che sta digitando
+                'isDirect': isDirect
+            }, room=room, include_self=False)
+            print(f"Broadcast typing start event to room {room}")
+
+    @socketio.on('userStopTyping')
+    def handle_stop_typing(data):
+        """Handle user typing event stop"""
+        print(f"Received typing stop event: {data}")
+        channelName = data.get('channelName')
+        userId = data.get('userId')
+        isDirect = data.get('isDirect', False)
+        
+        # Determina la stanza corretta
+        room = None
+        if isDirect:
+            # Per messaggi diretti, invia all'altro utente
+            room = f"dm:{userId}"
+        elif channelName:
+            # Per canali, invia a tutti nel canale
+            room = f"channel:{channelName}"
+        
+        if not room:
+            print("Error: Could not determine room for typing event")
+            return
+            
+        # Trova l'utente corrente (ID 1)
+        with get_db() as db:
+            current_user = db.query(User).filter(User.id == 1).first()
+            if not current_user:
+                print("Error: Current user not found")
+                return
+                
+            # Propaga l'evento agli altri utenti nella stanza, escludendo mittente
+            emit('userStopTyping', {
+                'userId': current_user.id,  # ID utente che ha smesso di digitare
+                'isDirect': isDirect
+            }, room=room, include_self=False)
+            print(f"Broadcast typing stop event to room {room}")                
+
 def ensure_channel_conversations_exist():
     """Ensure that all channels have corresponding conversations in the database"""
     with get_db() as db:

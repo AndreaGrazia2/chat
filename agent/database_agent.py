@@ -34,16 +34,24 @@ STATIC_URL = os.getenv("STATIC_URL", "/static/")
 
 # Funzione per connettersi al database
 def get_db_connection():
-	conn = psycopg2.connect(
-		host=os.getenv("DB_HOST"),
-		port=os.getenv("DB_PORT"),
-		dbname=os.getenv("DB_NAME"),
-		user=os.getenv("DB_USER"),
-		password=os.getenv("DB_PASSWORD"),
-		cursor_factory=psycopg2.extras.DictCursor
-	)
-	conn.autocommit = True
-	return conn
+    # Parametri di connessione migliorati per evitare problemi SSL
+    conn = psycopg2.connect(
+        host=os.getenv("DB_HOST"),
+        port=os.getenv("DB_PORT"),
+        dbname=os.getenv("DB_NAME"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        cursor_factory=psycopg2.extras.DictCursor,
+        # Aggiungi questi parametri per migliorare la gestione SSL
+        sslmode='require',
+        connect_timeout=60,
+        keepalives=1,
+        keepalives_idle=20,
+        keepalives_interval=5,
+        keepalives_count=5
+    )
+    conn.autocommit = True
+    return conn
 
 # Funzione per ottenere lo schema del database
 def get_db_schema():

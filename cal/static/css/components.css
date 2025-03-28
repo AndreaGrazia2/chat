@@ -14,7 +14,7 @@
 	padding: 8px;
 	border-radius: 4px;
 	color: var(--text-color);
-    font-size: 18px;
+    font-size: 13.3333px;
 }
 
 .btn:hover {
@@ -27,10 +27,6 @@
 	border-radius: 50%;
 }
 
-.btn-text {
-	padding: 8px 12px;
-}
-
 .btn-primary {
 	background-color: var(--primary);
 	color: white;
@@ -39,6 +35,16 @@
 
 .btn-primary:hover {
 	background-color: #1a68d9;
+}
+
+.btn-danger {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.btn-text {
+    background-color: var(--secondary-bg);
+    color: var(--text-color);
 }
 
 /* ===== SELETTORE VISTA ===== */
