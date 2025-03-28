@@ -494,17 +494,18 @@ function handleUserTyping(data) {
     console.log('User typing event received:', data);
     
     const typingUserId = data.userId;
-    const isTyping = data.isTyping;  // Ripristinato invece di forzare a true
+    const isTyping = data.isTyping;
     const typingIndicator = document.getElementById('typingIndicator');
     const typingText = document.getElementById('typingText');
     
-    // Manteniamo la modalità testing
-    const TESTING_MODE = true;
-    
-    if (typingUserId === 1 && !TESTING_MODE) {
-        console.log('Not showing typing indicator for current user');
+    // AGGIUNTO: Se l'utente sta digitando localmente, ignora gli eventi di typing
+    if (window.isLocalTyping) {
+        console.log('Utente sta digitando localmente, ignoro evento typing');
         return;
     }
+    
+    // Manteniamo la modalità testing
+    const TESTING_MODE = true;
     
     // Trova l'utente
     const user = users.find(u => u.id == typingUserId);
@@ -515,14 +516,14 @@ function handleUserTyping(data) {
     
     if (isTyping) {
         // Mostro l'indicatore di digitazione
-        typingText.textContent = `${user.displayName} is typing...`;
+        typingText.textContent = `${user.displayName} sta scrivendo...`;
         typingIndicator.style.display = 'flex';
         typingIndicator.dataset.startTime = Date.now();
         console.log('Typing indicator shown for', user.displayName);
     } else {
         // Se l'indicatore è relativo allo stesso utente, nascondilo
         if (typingIndicator.style.display === 'flex' && 
-            typingText.textContent === `${user.displayName} is typing...`) {
+            typingText.textContent === `${user.displayName} sta scrivendo...`) {
             typingIndicator.style.display = 'none';
             delete typingIndicator.dataset.startTime;
             console.log('Typing indicator hidden for', user.displayName);
@@ -537,7 +538,7 @@ function handleModelInference(data) {
 
     if (data.status === 'started') {
         // Trova il nome dell'utente con gestione più robusta degli ID
-        let userName = 'Someone';
+        let userName = 'Agente';
         if (data.userId) {
             // Cerca prima nell'array users
             const user = users.find(u => u.id == data.userId);
@@ -549,8 +550,16 @@ function handleModelInference(data) {
             }
         }
 
+        // AGGIUNTO: Forza la visualizzazione dell'indicatore per gli eventi di modello,
+        // anche se l'utente sta digitando localmente
+        const wasLocalTyping = window.isLocalTyping;
+        if (wasLocalTyping) {
+            console.log('Mostrando indicatore di inferenza anche durante digitazione locale');
+            // Salviamo lo stato di digitazione locale ma forziamo il display dell'indicatore
+        }
+
         // Mostra l'indicatore di typing
-        typingText.textContent = `${userName} is typing...`;
+        typingText.textContent = `${userName} sta elaborando...`;
         typingIndicator.style.display = 'flex';
         
         // Aggiungi un timestamp all'indicatore per il controllo timeout

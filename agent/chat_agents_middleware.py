@@ -30,7 +30,7 @@ def get_calendar_agent():
     if _calendar_agent is None:
         try:
             # Importazione locale per evitare dipendenze circolari
-            from agent.calendar_agent import CalendarAgent
+            from agent.cal.calendar_agent import CalendarAgent
             
             # Ottieni la chiave API dall'ambiente
             api_key = os.getenv("OPENROUTER_API_KEY")

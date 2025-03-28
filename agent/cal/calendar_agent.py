@@ -42,7 +42,7 @@ class CalendarAgent:
             self.calendar_api_base_url = calendar_api_base_url
         
         # Import qui per evitare dipendenze circolari
-        from agent.calendar_intent import create_calendar_intent_chain, parse_intent_response
+        from agent.cal.calendar_intent import create_calendar_intent_chain, parse_intent_response
         self.intent_chain = create_calendar_intent_chain(llm)
         self.parse_intent_response = parse_intent_response
         
@@ -70,7 +70,7 @@ class CalendarAgent:
         logger.info("Invocazione della chain di intento")
         raw_intent = self.intent_chain.invoke({"user_input": user_input, "current_year": datetime.now().year})
         
-        from agent.calendar_intent import parse_intent_response
+        from agent.cal.calendar_intent import parse_intent_response
         intent_data = parse_intent_response(raw_intent)
         
         # Log dell'intento rilevato (per debug)
@@ -93,7 +93,7 @@ class CalendarAgent:
         
         try:
             # Import qui per evitare dipendenze circolari
-            from agent.calendar_utils import format_event_response
+            from agent.cal.calendar_utils import format_event_response
             
             if action == 'create':
                 logger.info("Esecuzione creazione evento")
@@ -140,7 +140,11 @@ class CalendarAgent:
     def _create_event(self, intent_data):
         """Crea un nuovo evento nel calendario"""
         # Import qui per evitare dipendenze circolari
-        from agent.calendar_utils import parse_relative_date, parse_time
+        from agent.cal.calendar_utils import parse_relative_date, parse_time
+        import logging
+        logger = logging.getLogger('calendar_agent')
+        
+        logger.info(f"Creazione evento con dati: {json.dumps(intent_data, indent=2)}")
         
         # Estrai e normalizza i dati dall'intent
         title = intent_data.get('title')
@@ -149,6 +153,12 @@ class CalendarAgent:
             
         description = intent_data.get('description', '')
         category = intent_data.get('category', 'personal')
+        
+        # Ottieni l'ID della categoria
+        category_id = self._get_category_id(category)
+        if not category_id:
+            logger.warning(f"Categoria '{category}' non trovata, utilizzo categoria di default")
+            category_id = self._get_default_category_id()
             
         # Gestisci la data
         date_str = intent_data.get('date')
@@ -191,18 +201,123 @@ class CalendarAgent:
             "descrizione": description,
             "dataInizio": start_date_iso,
             "dataFine": end_date_iso,
-            "categoria": category,
+            "categoria_id": category_id,  # Usa l'ID della categoria invece del nome
             "allDay": False
         }
         
         # Chiama l'API per creare l'evento
         url = f"{self.calendar_api_base_url}/events"
+        logger.info(f"Invio richiesta POST a {url} con dati: {json.dumps(event_data, indent=2)}")
         response = requests.post(url, json=event_data)
         
         if not response.ok:
+            logger.error(f"Errore API ({response.status_code}): {response.text}")
             raise Exception(f"Errore API ({response.status_code}): {response.text}")
             
-        return response.json().get('evento', {})
+        result = response.json().get('evento', {})
+        logger.info(f"Evento creato con successo: {json.dumps(result, indent=2)}")
+        return result
+    
+    def _get_category_id(self, category_name):
+        """Ottiene l'ID di una categoria dal suo nome"""
+        import logging
+        logger = logging.getLogger('calendar_agent')
+        
+        if not category_name:
+            return self._get_default_category_id()
+        
+        # Normalizza il nome della categoria
+        category_name = category_name.lower().strip()
+        
+        # Ottieni tutte le categorie
+        url = f"{self.calendar_api_base_url}/categories"
+        response = requests.get(url)
+        
+        if not response.ok:
+            logger.error(f"Errore nel recupero delle categorie: {response.text}")
+            return self._get_default_category_id()
+        
+        categories = response.json()
+        
+        # Cerca una corrispondenza esatta
+        for category in categories:
+            if category.get('nome', '').lower() == category_name:
+                return category.get('id')
+        
+        # Cerca una corrispondenza parziale
+        for category in categories:
+            if category_name in category.get('nome', '').lower() or category.get('nome', '').lower() in category_name:
+                return category.get('id')
+        
+        # Se non troviamo corrispondenze, crea una nuova categoria
+        try:
+            new_category = {
+                "nome": category_name.capitalize(),
+                "colore": self._get_random_color()
+            }
+            
+            response = requests.post(f"{self.calendar_api_base_url}/categories", json=new_category)
+            
+            if response.ok:
+                created_category = response.json()
+                return created_category.get('id')
+        except Exception as e:
+            logger.error(f"Errore nella creazione della categoria: {str(e)}")
+        
+        # Se tutto fallisce, ritorna l'ID della categoria di default
+        return self._get_default_category_id()
+    
+    def _get_default_category_id(self):
+        """Ottiene l'ID della categoria di default o ne crea una se non esiste"""
+        import logging
+        logger = logging.getLogger('calendar_agent')
+        
+        # Ottieni tutte le categorie
+        url = f"{self.calendar_api_base_url}/categories"
+        response = requests.get(url)
+        
+        if response.ok:
+            categories = response.json()
+            
+            # Se ci sono categorie, usa la prima
+            if categories and len(categories) > 0:
+                return categories[0].get('id')
+        
+        # Se non ci sono categorie o c'è stato un errore, crea una categoria di default
+        default_category = {
+            "nome": "Generale",
+            "colore": "#3498db"  # Blu come colore di default
+        }
+        
+        try:
+            response = requests.post(f"{self.calendar_api_base_url}/categories", json=default_category)
+            
+            if response.ok:
+                created_category = response.json()
+                return created_category.get('id')
+        except Exception as e:
+            logger.error(f"Errore nella creazione della categoria di default: {str(e)}")
+        
+        # Se tutto fallisce, ritorna None (ma questo non dovrebbe mai accadere)
+        logger.critical("Impossibile ottenere o creare una categoria di default!")
+        return None
+    
+    def _get_random_color(self):
+        """Genera un colore casuale in formato esadecimale"""
+        import random
+        colors = [
+            "#3498db",  # Blu
+            "#2ecc71",  # Verde
+            "#e74c3c",  # Rosso
+            "#f39c12",  # Arancione
+            "#9b59b6",  # Viola
+            "#1abc9c",  # Turchese
+            "#34495e",  # Blu scuro
+            "#e67e22",  # Arancione scuro
+            "#95a5a6",  # Grigio
+            "#16a085",  # Verde acqua
+        ]
+        return random.choice(colors)
     
     def _find_matching_event(self, intent_data):
         """Trova un evento che corrisponde ai criteri specificati"""
@@ -228,7 +343,7 @@ class CalendarAgent:
                             "Specifica almeno il titolo o la data dell'evento da modificare.")
         
         # Import qui per evitare dipendenze circolari
-        from agent.calendar_utils import parse_relative_date, parse_time
+        from agent.cal.calendar_utils import parse_relative_date, parse_time
         
         # Gestisci la data originale per la ricerca
         start_date = None
@@ -386,7 +501,7 @@ class CalendarAgent:
         logger = logging.getLogger('calendar_agent')
         
         # Import qui per evitare dipendenze circolari
-        from agent.calendar_utils import parse_relative_date, parse_time
+        from agent.cal.calendar_utils import parse_relative_date, parse_time
         
         logger.info(f"Tentativo di aggiornamento evento con dati: {json.dumps(intent_data, indent=2)}")
         
@@ -589,7 +704,7 @@ class CalendarAgent:
     def _view_events(self, intent_data):
         """Visualizza eventi in un determinato periodo"""
         # Import qui per evitare dipendenze circolari
-        from agent.calendar_utils import parse_relative_date, get_period_dates
+        from agent.cal.calendar_utils import parse_relative_date, get_period_dates
         
         period = intent_data.get('period')
         date_str = intent_data.get('date')

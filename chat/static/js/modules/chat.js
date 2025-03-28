@@ -127,16 +127,18 @@ function setupTypingEvents() {
         console.log("Event listener 'input' triggato, isTyping:", isTyping);
         if (!isTyping) {
             isTyping = true;
+            // AGGIUNTO: Imposta la flag di digitazione locale a true
+            window.isLocalTyping = true;
             
             // Emetti evento solo se siamo connessi e abbiamo una conversazione attiva
             if (currentlyConnected && socket) {
                 if (isDirectMessage && currentUser) {
-                    socket.emit('userStartTyping', {  // CORRETTO: userStartTyping
+                    socket.emit('userStartTyping', {
                         userId: currentUser.id,
                         isDirect: true
                     });
                 } else if (currentChannel) {
-                    socket.emit('userStartTyping', {  // CORRETTO: userStartTyping
+                    socket.emit('userStartTyping', {
                         channelName: currentChannel,
                         isDirect: false,
                         // Invia comunque l'user ID corrente
@@ -155,6 +157,8 @@ function setupTypingEvents() {
         typingTimeout = setTimeout(function() {
             // Quando il timeout scade, l'utente non sta più digitando
             isTyping = false;
+            // AGGIUNTO: Resetta la flag di digitazione locale
+            window.isLocalTyping = false;
             
             // Emetti evento di fine digitazione
             if (currentlyConnected && socket) {
@@ -194,6 +198,8 @@ function stopTyping() {
     // Solo se stavamo già digitando, inviamo l'evento di stop
     if (isTyping) {
         isTyping = false;
+        // AGGIUNTO: Resetta la flag di digitazione locale
+        window.isLocalTyping = false;
         
         if (currentlyConnected && socket) {
             if (isDirectMessage && currentUser) {

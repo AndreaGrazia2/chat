@@ -40,6 +40,7 @@ window.messagesLoaded = null;
 window.typingTimeout = null;
 window.isTyping = false;
 window.typingDebounceTime = 1000; // 1 secondo di debounce
+window.isLocalTyping = false; 
 
 // Dati utenti - Assicurati che siano disponibili ovunque
 window.users = [{
