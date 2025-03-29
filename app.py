@@ -1,3 +1,5 @@
+# TODO: Autenticazione
+# TODO: Analisi delle email e allegati
 import gevent.monkey
 gevent.monkey.patch_all()
 
@@ -5,6 +7,13 @@ import os
 import sys
 from flask import Flask, request, jsonify, redirect, Blueprint
 from flask_socketio import SocketIO
+from sqlalchemy import text
+import logging
+
+# Disabilita i log di geventwebsocket
+logging.getLogger('geventwebsocket.handler').setLevel(logging.ERROR)
+# Opzionalmente, puoi anche disabilitare i log di werkzeug
+logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
 # Imposta un limite di ricorsione sicura
 sys.setrecursionlimit(1000)
@@ -23,9 +32,13 @@ except ImportError:
 from chat.routes import chat_bp
 from cal.routes import calendar_bp
 from dashboard.routes import dashboard_bp
+from agent.db_agent.routes import db_agent_bp
 
 # Importa i gestori di eventi Socket.IO
 from chat.handlers import register_handlers
+
+# Importa le funzionalità di database
+from common.db.connection import get_engine
 
 # Crea l'applicazione Flask
 app = Flask(__name__)
@@ -44,7 +57,6 @@ import logging
 logger = logging.getLogger(__name__)
 logger.info("L'inizializzazione automatica del database è disabilitata")
 
-
 # Aggiungi i template comuni al percorso di ricerca di Jinja
 app.jinja_loader.searchpath.append(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), 'common/templates')
@@ -60,9 +72,19 @@ socketio = SocketIO(app, cors_allowed_origins="*",
 app.register_blueprint(chat_bp, url_prefix='/chat')
 app.register_blueprint(calendar_bp, url_prefix='/cal')
 app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
+app.register_blueprint(db_agent_bp, url_prefix='/db_agent') 
 
 # Registra i gestori di eventi Socket.IO
 register_handlers(socketio)
+
+from cal import init_app as init_calendar
+init_calendar(app, socketio)
+
+# Semplice verifica della connessione al database all'avvio del client
+@socketio.on('connect')
+def handle_connect():
+    """Handler per la connessione di un client Socket.IO"""
+    print(f"Client connesso: {request.sid}")
 
 # Gestore eccezioni per Flask
 @app.errorhandler(Exception)
@@ -114,12 +136,15 @@ if __name__ == '__main__':
     # Registra informazioni di configurazione
     log_config_info()
     
+    # Assicurati che PORT sia un intero
+    port = int(PORT)
+    
     # In modalità sviluppo, usa il server integrato di Flask
     if FLASK_ENV == 'development':
-        print(f"Avvio del server di sviluppo su http://0.0.0.0:{PORT}")
-        socketio.run(app, host='0.0.0.0', port=PORT, debug=DEBUG, use_reloader=False)
+        print(f"Avvio del server di sviluppo su http://0.0.0.0:{port}")
+        socketio.run(app, host='0.0.0.0', port=port, debug=DEBUG, use_reloader=True)
     else:
         # In produzione, il server sarà gestito da Gunicorn
         # Questo codice non verrà eseguito quando si usa Gunicorn
-        print(f"Avvio del server in modalità produzione su http://0.0.0.0:{PORT}")
-        socketio.run(app, host='0.0.0.0', port=PORT, debug=False)
+        print(f"Avvio del server in modalità produzione su http://0.0.0.0:{port}")
+        socketio.run(app, host='0.0.0.0', port=port, debug=False)

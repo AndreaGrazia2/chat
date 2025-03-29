@@ -30,8 +30,9 @@ if os.getenv('DATABASE_URL'):
 print(f"DB_HOST: {os.getenv('DB_HOST', 'Non impostato')}")
 print(f"DB_PORT: {os.getenv('DB_PORT', 'Non impostato')}")
 print(f"DB_NAME: {os.getenv('DB_NAME', 'Non impostato')}")
+
 # Importa la funzione per creare l'app
-from app import create_app
+from app import create_app, socketio
 
 # Crea l'applicazione Flask
 application = create_app()
@@ -39,6 +40,11 @@ application = create_app()
 # Definisci app come alias di application (convenzione WSGI standard)
 app = application
 
+# Esporta l'app per Gunicorn
+# In Flask-SocketIO più recente, non è necessario usare run_wsgi_app
+# Gunicorn può usare direttamente l'app Flask
+socketio_app = app
+
 if __name__ == "__main__":
     print("Questo file non dovrebbe essere eseguito direttamente.")
-    print("Usare 'gunicorn wsgi:app' per avviare l'app con Gunicorn.")
+    print("Usare 'gunicorn wsgi:socketio_app' per avviare l'app con Gunicorn.")

@@ -11,11 +11,18 @@ import { debug, hideLoader } from './utils.js';
 import { initializeSocketIO } from './socket.js';
 import { handleReply, forwardMessage, copyMessageText, editMessage } from './messageActions.js';
 import { sendMessage } from './chat.js';
+import { setupTypingEvents } from './chat.js';
+
 /**
  * coreInit.js - Initialization functions
  * 
  * Contains the main initialization functions for the chat application.
  */
+
+// Funzione di verifica per ID temporanei
+function isTemporaryId(messageId) {
+    return typeof messageId === 'string' && messageId.startsWith('temp-');
+}
 
 function initializeApp() {
     // Setup del failsafe per history lock
@@ -40,6 +47,9 @@ function initializeApp() {
     initializeSocketIO();
 
     setupTypingTimeoutChecker();
+
+    // Inizializza eventi di digitazione
+    setupTypingEvents();   
     
     debug("Chat initialization complete");
 }
@@ -61,6 +71,12 @@ function setupHistoryLockFailsafe() {
 }
 
 function showContextMenu(x, y, messageId) {
+    // Non mostrare il menu contestuale per messaggi con ID temporaneo
+    if (isTemporaryId(messageId)) {
+        console.log(`Non è possibile mostrare il menu contestuale per un messaggio temporaneo: ${messageId}`);
+        return;
+    }
+    
     const message = displayedMessages.find(m => m.id == messageId);
     if (!message) return;
     
@@ -168,6 +184,15 @@ function setupEventListeners() {
     document.getElementById('contextMenu').addEventListener('click', function(e) {
         const action = e.target.dataset.action;
         const messageId = this.dataset.messageId;
+        
+        // Verifica se il messaggio ha un ID temporaneo
+        if (isTemporaryId(messageId)) {
+            console.log(`Non è possibile eseguire l'azione ${action} su un messaggio temporaneo`);
+            showNotification('Impossibile eseguire questa azione su un messaggio in fase di invio', true);
+            this.style.display = 'none';
+            return;
+        }
+        
         switch (action) {
             case 'reply':
                 handleReply(messageId);
@@ -194,12 +219,28 @@ function setupEventListeners() {
         // Pulsante risposta
         if (e.target.classList.contains('reply-button')) {
             const messageId = e.target.dataset.messageId;
+            
+            // Verifica se è un ID temporaneo
+            if (isTemporaryId(messageId)) {
+                console.log(`Non è possibile rispondere a un messaggio temporaneo: ${messageId}`);
+                showNotification('Impossibile rispondere a un messaggio in fase di invio', true);
+                return;
+            }
+            
             handleReply(messageId);
         }
         
         // Pulsante menu
         if (e.target.classList.contains('menu-button')) {
             const messageId = e.target.dataset.messageId;
+            
+            // Verifica se è un ID temporaneo
+            if (isTemporaryId(messageId)) {
+                console.log(`Non è possibile mostrare il menu per un messaggio temporaneo: ${messageId}`);
+                showNotification('Impossibile eseguire azioni su un messaggio in fase di invio', true);
+                return;
+            }
+            
             const rect = e.target.getBoundingClientRect();
             showContextMenu(rect.right, rect.top, messageId);
             e.stopPropagation();
@@ -208,11 +249,13 @@ function setupEventListeners() {
         // Pulsante download file
         if (e.target.classList.contains('fa-download') || e.target.closest('.file-download')) {
             showNotification('Download started');
-            e.stopPropagation();
+            return;
         }
         
         // Click su link - previene navigazione e mostra notifica
-        if (e.target.tagName === 'A' || e.target.closest('a')) {
+        if ((e.target.tagName === 'A' || e.target.closest('a')) && 
+            !e.target.classList.contains('file-download') && 
+            !e.target.closest('.file-download')) {
             e.preventDefault();
             const url = e.target.href || e.target.closest('a').href;
             if (url) {
@@ -279,7 +322,6 @@ function setupEventListeners() {
     });
 }
 
-// Export functions
 // Export functions
 export { 
     initializeApp, 

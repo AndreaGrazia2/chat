@@ -1,8 +1,7 @@
 import { updateUnreadBadge}  from './uiNavigation.js';
-import { showNotification}  from './utils.js';
 import { scrollToBottom } from './coreScroll.js';
 import { createMessageElement } from './messageRenderer.js';
-import { formatDate, showLoader, hideLoader } from './utils.js';
+import { showLoader, hideLoader, formatTime, formatDate, linkifyText, showNotification  } from './utils.js';
 
 /**
  * socket.js - Gestione Socket.IO e comunicazione tempo reale
@@ -37,6 +36,9 @@ function setupSocketIOEvents() {
     // Aggiunti nuovi eventi per gestire le features mancanti
     socket.on('messageDeleted', handleMessageDeleted); 
     socket.on('messageEdited', handleMessageEdited);
+
+    socket.on('userStartTyping', (data) => handleUserTyping({...data, isTyping: true}));
+    socket.on('userStopTyping', (data) => handleUserTyping({...data, isTyping: false}));
 }
 
 function handleSocketConnect() {
@@ -96,8 +98,27 @@ function handleMessageHistory(history) {
                     console.error(`Errore nel parsing di fileData per il messaggio ${message.id}:`, e);
                     message.fileData = null;
                 }
-            }
- 
+            } else if (message.fileData && typeof message.fileData === 'object') {
+                // Se fileData è un oggetto, verifica che abbia tutte le proprietà necessarie
+                if (!message.fileData.name) {
+                    // Estrai il nome del file dall'URL se esiste
+                    if (message.fileData.url) {
+                        const urlParts = message.fileData.url.split('/');
+                        message.fileData.name = urlParts[urlParts.length - 1];
+                    } else {
+                        message.fileData.name = 'file';
+                    }
+                }
+                
+                // Determina l'icona in base al tipo di file
+                if (!message.fileData.icon) {
+                    if (message.fileData.type === 'application/pdf') {
+                        message.fileData.icon = 'fa-file-pdf';
+                    } else {
+                        message.fileData.icon = 'fa-file';
+                    }
+                }
+            } 
            
             // Gestisci i messaggi replyTo
             if (message.replyTo && typeof message.replyTo === 'object') {
@@ -146,7 +167,6 @@ function handleMessageHistory(history) {
 }
 
 // Funzione per gestire nuovi messaggi
-// Modifica a handleNewMessage() in socket.js
 function handleNewMessage(message) {
     console.log('Nuovo messaggio ricevuto:', message);
 
@@ -158,40 +178,148 @@ function handleNewMessage(message) {
     // Verifica se questo messaggio è un duplicato
     let isDuplicate = false;
     
-    // Verifica se il messaggio esiste già in displayedMessages (controllo per ID)
-    const existingMessage = displayedMessages.find(m => m.id === message.id);
-    if (existingMessage) {
-        isDuplicate = true;
-        console.log('Messaggio duplicato rilevato per ID:', message.id);
-    } else if (message.isOwn || (message.user && message.user.displayName === "You")) {
-        // Se è un messaggio nostro o con nome utente "You", controlla se è un duplicato
-        const recentMessages = displayedMessages.filter(m => {
-            // Verifica il testo del messaggio
-            const textMatch = m.text === message.text;
+    // Controlla se c'è un ID temporaneo associato a questo messaggio
+    const tempId = message.tempId;
+    let replacedTempMessage = false;
+    
+    // Se c'è un tempId, cerca messaggi con quell'ID
+    if (tempId && typeof tempId === 'string' && tempId.startsWith('temp-')) {
+        const tempMessageIndex = displayedMessages.findIndex(m => m.id === tempId);
+        if (tempMessageIndex !== -1) {
+            console.log(`Sostituendo il messaggio temporaneo ${tempId} con l'ID permanente ${message.id}`);
             
-            // Verifica se il messaggio è recente (inviato negli ultimi 5 secondi)
-            const isRecent = new Date() - new Date(m.timestamp) < 5000;
-            
-            // Controlla se è di proprietà dell'utente
-            const isOwnMessage = m.isOwn;
-            
-            return isOwnMessage && textMatch && isRecent;
-        });
-        
-        if (recentMessages.length > 0) {
-            // È un duplicato, aggiorniamo solo lo stato
-            isDuplicate = true;
-            const existingMsg = recentMessages[0];
-            const existingEl = document.querySelector(`.message-container[data-message-id="${existingMsg.id}"]`);
-            
-            if (existingEl) {
-                // Cambiamo icona da orologio a spunta
-                const statusIcon = existingEl.parentElement.querySelector('.timestamp i');
+            // Trova l'elemento DOM con l'ID temporaneo
+            const tempEl = document.querySelector(`.message-container[data-message-id="${tempId}"]`);
+            if (tempEl) {
+                // Aggiorna l'ID nell'attributo data-message-id
+                tempEl.dataset.messageId = message.id;
+                
+                // Aggiorna anche gli attributi dei pulsanti all'interno del messaggio
+                const buttons = tempEl.querySelectorAll('[data-message-id]');
+                buttons.forEach(button => {
+                    button.dataset.messageId = message.id;
+                });
+                
+                // Cambia icona da orologio a spunta
+                const statusIcon = tempEl.parentElement.querySelector('.timestamp i');
                 if (statusIcon) {
                     statusIcon.className = 'fas fa-check';
                     statusIcon.style.opacity = '1';
                 }
-                existingMsg.status = 'sent';
+                
+                // Rimuovi la classe sending-message per attivare le azioni
+                tempEl.classList.remove('sending-message');
+                
+                // Sostituisci la sezione delle azioni se è in stato 'sending'
+                const actionsContainer = tempEl.querySelector('.message-actions.sending');
+                if (actionsContainer) {
+                    const newActions = document.createElement('div');
+                    newActions.className = 'message-actions';
+                    newActions.innerHTML = `
+                        <button class="reply-button" data-message-id="${message.id}">↩️ Reply</button>
+                        <button class="menu-button" data-message-id="${message.id}">⋮</button>
+                    `;
+                    actionsContainer.replaceWith(newActions);
+                }
+                
+                // Aggiorna l'oggetto del messaggio nell'array displayedMessages
+                // con il nuovo ID permanente e stato 'sent'
+                const tempMessage = displayedMessages[tempMessageIndex];
+                tempMessage.id = message.id;
+                tempMessage.status = 'sent';
+                
+                // Marca come già gestito
+                replacedTempMessage = true;
+                isDuplicate = true;
+            }
+        }
+    }
+    
+    // Se non abbiamo già gestito come sostituzione di un messaggio temporaneo,
+    // esegui il controllo duplicati standard
+    if (!replacedTempMessage) {
+        // Verifica se il messaggio esiste già in displayedMessages (controllo per ID)
+        const existingMessage = displayedMessages.find(m => m.id === message.id);
+        if (existingMessage) {
+            isDuplicate = true;
+            console.log('Messaggio duplicato rilevato per ID:', message.id);
+        } else if (message.isOwn || (message.user && message.user.displayName === "You")) {
+            // Se è un messaggio nostro o con nome utente "You", controlla se è un duplicato
+            const recentMessages = displayedMessages.filter(m => {
+                // Verifica il testo del messaggio
+                const textMatch = m.text === message.text;
+                
+                // Verifica se il messaggio è recente (inviato negli ultimi 5 secondi)
+                const isRecent = new Date() - new Date(m.timestamp) < 5000;
+                
+                // Controlla se è di proprietà dell'utente
+                const isOwnMessage = m.isOwn;
+                
+                return isOwnMessage && textMatch && isRecent;
+            });
+            
+            if (recentMessages.length > 0) {
+                // È un duplicato, aggiorniamo solo lo stato
+                isDuplicate = true;
+                const existingMsg = recentMessages[0];
+                
+                // Controlla se l'ID esistente è temporaneo
+                if (typeof existingMsg.id === 'string' && existingMsg.id.startsWith('temp-')) {
+                    const oldId = existingMsg.id;
+                    
+                    // Aggiorna l'ID nell'oggetto messaggio
+                    existingMsg.id = message.id;
+                    existingMsg.status = 'sent';
+                    
+                    // Aggiorna l'ID nell'elemento DOM
+                    const existingEl = document.querySelector(`.message-container[data-message-id="${oldId}"]`);
+                    if (existingEl) {
+                        // Aggiorna l'attributo data-message-id
+                        existingEl.dataset.messageId = message.id;
+                        
+                        // Aggiorna anche gli attributi dei pulsanti all'interno del messaggio
+                        const buttons = existingEl.querySelectorAll('[data-message-id]');
+                        buttons.forEach(button => {
+                            button.dataset.messageId = message.id;
+                        });
+                        
+                        // Cambiamo icona da orologio a spunta
+                        const statusIcon = existingEl.parentElement.querySelector('.timestamp i');
+                        if (statusIcon) {
+                            statusIcon.className = 'fas fa-check';
+                            statusIcon.style.opacity = '1';
+                        }
+                        
+                        // Rimuovi la classe sending-message e aggiungi le azioni se necessario
+                        existingEl.classList.remove('sending-message');
+                        
+                        // Sostituisci la sezione delle azioni se è in stato 'sending'
+                        const actionsContainer = existingEl.querySelector('.message-actions.sending');
+                        if (actionsContainer) {
+                            const newActions = document.createElement('div');
+                            newActions.className = 'message-actions';
+                            newActions.innerHTML = `
+                                <button class="reply-button" data-message-id="${message.id}">↩️ Reply</button>
+                                <button class="menu-button" data-message-id="${message.id}">⋮</button>
+                            `;
+                            actionsContainer.replaceWith(newActions);
+                        }
+                        
+                        console.log(`Aggiornato ID del messaggio da ${oldId} a ${message.id}`);
+                    }
+                } else {
+                    // Se non è temporaneo, aggiorna solo lo stato
+                    const existingEl = document.querySelector(`.message-container[data-message-id="${existingMsg.id}"]`);
+                    if (existingEl) {
+                        // Cambiamo icona da orologio a spunta
+                        const statusIcon = existingEl.parentElement.querySelector('.timestamp i');
+                        if (statusIcon) {
+                            statusIcon.className = 'fas fa-check';
+                            statusIcon.style.opacity = '1';
+                        }
+                        existingMsg.status = 'sent';
+                    }
+                }
             }
         }
     }
@@ -217,6 +345,26 @@ function handleNewMessage(message) {
         } catch (e) {
             console.error(`Errore nel parsing di fileData per il messaggio ${message.id}:`, e);
             message.fileData = null;
+        }
+    } else if (message.fileData && typeof message.fileData === 'object') {
+        // Se fileData è un oggetto, verifica che abbia tutte le proprietà necessarie
+        if (!message.fileData.name) {
+            // Estrai il nome del file dall'URL se esiste
+            if (message.fileData.url) {
+                const urlParts = message.fileData.url.split('/');
+                message.fileData.name = urlParts[urlParts.length - 1];
+            } else {
+                message.fileData.name = 'file';
+            }
+        }
+        
+        // Determina l'icona in base al tipo di file
+        if (!message.fileData.icon) {
+            if (message.fileData.type === 'application/pdf') {
+                message.fileData.icon = 'fa-file-pdf';
+            } else {
+                message.fileData.icon = 'fa-file';
+            }
         }
     }
     
@@ -382,15 +530,55 @@ function handleMessageEdited(data) {
 }
 
 function handleUserTyping(data) {
-	const userId = data.userId;
-	const isTyping = data.isTyping;
-
-	// Find the user
-	const user = users.find(u => u.id == userId);
-	if (user) {
-		// Show/hide typing indicator
-		// You can implement this UI element
-	}
+    console.log('User typing event received:', data);
+    
+    const typingUserId = data.userId;
+    const isTyping = data.isTyping;
+    const typingIndicator = document.getElementById('typingIndicator');
+    const typingText = document.getElementById('typingText');
+    
+    const currentUserId = 1; // o qualsiasi logica per ottenere l'ID dell'utente corrente
+    if (window.isLocalTyping && typingUserId == currentUserId) {
+        console.log('Ignoro evento typing perché proviene da me stesso');
+        return;
+    }
+ 
+    // Ignora solo se è il mio stesso evento di typing E non c'è un'inferenza in corso
+    if (window.isLocalTyping && typingUserId == currentUserId && !window.isModelInferring) {
+        console.log('Ignoro evento typing perché proviene da me stesso e non è in corso un\'inferenza');
+        return;
+    }
+    
+    // Non ignorare eventi di typing da altri utenti, anche se sto digitando io
+    
+    // Se c'è un'inferenza in corso, dai priorità a quell'indicatore
+    if (window.isModelInferring) {
+        console.log('Inferenza in corso, l\'indicatore di typing rimane per l\'inferenza');
+        return;
+    }
+      
+    // Trova l'utente
+    const user = users.find(u => u.id == typingUserId);
+    if (!user) {
+        console.warn('User not found for typing indicator:', typingUserId);
+        return;
+    }
+    
+    if (isTyping) {
+        // Mostro l'indicatore di digitazione
+        typingText.textContent = `${user.displayName} sta scrivendo...`;
+        typingIndicator.style.display = 'flex';
+        typingIndicator.dataset.startTime = Date.now();
+        console.log('Typing indicator shown for', user.displayName);
+    } else {
+        // Se l'indicatore è relativo allo stesso utente, nascondilo
+        if (typingIndicator.style.display === 'flex' && 
+            typingText.textContent === `${user.displayName} sta scrivendo...`) {
+            typingIndicator.style.display = 'none';
+            delete typingIndicator.dataset.startTime;
+            console.log('Typing indicator hidden for', user.displayName);
+        }
+    }
 }
 
 function handleModelInference(data) {
@@ -400,7 +588,7 @@ function handleModelInference(data) {
 
     if (data.status === 'started') {
         // Trova il nome dell'utente con gestione più robusta degli ID
-        let userName = 'Someone';
+        let userName = 'Agente';
         if (data.userId) {
             // Cerca prima nell'array users
             const user = users.find(u => u.id == data.userId);
@@ -412,8 +600,13 @@ function handleModelInference(data) {
             }
         }
 
-        // Mostra l'indicatore di typing
-        typingText.textContent = `${userName} is typing...`;
+        // IMPORTANTE: Salva lo stato corrente di digitazione e imposta una flag globale
+        // per indicare che un'inferenza è in corso
+        window.previousTypingState = window.isLocalTyping;
+        window.isModelInferring = true;
+        
+        // Forza la visualizzazione dell'indicatore indipendentemente dallo stato locale
+        typingText.textContent = `${userName} sta elaborando...`;
         typingIndicator.style.display = 'flex';
         
         // Aggiungi un timestamp all'indicatore per il controllo timeout
@@ -431,6 +624,11 @@ function handleModelInference(data) {
         // Nascondi l'indicatore di typing quando l'inferenza è completata
         typingIndicator.style.display = 'none';
         delete typingIndicator.dataset.startTime;
+        
+        // IMPORTANTE: Ripristina lo stato precedente e rimuovi la flag di inferenza
+        window.isModelInferring = false;
+        window.isLocalTyping = window.previousTypingState || false;
+        
         console.log('Typing indicator hidden after model inference completed');
     }
 }

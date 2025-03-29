@@ -346,3 +346,40 @@ body {
 .newEvent {
 	font-size: 13px!important;
 }
+
+#notification-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.notification {
+    padding: 10px 15px;
+    border-radius: 4px;
+    opacity: 0;
+    transform: translateX(50px);
+    transition: opacity 0.3s, transform 0.3s;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    background-color: #f8f9fa;
+    min-width: 250px;
+}
+
+.notification.success {
+    background-color: #d4edda;
+    color: #ffffff;
+}
+
+.notification.error {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.notification.warning {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.notification.show {
+    opacity: 1;
+    transform: translateX(0);
+}

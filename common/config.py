@@ -23,7 +23,14 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'dev_key')
 FLASK_ENV = os.getenv('FLASK_ENV', 'production' if not DEBUG else 'development')
 
 # Porta su cui eseguire l'applicazione
-PORT = int(os.getenv('PORT', 5000))
+# Porta su cui eseguire l'applicazione
+if FLASK_ENV == 'development':
+    PORT = int(os.getenv('PORT', 5000))
+    API_BASE_URL = f"http://localhost:{PORT}"
+else:
+    # In produzione (come su Render) usa la porta fornita dall'ambiente o 10000 come fallback
+    PORT = int(os.getenv('PORT', 10000))
+    API_BASE_URL = os.getenv('API_BASE_URL', f"http://localhost:{PORT}")
 
 DATABASE_URL = os.getenv('DATABASE_URL', '')
 
@@ -50,6 +57,7 @@ def log_config_info():
     logger.info(f"Ambiente: {'Development' if DEBUG else 'Production'}")
     logger.info(f"FLASK_ENV: {FLASK_ENV}")
     logger.info(f"PORT: {PORT}")
+    logger.info(f"API_BASE_URL: {API_BASE_URL}")
     logger.info(f"DATABASE: {DB_HOST}:{DB_PORT}/{DB_NAME}")
     logger.info(f"DB_SCHEMA principale: {DB_SCHEMA}")
     logger.info(f"CHAT_SCHEMA: {CHAT_SCHEMA}")

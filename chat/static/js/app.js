@@ -1,3 +1,10 @@
+//TODO: upload files
+//TODO: aggiungere prompt strutturato all'inferenza di john doe
+//TODO: Aggiungere memoria all'inferenza di john doe
+//TODO: Aggiungere RAG vettoriale
+//TODO: Aggiungere inferenza per agent per RAG sul DB
+//TODO: Aggiungere analisi dei documenti inviati
+
 /**
  * app.js - File bridge per rendere disponibili le funzioni dei moduli
  */
@@ -28,6 +35,11 @@ window.isChannel = false;
 window.currentlyConnected = false;
 window.socket = null;
 window.messagesLoaded = null;
+// Gestione typing
+window.typingTimeout = null;
+window.isTyping = false;
+window.typingDebounceTime = 1000; // 1 secondo di debounce
+window.isLocalTyping = false; 
 
 // Dati utenti - Assicurati che siano disponibili ovunque
 window.users = [{

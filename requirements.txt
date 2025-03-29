@@ -12,3 +12,8 @@ jinja2
 langchain
 langchain-community
 psycopg2-binary
+langchain_openai
+pandas
+openai[datalib]
+openai[voice_helpers]
+reportlab
