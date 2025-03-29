@@ -17,3 +17,4 @@ pandas
 openai[datalib]
 openai[voice_helpers]
 reportlab
+python-magic

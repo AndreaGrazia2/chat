@@ -9,6 +9,8 @@ from datetime import datetime
 from contextlib import contextmanager
 from common.db.connection import get_db_session
 
+from chat.file_utils import save_uploaded_file, init_upload_dir
+
 @contextmanager
 def get_db():
     """Context manager per ottenere una sessione del database"""
@@ -733,3 +735,31 @@ def search():
     except Exception as e:
         print(f"Error searching: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+# Aggiungi queste importazioni all'inizio del file
+from chat.file_utils import save_uploaded_file, init_upload_dir
+
+@chat_bp.route('/api/upload', methods=['POST'])
+def upload_file():
+    """Endpoint per l'upload dei file"""
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+    
+    file = request.files['file']
+    
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    
+    # Salva il file e ottieni i metadati
+    file_data = save_uploaded_file(file)
+    
+    if file_data is None:
+        return jsonify({'error': 'Invalid file type or size'}), 400
+    
+    return jsonify({'success': True, 'fileData': file_data})
+
+@chat_bp.route('/uploads/<filename>')
+def uploaded_file(filename):
+    """Serve i file caricati"""
+    upload_dir = init_upload_dir()
+    return send_from_directory(str(upload_dir), filename)

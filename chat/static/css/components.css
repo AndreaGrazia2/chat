@@ -651,3 +651,181 @@
 	max-width: 100%;
 	overflow-wrap: break-word;
 }
+
+/* Stili per il drag and drop */
+.message-input-container {
+    position: relative;
+    flex: 1;
+    padding: 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-main);
+    color: var(--text-color);
+    resize: none;
+    min-height: 38px;
+    max-height: 120px;
+    outline: none;
+    font-size: 14px;
+}
+
+.message-input-container.drag-active {
+    border: 2px dashed var(--primary-color);
+    background-color: rgba(var(--primary-rgb), 0.05);
+}
+
+.drop-overlay {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(var(--primary-rgb), 0.1);
+    border: 2px dashed var(--primary-color);
+    border-radius: 8px;
+    z-index: 10;
+    justify-content: center;
+    align-items: center;
+}
+
+.message-input-container.drag-active .drop-overlay {
+    display: flex;
+}
+
+.drop-message {
+    text-align: center;
+    color: var(--primary-color);
+    font-weight: bold;
+}
+
+.drop-message i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Stili per l'indicatore di caricamento */
+.upload-progress-container {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background-color: rgba(var(--primary-rgb), 0.1);
+    display: flex;
+    align-items: center;
+}
+
+.upload-progress {
+    height: 100%;
+    background-color: var(--primary-color);
+    transition: width 0.3s ease;
+}
+
+.upload-cancel {
+    position: absolute;
+    right: 5px;
+    top: -20px;
+    background-color: var(--danger-color);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 10px;
+    transition: transform 0.2s ease;
+}
+
+.upload-cancel:hover {
+    transform: scale(1.1);
+}
+
+/* Stili per l'anteprima del file */
+.file-preview-container {
+    position: absolute;
+    top: -70px;
+    left: 10px;
+    right: 10px;
+    height: 60px;
+    background-color: var(--bg-secondary);
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    z-index: 5;
+}
+
+.file-preview-image {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 4px;
+    margin-right: 10px;
+}
+
+.file-preview-icon {
+    font-size: 2rem;
+    color: var(--primary-color);
+    margin-right: 10px;
+    width: 50px;
+    text-align: center;
+}
+
+.file-preview-info {
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.file-preview-name {
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+}
+
+.file-preview-size {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.file-preview-close {
+    background-color: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 1rem;
+    transition: color 0.2s ease;
+}
+
+.file-preview-close:hover {
+    color: var(--danger-color);
+}
+/* Stili per la message-toolbar */
+.message-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 8px;
+    margin-bottom: 8px;
+}
+
+.toolbar-button {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    opacity: 0.7;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.toolbar-button:hover {
+    opacity: 1;
+    background-color: var(--secondary-bg);
+}

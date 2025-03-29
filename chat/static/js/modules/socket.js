@@ -678,32 +678,34 @@ function joinDirectMessage(userId) {
 	}
 }
 
+// Aggiorniamo le funzioni di invio messaggi per supportare i file
 function sendChannelMessage(channelName, messageData) {
-    if (currentlyConnected) {
-        try {
-            console.log(`Inviando messaggio al canale ${channelName}:`, messageData);
-            socket.emit('channelMessage', {
-                channelName: channelName,
-                message: messageData
-            });
-            
-            // Aggiungi timeout di sicurezza per verificare se il messaggio è stato ricevuto
-            setTimeout(() => {
-                const sentMessages = displayedMessages.filter(m => 
-                    m.isOwn && m.text === messageData.text && m.status !== 'sending'
-                );
-                
-                if (sentMessages.length === 0) {
-                    console.warn(`Possibile problema nell'invio del messaggio al canale ${channelName}:`, messageData);
-                }
-            }, 3000);
-        } catch (error) {
-            console.error(`Errore nell'invio del messaggio al canale ${channelName}:`, error);
-            showNotification(`Errore nell'invio del messaggio: ${error.message}`, true);
-        }
+    // Verifica se è un messaggio con file
+    if (messageData.message_type === 'file' && messageData.file_data) {
+        // Emetti l'evento di invio messaggio con file
+        socket.emit('send_channel_message', {
+            channel: channelName,
+            text: messageData.text || '',
+            message_type: 'file',
+            file_data: messageData.file_data
+        });
     } else {
-        console.warn("Socket non connesso. Impossibile inviare il messaggio.");
-        showNotification("Non connesso al server. Messaggio non inviato.", true);
+        // Messaggio normale
+        socket.emit('channelMessage', {
+            channelName: channelName,
+            message: messageData
+        });
+        
+        // Aggiungi timeout di sicurezza per verificare se il messaggio è stato ricevuto
+        setTimeout(() => {
+            const sentMessages = displayedMessages.filter(m => 
+                m.isOwn && m.text === messageData.text && m.status !== 'sending'
+            );
+            
+            if (sentMessages.length === 0) {
+                console.warn(`Possibile problema nell'invio del messaggio al canale ${channelName}:`, messageData);
+            }
+        }, 3000);
     }
 }
 
