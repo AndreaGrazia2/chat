@@ -201,6 +201,13 @@ function initDragAndDrop(dropZoneElement, callback) {
         document.body.addEventListener(eventName, preventDefaults, false);
     });
     
+    // Verifica se esiste una conversazione attiva
+    if (!window.currentConversationId) {
+        window.currentConversationId = 'general';
+        window.isChannel = true;
+        console.log('Using default channel: general');
+    }
+
     // Tieni traccia degli eventi di drag enter/leave per evitare flickering
     let dragCounter = 0;
     
@@ -230,18 +237,15 @@ function initDragAndDrop(dropZoneElement, callback) {
         if (files.length > 0) {
             const file = files[0]; // Per ora gestiamo un solo file alla volta
             
-            // Verifica se esiste una conversazione attiva
-            if (!window.currentConversationId) {
-                // Prova a ottenere l'ID della conversazione attiva dall'UI
-                const activeConversation = document.querySelector('.conversation.active');
-                if (activeConversation && activeConversation.dataset.conversationId) {
-                    window.currentConversationId = activeConversation.dataset.conversationId;
-                    window.isChannel = activeConversation.classList.contains('channel-conversation');
-                    console.log('Recovered conversation ID from drag and drop:', window.currentConversationId);
-                } else {
-                    showNotification('Seleziona prima una conversazione', 'error');
-                    return;
-                }
+            // Prova a ottenere l'ID della conversazione attiva dall'UI
+            const activeConversation = document.querySelector('.conversation.active');
+            if (activeConversation && activeConversation.dataset.conversationId) {
+                window.currentConversationId = activeConversation.dataset.conversationId;
+                window.isChannel = activeConversation.classList.contains('channel-conversation');
+                console.log('Recovered conversation ID from drag and drop:', window.currentConversationId);
+            } else {
+                showNotification('Seleziona prima una conversazione', 'error');
+                return;
             }
             
             // Mostra anteprima del file

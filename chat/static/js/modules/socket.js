@@ -29,7 +29,6 @@ function setupSocketIOEvents() {
     // Eventi per i messaggi
     socket.on('messageHistory', handleMessageHistory);
     socket.on('newMessage', handleNewMessage);
-    socket.on('userTyping', handleUserTyping);
     socket.on('modelInference', handleModelInference);
     socket.on('userStatusUpdate', handleUserStatusUpdate);
     
