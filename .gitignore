@@ -9,3 +9,4 @@ venv/
 node_modules/
 chat/templates/chat-mockup.html
 archive/
+uploads/

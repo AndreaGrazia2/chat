@@ -98,25 +98,33 @@ function createMessageElement(message) {
     `;
   }
 
-  // Gestisce visualizzazione allegato file
-  let fileHtml = '';
-  if (message.fileData) {
-      const file = message.fileData;
-      fileHtml = `
+// Gestisce visualizzazione allegato file
+let fileHtml = '';
+if (message.fileData) {
+    const file = message.fileData;
+    // Verifica che l'URL esista
+    const fileUrl = file.url || '#';
+    // Rimuovi eventuali undefined nel nome del file
+    const fileName = file.name ? file.name.replace('.undefined', '') : 'file';
+    const fileExt = file.type === 'application/pdf' ? 'pdf' : (file.ext || '');
+    const fileSize = file.size || '';
+    const fileIcon = file.icon || 'fa-file';
+    
+    fileHtml = `
       <div class="file-attachment">
         <div class="file-icon">
-          <i class="fas ${file.icon}"></i>
+          <i class="fas ${fileIcon}"></i>
         </div>
         <div class="file-info">
-          <div class="file-name">${file.name}.${file.ext}</div>
-          <div class="file-size">${file.size}</div>
+          <div class="file-name">${fileName}</div>
+          <div class="file-size">${fileSize}</div>
         </div>
-        <div class="file-download">
+        <a href="${fileUrl}" download="${fileName}" class="file-download">
           <i class="fas fa-download"></i>
-        </div>
+        </a>
       </div>
     `;
-  }
+}
 
   // Aggiungi spunte per messaggi propri con stato
   let statusIndicator = '';

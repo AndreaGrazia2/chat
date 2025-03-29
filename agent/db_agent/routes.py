@@ -94,4 +94,10 @@ def serve_report(filename):
     
     logger.info(f"Richiesta di download del file: {filename} dalla directory: {reports_dir}")
     
-    return send_from_directory(reports_dir, filename, as_attachment=True)
+    # Assicurati che as_attachment sia True e aggiungi mimetype
+    return send_from_directory(
+        reports_dir, 
+        filename, 
+        as_attachment=True,
+        mimetype='application/pdf'
+    )

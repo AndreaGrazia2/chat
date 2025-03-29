@@ -159,7 +159,7 @@ class DBQueryAgent:
             from common.config import API_BASE_URL
             pdf_filename = pdf_info.get('filename')
             # URL corretto per accedere al PDF - modifica il percorso
-            pdf_info['url'] = f"{API_BASE_URL}/uploads/reports/{pdf_filename}"
+            pdf_info['url'] = f"{API_BASE_URL}/db_agent/uploads/reports/{pdf_filename}"
             
             return pdf_info
         except Exception as e:

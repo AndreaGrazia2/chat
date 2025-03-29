@@ -98,8 +98,27 @@ function handleMessageHistory(history) {
                     console.error(`Errore nel parsing di fileData per il messaggio ${message.id}:`, e);
                     message.fileData = null;
                 }
-            }
- 
+            } else if (message.fileData && typeof message.fileData === 'object') {
+                // Se fileData è un oggetto, verifica che abbia tutte le proprietà necessarie
+                if (!message.fileData.name) {
+                    // Estrai il nome del file dall'URL se esiste
+                    if (message.fileData.url) {
+                        const urlParts = message.fileData.url.split('/');
+                        message.fileData.name = urlParts[urlParts.length - 1];
+                    } else {
+                        message.fileData.name = 'file';
+                    }
+                }
+                
+                // Determina l'icona in base al tipo di file
+                if (!message.fileData.icon) {
+                    if (message.fileData.type === 'application/pdf') {
+                        message.fileData.icon = 'fa-file-pdf';
+                    } else {
+                        message.fileData.icon = 'fa-file';
+                    }
+                }
+            } 
            
             // Gestisci i messaggi replyTo
             if (message.replyTo && typeof message.replyTo === 'object') {
@@ -326,6 +345,26 @@ function handleNewMessage(message) {
         } catch (e) {
             console.error(`Errore nel parsing di fileData per il messaggio ${message.id}:`, e);
             message.fileData = null;
+        }
+    } else if (message.fileData && typeof message.fileData === 'object') {
+        // Se fileData è un oggetto, verifica che abbia tutte le proprietà necessarie
+        if (!message.fileData.name) {
+            // Estrai il nome del file dall'URL se esiste
+            if (message.fileData.url) {
+                const urlParts = message.fileData.url.split('/');
+                message.fileData.name = urlParts[urlParts.length - 1];
+            } else {
+                message.fileData.name = 'file';
+            }
+        }
+        
+        // Determina l'icona in base al tipo di file
+        if (!message.fileData.icon) {
+            if (message.fileData.type === 'application/pdf') {
+                message.fileData.icon = 'fa-file-pdf';
+            } else {
+                message.fileData.icon = 'fa-file';
+            }
         }
     }
     

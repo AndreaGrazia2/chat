@@ -9,6 +9,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
 from reportlab.lib.units import cm, mm
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+import json
 
 # Configurazione del logger
 logger = logging.getLogger('pdf_generator')
@@ -76,7 +77,7 @@ class PDFGenerator:
                 'CustomTitle',
                 parent=styles['Heading1'],
                 fontSize=18,
-                textColor=colors.white,  # Modifica: cambiato da colors.HexColor('#1a237e') a colors.white
+                textColor=colors.HexColor('#1a237e'),  # Cambia da colors.white a un blu scuro
                 spaceAfter=12,
                 spaceBefore=12,
                 alignment=TA_LEFT,
@@ -88,7 +89,7 @@ class PDFGenerator:
                 'CustomSubtitle',
                 parent=styles['Heading2'],
                 fontSize=14,
-                textColor=colors.white,  # Modifica: cambiato da colors.HexColor('#283593') a colors.white
+                textColor=colors.HexColor('#283593'),  # Cambia da colors.white a un blu
                 spaceAfter=10,
                 alignment=TA_LEFT,
                 fontName='Helvetica-Bold'
@@ -115,6 +116,15 @@ class PDFGenerator:
                 fontName='Helvetica-Oblique'
             )
             
+            header_style = ParagraphStyle(
+                'TableHeader',
+                parent=styles['Heading4'],
+                fontSize=11,
+                textColor=colors.white,  # Imposta esplicitamente il colore del testo a bianco
+                alignment=TA_CENTER,
+                fontName='Helvetica-Bold'
+            )
+
             # Elementi del documento
             elements = []
             
@@ -144,7 +154,7 @@ class PDFGenerator:
                 for col in columns:
                     # Formatta le intestazioni per renderle più leggibili
                     header = col.replace('_', ' ').title()
-                    header_row.append(Paragraph(header, styles['Heading4']))
+                    header_row.append(Paragraph(header, header_style))
                 table_data.append(header_row)
                 
                 # Aggiungi righe di dati
