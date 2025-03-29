@@ -136,3 +136,9 @@ def ensure_schema_exists(engine, schema_name):
         else:
             logger.info(f"Schema {schema_name} già esistente")
 
+
+def get_db_url():
+    """Return the database URL used by the application"""
+    # This should return the same URL used by your main application
+    return DATABASE_URL
+

@@ -264,12 +264,3 @@ export function renderizzaVistaSettimanale() {
         setTimeout(enableDragAndDrop, 100);
     }
 }
-
-// Funzione di supporto per la vista settimanale
-export function renderWeekView(date = new Date()) {
-    // Assicurati che window.dataAttuale sia impostata correttamente
-    window.dataAttuale = createDate(date) || window.dataAttuale;
-
-    // Renderizza la vista
-    renderizzaVistaSettimanale();
-}

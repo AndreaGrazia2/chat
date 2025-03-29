@@ -65,7 +65,12 @@ class CalendarAgent:
         if user_id:
             self.default_user_id = user_id
             logger.info(f"Impostato user_id: {user_id}")
-            
+
+        # AGGIUNGI QUESTA RIGA: emetti un evento al frontend tramite socketio
+        # Usa l'evento modelInference che è già gestito dal frontend
+        from flask_socketio import emit
+        emit('modelInference', {'status': 'started', 'userId': user_id or self.default_user_id}, broadcast=True)
+    
         # Analizza l'intento
         logger.info("Invocazione della chain di intento")
         raw_intent = self.intent_chain.invoke({"user_input": user_input, "current_year": datetime.now().year})
@@ -118,7 +123,10 @@ class CalendarAgent:
         except Exception as e:
             logger.error(f"Errore in calendar agent: {str(e)}")
             logger.error(traceback.format_exc())
-            
+
+            from flask_socketio import emit
+            emit('modelInference', {'status': 'completed', 'userId': user_id or self.default_user_id}, broadcast=True)
+  
             return {
                 "is_calendar_intent": True,
                 "action": action,
@@ -127,7 +135,12 @@ class CalendarAgent:
                 "error": str(e)
             }
         
+        # AGGIUNGI QUESTA RIGA: emetti evento completed
+        from flask_socketio import emit
+        emit('modelInference', {'status': 'completed', 'userId': user_id or self.default_user_id}, broadcast=True)
+        
         logger.info(f"Operazione completata con successo. Risposta: {response}")
+
         return {
             "is_calendar_intent": True,
             "action": action,

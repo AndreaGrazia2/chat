@@ -249,11 +249,13 @@ function setupEventListeners() {
         // Pulsante download file
         if (e.target.classList.contains('fa-download') || e.target.closest('.file-download')) {
             showNotification('Download started');
-            e.stopPropagation();
+            return;
         }
         
         // Click su link - previene navigazione e mostra notifica
-        if (e.target.tagName === 'A' || e.target.closest('a')) {
+        if ((e.target.tagName === 'A' || e.target.closest('a')) && 
+            !e.target.classList.contains('file-download') && 
+            !e.target.closest('.file-download')) {
             e.preventDefault();
             const url = e.target.href || e.target.closest('a').href;
             if (url) {

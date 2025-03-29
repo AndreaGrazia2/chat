@@ -16,3 +16,4 @@ langchain_openai
 pandas
 openai[datalib]
 openai[voice_helpers]
+reportlab
