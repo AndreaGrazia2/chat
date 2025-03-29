@@ -32,6 +32,7 @@ except ImportError:
 from chat.routes import chat_bp
 from cal.routes import calendar_bp
 from dashboard.routes import dashboard_bp
+from agent.db_agent.routes import db_agent_bp
 
 # Importa i gestori di eventi Socket.IO
 from chat.handlers import register_handlers
@@ -71,6 +72,7 @@ socketio = SocketIO(app, cors_allowed_origins="*",
 app.register_blueprint(chat_bp, url_prefix='/chat')
 app.register_blueprint(calendar_bp, url_prefix='/cal')
 app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
+app.register_blueprint(db_agent_bp, url_prefix='/db_agent') 
 
 # Registra i gestori di eventi Socket.IO
 register_handlers(socketio)

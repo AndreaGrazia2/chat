@@ -66,7 +66,17 @@ class DBAgentMiddleware:
     """Middleware per l'integrazione dell'agente database nella chat"""
     
     def __init__(self):
+        """Inizializza il middleware dell'agente database"""
         logger.info("DBAgentMiddleware inizializzato")
+        
+        # Importa la configurazione
+        from common.config import API_BASE_URL, DB_SCHEMA, CHAT_SCHEMA
+        
+        # URL base per le API del database
+        self.db_api_base_url = f"{API_BASE_URL}/api"
+        
+        # Schema del database
+        self.db_schema = CHAT_SCHEMA
         
         # Patterns per riconoscere intenti database comuni
         self.db_intent_patterns = [
@@ -124,16 +134,34 @@ class DBAgentMiddleware:
             
         # Processa il messaggio con l'agente
         try:
-            return db_agent.process_message(message_text, user_id)
+            agent_result = db_agent.process_message(message_text, user_id)
+            
+            # Prepara i dati del file PDF se disponibili
+            file_data = None
+            if agent_result.get('pdf_info') and agent_result.get('pdf_info').get('url'):
+                pdf_info = agent_result.get('pdf_info')
+                file_data = {
+                    'id': f"pdf_{pdf_info.get('filename', 'report.pdf')}",
+                    'name': pdf_info.get('filename', 'report.pdf'),
+                    'type': 'application/pdf',
+                    'size': pdf_info.get('size', 0),
+                    'url': pdf_info.get('url')
+                }
+            
+            # Aggiungi i dati del file alla risposta
+            if file_data:
+                agent_result['file_data'] = file_data
+            
+            return agent_result
         except Exception as e:
             error_msg = f"Non è stato possibile connettersi al database. Riprova più tardi."
             logger.error(f"Errore nell'esecuzione della query: {error_msg}")
             return {
-                "type": "db_query_response", 
-                "text": f"Si è verificato un errore nell'esecuzione della query: {error_msg}",
-                "query_results": {
+                "is_db_intent": True,
+                "success": False,
+                "response": f"Si è verificato un errore nell'esecuzione della query: {error_msg}",
+                "result": {
                     "success": False,
-                    "error": error_msg,
-                    "description": f"Tentativo di eseguire la query: {message_text}"
+                    "error": error_msg
                 }
             }

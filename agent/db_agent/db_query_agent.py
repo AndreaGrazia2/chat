@@ -33,10 +33,13 @@ class DBQueryAgent:
         """
         self.llm = llm
         
+        # Importa la configurazione
+        from common.config import API_BASE_URL
+        
         # Se non viene fornito un URL base, usa quello dalla configurazione
         if db_api_base_url is None:
-            from common.config import API_BASE_URL
-            self.db_api_base_url = f"{API_BASE_URL}/db/api"
+            # Usa l'URL base dalla configurazione con il nuovo prefisso
+            self.db_api_base_url = f"{API_BASE_URL}/db_agent"
         else:
             self.db_api_base_url = db_api_base_url
         
@@ -64,7 +67,7 @@ class DBQueryAgent:
         if user_id:
             self.default_user_id = user_id
             logger.info(f"Impostato user_id: {user_id}")
-
+    
         # Emetti un evento al frontend tramite socketio
         from flask_socketio import emit
         emit('modelInference', {'status': 'started', 'userId': user_id or self.default_user_id}, broadcast=True)
@@ -92,12 +95,12 @@ class DBQueryAgent:
         query = intent_data.get('query', 'SELECT 1')
         title = intent_data.get('title', 'Risultato query')
         description = intent_data.get('description', '')
-        visualization_type = intent_data.get('visualization_type', 'table')
         
         logger.info(f"Query generata: {query}")
         
         result = None
         response = None
+        pdf_info = None
         
         try:
             # Esegui la query
@@ -105,50 +108,64 @@ class DBQueryAgent:
             
             # Genera una risposta basata sui risultati
             if result.get('success', False):
-                # Crea una visualizzazione
-                visualization = self._create_visualization(
-                    title=title,
-                    description=description,
-                    query=query,
-                    data=result.get('results', []),
-                    visualization_type=visualization_type
-                )
+                # Genera il PDF con i risultati
+                pdf_info = self._generate_pdf_report(result, title, description)
                 
                 # Crea una risposta testuale
-                response = self._format_response(result, visualization)
+                response = self._format_response(result, pdf_info)
             else:
-                # Se c'è stato un errore, restituisci una risposta di errore
-                response = f"Si è verificato un errore nell'esecuzione della query: {result.get('error', 'Errore sconosciuto')}"
-                logger.error(f"Errore nell'esecuzione della query: {result.get('error')}")
-        
+                error = result.get('error', 'Errore sconosciuto')
+                logger.error(f"Errore nell'esecuzione della query: {error}")
+                response = f"Si è verificato un errore nell'esecuzione della query: {error}"
         except Exception as e:
-            logger.error(f"Errore in db agent: {str(e)}")
+            logger.error(f"Errore durante l'elaborazione: {str(e)}")
             logger.error(traceback.format_exc())
-
-            response = f"Mi dispiace, c'è stato un errore: {str(e)}"
-            
-            emit('modelInference', {'status': 'completed', 'userId': user_id or self.default_user_id}, broadcast=True)
-            
-            return {
-                "is_db_intent": True,
-                "success": False,
-                "response": response,
-                "error": str(e)
-            }
+            response = f"Si è verificato un errore durante l'elaborazione: {str(e)}"
         
-        # Emetti evento completed
+        # Emetti evento di completamento
         emit('modelInference', {'status': 'completed', 'userId': user_id or self.default_user_id}, broadcast=True)
         
-        logger.info(f"Operazione completata con successo. Risposta: {response}")
-
         return {
             "is_db_intent": True,
             "success": True,
             "response": response,
             "result": result,
-            "visualization": visualization if 'visualization' in locals() else None,
-            "intent": intent_data
+            "intent": intent_data,
+            "pdf_info": pdf_info
         }
+    
+    def _generate_pdf_report(self, query_results, title, description):
+        """Genera un report PDF dai risultati della query"""
+        try:
+            from agent.db_agent.pdf_generator import PDFGenerator
+            import json
+            
+            # Inizializza il generatore PDF
+            pdf_generator = PDFGenerator()
+            
+            # Log dei dati che stiamo passando al generatore PDF
+            logger.info(f"Dati per il PDF: {json.dumps(query_results, default=str)[:500]}...")
+            
+            # Verifica che i dati siano nel formato corretto
+            if not query_results.get('results'):
+                logger.warning("Nessun risultato trovato nella query")
+            
+            # Genera il PDF
+            pdf_info = pdf_generator.generate_pdf(query_results, title, description)
+            
+            logger.info(f"PDF generato: {pdf_info.get('filepath')}")
+            
+            # Aggiungi l'URL per accedere al PDF
+            from common.config import API_BASE_URL
+            pdf_filename = pdf_info.get('filename')
+            # URL corretto per accedere al PDF - modifica il percorso
+            pdf_info['url'] = f"{API_BASE_URL}/uploads/reports/{pdf_filename}"
+            
+            return pdf_info
+        except Exception as e:
+            logger.error(f"Errore nella generazione del PDF: {str(e)}")
+            logger.error(traceback.format_exc())
+            return None
     
     def _execute_query(self, query):
         """Esegue una query SQL sul database"""
@@ -185,47 +202,11 @@ class DBQueryAgent:
                 "error": f"Errore nell'esecuzione della query: {str(e)}"
             }
     
-    def _create_visualization(self, title, description, query, data, visualization_type='table'):
-        """Crea una visualizzazione per i risultati della query"""
-        try:
-            url = f"{self.db_api_base_url}/visualizations"
-            
-            payload = {
-                "title": title,
-                "description": description,
-                "query": query,
-                "data": data,
-                "type": visualization_type,
-                "user_id": self.default_user_id
-            }
-            
-            logger.info(f"Creazione visualizzazione di tipo {visualization_type}")
-            response = requests.post(url, json=payload)
-            
-            if not response.ok:
-                logger.error(f"Errore creazione visualizzazione ({response.status_code}): {response.text}")
-                return None
-                
-            visualization = response.json()
-            logger.info(f"Visualizzazione creata con ID: {visualization.get('id')}")
-            
-            return visualization
-        except Exception as e:
-            logger.error(f"Errore nella creazione della visualizzazione: {str(e)}")
-            return None
-    
-    def _format_response(self, result, visualization):
+    # Sostituisci il metodo _format_response esistente con questa versione che supporta pdf_info
+    def _format_response(self, result, pdf_info=None):
         """Formatta la risposta per l'utente"""
         if not result.get('success', False):
             return f"Si è verificato un errore: {result.get('error', 'Errore sconosciuto')}"
-        
-        if not visualization:
-            return "Ho eseguito la query, ma non è stato possibile creare una visualizzazione dei risultati."
-        
-        # Recupera i dettagli della visualizzazione
-        viz_id = visualization.get('id')
-        viz_type = visualization.get('type', 'table')
-        viz_url = f"{self.db_api_base_url}/visualizations/{viz_id}"
         
         # Conta i risultati
         count = len(result.get('results', []))
@@ -233,7 +214,8 @@ class DBQueryAgent:
         # Formatta la risposta
         response = f"✅ Ho trovato {count} risultati per la tua query."
         
-        if viz_id:
-            response += f"\n\nHo creato una visualizzazione di tipo {viz_type} che puoi vedere al seguente link: {viz_url}"
+        # Aggiungi informazioni sul PDF
+        if pdf_info and pdf_info.get('url'):
+            response += f"\n\nHo generato un report PDF con i risultati della query. Puoi scaricarlo qui: {pdf_info.get('url')}"
         
         return response
