@@ -1,7 +1,4 @@
-//TODO: aggiungere prompt strutturato all'inferenza di john doe
-//TODO: Aggiungere memoria all'inferenza di john doe
-//TODO: Aggiungere RAG vettoriale
-//TODO: Aggiungere inferenza per agent per RAG sul DB
+//TODO: Aggiungere inferenza per agent per RAG sul DB ( codice_civile nello schema public )
 
 /**
  * app.js - File bridge per rendere disponibili le funzioni dei moduli
