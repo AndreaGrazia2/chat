@@ -229,13 +229,53 @@ function stopTyping() {
 function sendFileMessage(fileData) {
     console.log('Invio messaggio con file:', fileData);
     
-    if (!window.currentConversationId) {
-        showNotification('Seleziona prima una conversazione', 'error');
-        return;
-    }
+    // Recupera il messaggio personalizzato (se esiste) o usa il messaggio predefinito
+    const messageText = fileData.customMessage || `File inviato: ${fileData.name}.${fileData.ext}`;
     
     // Creiamo un ID temporaneo per il messaggio
     const tempId = 'temp-' + Date.now();
+    
+    // NUOVA LOGICA: Determina il tipo di conversazione e il destinatario direttamente dalla UI
+    // Questo funzionerà indipendentemente dallo stato delle variabili globali
+    
+    // 1. Ottieni l'elemento attualmente attivo
+    const activeChannelElement = document.querySelector('.channel-item.active');
+    const activeUserElement = document.querySelector('.user-item.active');
+    
+    // 2. Ottieni il titolo della conversazione attuale
+    const conversationTitle = document.getElementById('currentChannel').textContent.trim();
+    console.log('Titolo conversazione attuale:', conversationTitle);
+    
+    // 3. Verifica se il simbolo # è visibile (indica un canale)
+    const hashSymbolVisible = document.querySelector('.chat-title-hash').style.display !== 'none';
+    console.log('Simbolo # visibile:', hashSymbolVisible);
+    
+    // 4. Determina il tipo di conversazione e il destinatario
+    let isChannelConversation, destinationId, channelName, userId;
+    
+    if (hashSymbolVisible || activeChannelElement) {
+        isChannelConversation = true;
+        channelName = conversationTitle;
+        console.log('Rilevato canale:', channelName);
+    } else if (activeUserElement) {
+        isChannelConversation = false;
+        // Trova l'ID utente - prima controlla se abbiamo un utente attivo con ID
+        const activeUsers = document.querySelectorAll('.user-item');
+        
+        for (let i = 0; i < activeUsers.length; i++) {
+            if (activeUsers[i].classList.contains('active')) {
+                // Trova l'utente corrispondente nella lista degli utenti
+                const displayName = activeUsers[i].textContent.trim();
+                const user = window.users.find(u => u.displayName === displayName);
+                
+                if (user && user.id) {
+                    userId = user.id;
+                    console.log('Rilevato utente con ID:', userId, 'Nome:', displayName);
+                    break;
+                }
+            }
+        }
+    }
     
     // Aggiungiamo immediatamente un messaggio temporaneo all'interfaccia
     const tempMessage = {
@@ -246,7 +286,7 @@ function sendFileMessage(fileData) {
             displayName: 'Me',
             avatarUrl: document.querySelector('.user-avatar img')?.src || ''
         },
-        text: `File inviato: ${fileData.name}.${fileData.ext}`,
+        text: messageText,
         timestamp: new Date().toISOString(),
         type: 'file',
         fileData: fileData,
@@ -284,28 +324,45 @@ function sendFileMessage(fileData) {
     
     // Prepara i dati per il messaggio da inviare
     const messageData = {
-        text: `File inviato: ${fileData.name}.${fileData.ext}`,
+        text: messageText,
         type: 'file',
         fileData: fileData,
         tempId: tempId
     };
     
-    // Invia messaggio tramite Socket.IO
-    console.log('Invio messaggio con file al server:', messageData);
+    // Invia il messaggio
     try {
-        if (window.isChannel) {
-            console.log('Invio messaggio al canale:', window.currentConversationId);
+        if (isChannelConversation) {
+            console.log('Invio messaggio al canale:', channelName);
             window.socket.emit('channelMessage', {
-                channelName: window.currentConversationId,
+                channelName: channelName,
+                message: messageData
+            });
+        } else if (userId) {
+            console.log('Invio messaggio diretto all\'utente con ID:', userId);
+            window.socket.emit('directMessage', {
+                userId: userId,
                 message: messageData
             });
         } else {
-            console.log('Invio messaggio diretto all\'utente:', window.currentUser ? window.currentUser.id : null);
-            window.socket.emit('directMessage', {
-                userId: window.currentUser ? window.currentUser.id : null,
-                message: messageData
-            });
+            // Ultimo tentativo: usa le variabili globali se disponibili
+            if (window.isChannel === true && window.currentChannel) {
+                console.log('Fallback: invio al canale (da variabili globali):', window.currentChannel);
+                window.socket.emit('channelMessage', {
+                    channelName: window.currentChannel,
+                    message: messageData
+                });
+            } else if (window.currentUser && window.currentUser.id) {
+                console.log('Fallback: invio a utente (da variabili globali):', window.currentUser.id);
+                window.socket.emit('directMessage', {
+                    userId: window.currentUser.id,
+                    message: messageData
+                });
+            } else {
+                throw new Error('Impossibile determinare il destinatario del messaggio');
+            }
         }
+        
         console.log('Messaggio inviato con successo');
     } catch (error) {
         console.error('Errore nell\'invio del messaggio:', error);

@@ -837,3 +837,104 @@
     margin-top: 4px;
     color: var(--primary);
 }
+
+/* Stili per l'anteprima file con campo messaggio */
+.file-preview-with-message {
+    margin: 10px 0;
+    padding: 15px;
+    background-color: var(--bg-tertiary);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.file-preview-area {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: var(--bg-main);
+    border-radius: 4px;
+    height: 120px;
+    overflow: hidden;
+}
+
+.file-preview-image {
+    max-height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+}
+
+.file-preview-icon {
+    font-size: 48px;
+    color: var(--primary);
+}
+
+.file-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.file-name {
+    font-weight: bold;
+    word-break: break-all;
+}
+
+.file-size {
+    color: var(--text-muted);
+    font-size: 0.9em;
+}
+
+.file-message-input {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-main);
+    color: var(--text-color);
+    resize: vertical;
+    font-family: inherit;
+    min-height: 60px;
+}
+
+.file-action-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.file-cancel-button, .file-send-button {
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.file-cancel-button {
+    background-color: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+}
+
+.file-send-button {
+    background-color: var(--primary);
+    border: none;
+    color: white;
+}
+
+.file-cancel-button:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.file-send-button:hover {
+    background-color: var(--primary-dark);
+}
+
+.upload-progress-text {
+    margin-top: 6px;
+    font-size: 0.9em;
+    color: var(--primary);
+}

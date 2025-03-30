@@ -172,6 +172,112 @@ async function uploadFile(file, progressCallback) {
     }
 }
 
+function createFilePreviewWithMessage(file, confirmCallback) {
+    // Rimuovi eventuali preview esistenti
+    removeFilePreviewWithMessage();
+    
+    // Crea contenitore principale
+    const previewContainer = document.createElement('div');
+    previewContainer.className = 'file-preview-with-message';
+    
+    // Crea anteprima del file
+    const filePreview = document.createElement('div');
+    filePreview.className = 'file-preview-area';
+    
+    // Determina il tipo di anteprima in base al tipo di file
+    const extension = file.name.split('.').pop().toLowerCase();
+    
+    if (['jpg', 'jpeg', 'png'].includes(extension)) {
+        // Anteprima per immagini
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = document.createElement('img');
+            img.src = e.target.result;
+            img.className = 'file-preview-image';
+            filePreview.appendChild(img);
+        };
+        reader.readAsDataURL(file);
+    } else {
+        // Icona per altri tipi di file
+        const iconMap = {
+            'pdf': 'fa-file-pdf',
+            'txt': 'fa-file-alt',
+            'doc': 'fa-file-word',
+            'docx': 'fa-file-word',
+            'csv': 'fa-file-csv',
+            'md': 'fa-file-alt',
+            'xls': 'fa-file-excel',
+            'xlsx': 'fa-file-excel'
+        };
+        
+        const fileIcon = document.createElement('i');
+        fileIcon.className = `fas ${iconMap[extension] || 'fa-file'} file-preview-icon`;
+        filePreview.appendChild(fileIcon);
+    }
+    
+    // Informazioni file
+    const fileInfo = document.createElement('div');
+    fileInfo.className = 'file-info';
+    fileInfo.innerHTML = `
+        <div class="file-name">${file.name}</div>
+        <div class="file-size">${formatFileSize(file.size)}</div>
+    `;
+    
+    // Campo messaggio
+    const messageInput = document.createElement('textarea');
+    messageInput.className = 'file-message-input';
+    messageInput.placeholder = 'Aggiungi un messaggio (opzionale)';
+    messageInput.rows = 3;
+    
+    // Pulsanti azione
+    const actionButtons = document.createElement('div');
+    actionButtons.className = 'file-action-buttons';
+    
+    const cancelButton = document.createElement('button');
+    cancelButton.className = 'file-cancel-button';
+    cancelButton.innerHTML = 'Annulla';
+    cancelButton.addEventListener('click', () => {
+        removeFilePreviewWithMessage();
+    });
+    
+    const sendButton = document.createElement('button');
+    sendButton.className = 'file-send-button';
+    sendButton.innerHTML = 'Invia File';
+    sendButton.addEventListener('click', () => {
+        if (confirmCallback) {
+            // Recupera il messaggio personalizzato
+            const message = messageInput.value.trim() || `File: ${file.name}`;
+            confirmCallback({
+                file: file,
+                message: message
+            });
+        }
+    });
+    
+    actionButtons.appendChild(cancelButton);
+    actionButtons.appendChild(sendButton);
+    
+    // Assembla tutti gli elementi
+    previewContainer.appendChild(filePreview);
+    previewContainer.appendChild(fileInfo);
+    previewContainer.appendChild(messageInput);
+    previewContainer.appendChild(actionButtons);
+    
+    // Aggiungi alla UI
+    const messageInputContainer = document.querySelector('.message-input-container');
+    if (messageInputContainer) {
+        messageInputContainer.appendChild(previewContainer);
+        // Focus sul campo di input del messaggio
+        setTimeout(() => messageInput.focus(), 100);
+    }
+}
+
+function removeFilePreviewWithMessage() {
+    const previewContainer = document.querySelector('.file-preview-with-message');
+    if (previewContainer && previewContainer.parentNode) {
+        previewContainer.parentNode.removeChild(previewContainer);
+    }
+}
 
 // Funzione per gestire la selezione del file tramite input con progresso
 function handleFileSelect(event, callback) {
@@ -189,52 +295,64 @@ function handleFileSelect(event, callback) {
         isChannel: window.isChannel
     });
     
-    // Mostra anteprima del file
-    showFilePreview(file);
+    // Validazione file
+    const validation = validateFile(file);
+    if (!validation.valid) {
+        showNotification(validation.error, true);
+        return;
+    }
     
-    // Crea e mostra indicatore di progresso
-    const progressObj = createProgressBar();
-    
-    uploadFile(file, (progress) => {
-        updateProgressBar(progressObj, progress);
-        console.log(`Progresso upload: ${Math.round(progress)}%`);
+    // Crea l'interfaccia di anteprima con messaggio personalizzabile
+    createFilePreviewWithMessage(file, (uploadData) => {
+        // Quando l'utente conferma, inizia l'upload
+        // Crea e mostra indicatore di progresso
+        const progressObj = createProgressBar();
         
-        // Aggiungi indicatore di progresso dettagliato nell'anteprima
-        const fileInfo = document.querySelector('.file-preview-info');
-        if (fileInfo) {
-            const progressInfo = fileInfo.querySelector('.file-upload-progress-text') || 
-                                document.createElement('div');
-            if (!progressInfo.classList.contains('file-upload-progress-text')) {
-                progressInfo.className = 'file-upload-progress-text';
-                fileInfo.appendChild(progressInfo);
+        uploadFile(file, (progress) => {
+            updateProgressBar(progressObj, progress);
+            console.log(`Progresso upload: ${Math.round(progress)}%`);
+            
+            // Aggiornamento dell'indicatore di progresso nel preview
+            const filePreview = document.querySelector('.file-preview-with-message');
+            if (filePreview) {
+                const progressInfo = filePreview.querySelector('.upload-progress-text') || 
+                                     document.createElement('div');
+                if (!progressInfo.classList.contains('upload-progress-text')) {
+                    progressInfo.className = 'upload-progress-text';
+                    filePreview.appendChild(progressInfo);
+                }
+                progressInfo.textContent = `Caricamento: ${Math.round(progress)}%`;
             }
-            progressInfo.textContent = `Caricamento: ${Math.round(progress)}%`;
-        }
-    })
-    .then(fileData => {
-        // Rimuovi indicatore di progresso
-        removeProgressBar(progressObj);
-        // Rimuovi anteprima
-        removeFilePreview();
-        
-        console.log('Upload completato, dati file:', fileData);
-        
-        if (callback && typeof callback === 'function') {
-            console.log('Esecuzione callback con i dati del file');
-            callback(fileData);
-        } else {
-            console.error('Callback non disponibile o non è una funzione!');
-        }
-    })
-    .catch(error => {
-        console.error('Errore durante upload:', error);
-        
-        // Rimuovi indicatore di progresso
-        removeProgressBar(progressObj);
-        // Rimuovi anteprima
-        removeFilePreview();
-        
-        showNotification('Errore upload: ' + error.message, 'error');
+        })
+        .then(fileData => {
+            // Rimuovi indicatore di progresso
+            removeProgressBar(progressObj);
+            
+            // Rimuovi anteprima
+            removeFilePreviewWithMessage();
+            
+            console.log('Upload completato, dati file:', fileData);
+            
+            if (callback && typeof callback === 'function') {
+                console.log('Esecuzione callback con i dati del file e il messaggio personalizzato');
+                // Aggiungi il messaggio personalizzato ai dati del file
+                fileData.customMessage = uploadData.message;
+                callback(fileData);
+            } else {
+                console.error('Callback non disponibile o non è una funzione!');
+            }
+        })
+        .catch(error => {
+            console.error('Errore durante upload:', error);
+            
+            // Rimuovi indicatore di progresso
+            removeProgressBar(progressObj);
+            
+            // Rimuovi anteprima
+            removeFilePreviewWithMessage();
+            
+            showNotification('Errore upload: ' + error.message, 'error');
+        });
     });
 }
 
@@ -352,79 +470,62 @@ function initDragAndDrop(dropZoneElement, callback) {
             const file = files[0]; // Only handle one file at a time
             console.log('File dropped:', file.name, file.type, file.size);
             
-            // Check for active conversation - FIX for the conversation selection issue
-            // First try to use the global window variables that should already be set
-            if (window.currentConversationId) {
-                console.log('Using existing conversation context:', window.currentConversationId, 'isChannel:', window.isChannel);
-            } else {
-                // If no global context, try to determine from UI elements
-                const activeChannelItem = document.querySelector('.channel-item.active');
-                const activeUserItem = document.querySelector('.user-item.active');
-                
-                if (activeChannelItem) {
-                    // If we have an active channel
-                    const channelName = activeChannelItem.textContent.trim().replace('#', '');
-                    window.currentConversationId = channelName;
-                    window.isChannel = true;
-                    console.log('Found active channel:', channelName);
-                } else if (activeUserItem) {
-                    // If we have an active user
-                    const userName = activeUserItem.textContent.trim();
-                    // Extract user ID from the element ID or data attribute
-                    // This might need adjustment based on how user IDs are stored
-                    const userId = activeUserItem.id.replace('user-', '');
-                    window.currentConversationId = userId;
-                    window.isChannel = false;
-                    console.log('Found active user:', userName, 'ID:', userId);
-                } else {
-                    console.error('No active conversation found');
-                    showNotification('Seleziona prima una conversazione', 'error');
-                    return;
-                }
+            // NUOVA LOGICA: accetta il file senza controlli stretti sul contesto
+            // Al momento del drag & drop ci deve essere per forza una conversazione attiva
+            
+            // Validazione file
+            const validation = validateFile(file);
+            if (!validation.valid) {
+                showNotification(validation.error, true);
+                return;
             }
             
-            // Show file preview
-            showFilePreview(file);
-            
-            // Create and show progress indicator
-            const progressObj = createProgressBar();
-            
-            uploadFile(file, (progress) => {
-                updateProgressBar(progressObj, progress);
+            // Crea l'interfaccia di anteprima con messaggio personalizzabile
+            createFilePreviewWithMessage(file, (uploadData) => {
+                // Quando l'utente conferma, inizia l'upload
+                // Crea e mostra indicatore di progresso
+                const progressObj = createProgressBar();
                 
-                // Add detailed progress indicator in the preview
-                const fileInfo = document.querySelector('.file-preview-info');
-                if (fileInfo) {
-                    const progressInfo = fileInfo.querySelector('.file-upload-progress-text') || 
-                                        document.createElement('div');
-                    if (!progressInfo.classList.contains('file-upload-progress-text')) {
-                        progressInfo.className = 'file-upload-progress-text';
-                        fileInfo.appendChild(progressInfo);
+                uploadFile(file, (progress) => {
+                    updateProgressBar(progressObj, progress);
+                    
+                    // Aggiornamento dell'indicatore di progresso nel preview
+                    const filePreview = document.querySelector('.file-preview-with-message');
+                    if (filePreview) {
+                        const progressInfo = filePreview.querySelector('.upload-progress-text') || 
+                                            document.createElement('div');
+                        if (!progressInfo.classList.contains('upload-progress-text')) {
+                            progressInfo.className = 'upload-progress-text';
+                            filePreview.appendChild(progressInfo);
+                        }
+                        progressInfo.textContent = `Caricamento: ${Math.round(progress)}%`;
                     }
-                    progressInfo.textContent = `Uploading: ${Math.round(progress)}%`;
-                }
-            })
-            .then(fileData => {
-                // Remove progress indicator
-                removeProgressBar(progressObj);
-                // Show success notification
-                showNotification('File uploaded successfully');
-                // Remove preview
-                removeFilePreview();
-                
-                if (callback && typeof callback === 'function') {
-                    callback(fileData);
-                }
-            })
-            .catch(error => {
-                // Remove progress indicator
-                removeProgressBar(progressObj);
-                // Remove preview
-                removeFilePreview();
-                
-                // Show more detailed error message
-                console.error('Upload failed:', error);
-                showNotification('Upload failed: ' + error.message, 'error');
+                })
+                .then(fileData => {
+                    // Rimuovi indicatore di progresso
+                    removeProgressBar(progressObj);
+                    
+                    // Rimuovi anteprima
+                    removeFilePreviewWithMessage();
+                    
+                    // Aggiungi il messaggio personalizzato ai dati del file
+                    fileData.customMessage = uploadData.message;
+                    
+                    if (callback && typeof callback === 'function') {
+                        callback(fileData);
+                    }
+                })
+                .catch(error => {
+                    console.error('Errore durante upload:', error);
+                    
+                    // Rimuovi indicatore di progresso
+                    removeProgressBar(progressObj);
+                    
+                    // Rimuovi anteprima
+                    removeFilePreviewWithMessage();
+                    
+                    showNotification('Errore upload: ' + error.message, 'error');
+                });
             });
         }
     }, false);

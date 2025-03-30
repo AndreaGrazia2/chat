@@ -737,7 +737,15 @@ def register_handlers(socketio):
         user_id = data.get('userId')
         message_data = data.get('message', {})
 
-        if not user_id or not message_data.get('text'):
+        # Verifica rigorosa che user_id sia un numero intero
+        if user_id is None or not isinstance(user_id, int):
+            print(f"Error: userId is not a valid integer: {user_id}")
+            return
+
+        # Verifica che il messaggio contenga testo o dati file
+        has_file = message_data.get('type') == 'file' and isinstance(message_data.get('fileData'), dict)
+        if not message_data.get('text') and not has_file:
+            print(f"Error: Message doesn't contain text or file data: {message_data}")
             return
 
         # Define room at the beginning of the function
@@ -811,14 +819,25 @@ def register_handlers(socketio):
                 else:
                     forwarded_from_id = message_data['forwardedFrom']
 
+            # Gestione dei dati del file
+            file_data = message_data.get('fileData')
+            
+            # Se è un messaggio di tipo file ma non ha testo, usa un testo predefinito
+            message_text = message_data.get('text', '')
+            if message_data.get('type') == 'file' and not message_text:
+                if file_data and isinstance(file_data, dict):
+                    file_name = file_data.get('name', 'file')
+                    file_ext = file_data.get('ext', '')
+                    message_text = f"File: {file_name}.{file_ext}"
+            
             # Create user message
             new_message = Message(
                 conversation_id=conversation_id,
                 user_id=1,  # current user id
                 reply_to_id=reply_to_id,
-                text=message_data.get('text', ''),
+                text=message_text,
                 message_type=message_data.get('type', 'normal'),
-                file_data=message_data.get('fileData'),
+                file_data=file_data,
                 forwarded_from_id=forwarded_from_id,
                 message_metadata=message_data.get('message_metadata', {})
             )
@@ -840,10 +859,10 @@ def register_handlers(socketio):
                     'avatarUrl': current_user.avatar_url,
                     'status': current_user.status
                 },
-                'text': message_data.get('text', ''),
+                'text': message_text,
                 'timestamp': created_at.isoformat(),
                 'type': message_data.get('type', 'normal'),
-                'fileData': message_data.get('fileData'),
+                'fileData': file_data,
                 'replyTo': None,  # Would need to fetch reply details
                 'forwardedFrom': None,  # Would need to fetch forwarded details
                 'message_metadata': message_data.get('message_metadata', {}),
@@ -959,6 +978,137 @@ def register_handlers(socketio):
                         'status': 'completed',
                         'userId': 2
                     }, room=room)
+
+    @socketio.on('channelMessage')
+    def handle_channel_message(data):
+        """Handle channel message from client"""
+        channel_name = data.get('channelName')
+        message_data = data.get('message')
+
+        print(f"Received channel message: {data}")
+
+        if not channel_name or not message_data:
+            print("Missing channel name or message data")
+            return
+
+        # Verifica per messaggi di tipo file (aggiunto nuovo controllo)
+        has_file = message_data.get('type') == 'file' and message_data.get('fileData')
+        if not message_data.get('text') and not has_file:
+            print(f"Error: Message without text or file data: {message_data}")
+            return
+
+        # Find the channel conversation
+        with get_db() as db:
+            conversation = (
+                db.query(Conversation)
+                .filter(Conversation.name == channel_name, Conversation.type == 'channel')
+                .first()
+            )
+
+            if not conversation:
+                print(f"Error: No conversation found for channel {channel_name}")
+                # Crea la conversazione se non esiste
+                conversation = Conversation(
+                    name=channel_name, 
+                    type='channel'
+                )
+                db.add(conversation)
+                db.commit()
+                db.refresh(conversation)
+                print(f"Created new conversation for channel {channel_name} with ID {conversation.id}")
+
+            conversation_id = conversation.id
+            print(f"Using conversation ID {conversation_id} for channel {channel_name}")
+
+            # Process reply
+            reply_to_id = None
+            if 'replyTo' in message_data and message_data['replyTo']:
+                if isinstance(message_data['replyTo'], dict):
+                    reply_to_id = message_data['replyTo'].get('id')
+                else:
+                    reply_to_id = message_data['replyTo']
+
+            # Extract forwarded info if present
+            forwarded_from_id = None
+            if 'forwardedFrom' in message_data and message_data['forwardedFrom']:
+                if isinstance(message_data['forwardedFrom'], dict):
+                    forwarded_from_id = message_data['forwardedFrom'].get('id')
+                else:
+                    forwarded_from_id = message_data['forwardedFrom']
+
+            # Per messaggi di tipo file, assicura che ci sia sempre un testo
+            file_data = message_data.get('fileData')
+            message_text = message_data.get('text', '')
+            
+            if message_data.get('type') == 'file' and not message_text:
+                if file_data and isinstance(file_data, dict):
+                    file_name = file_data.get('name', 'file')
+                    file_ext = file_data.get('ext', '')
+                    message_text = f"File: {file_name}.{file_ext}"
+
+            # Create new message with better error handling
+            try:
+                new_message = Message(
+                    conversation_id=conversation_id,
+                    user_id=1,  # current user id
+                    reply_to_id=reply_to_id,
+                    text=message_text,
+                    message_type=message_data.get('type', 'normal'),
+                    file_data=file_data,
+                    forwarded_from_id=forwarded_from_id
+                )
+                db.add(new_message)
+                db.commit()
+                db.refresh(new_message)
+                
+                message_id = new_message.id
+                created_at = new_message.created_at
+
+                print(f"Successfully inserted message with ID {message_id} for channel {channel_name}")
+
+                # Get user details
+                current_user = db.query(User).filter(User.id == 1).first()
+            except Exception as e:
+                db.rollback()
+                print(f"Error saving channel message: {str(e)}")
+                return
+
+            # Prepare message for sending
+            message_dict = {
+                'id': message_id,
+                'conversationId': conversation_id,
+                'user': {
+                    'id': current_user.id,
+                    'username': current_user.username,
+                    'displayName': current_user.display_name,
+                    'avatarUrl': current_user.avatar_url,
+                    'status': current_user.status
+                },
+                'text': message_text,
+                'timestamp': created_at.isoformat(),
+                'type': message_data.get('type', 'normal'),
+                'fileData': file_data,
+                'replyTo': None,  # Would need to fetch reply details
+                'forwardedFrom': None,  # Would need to fetch forwarded details
+                'message_metadata': message_data.get('message_metadata'),
+                'edited': False,
+                'editedAt': None,
+                'isOwn': True,  # Mark as own message for sender
+                'tempId': message_data.get('tempId')
+            }
+
+            # Broadcast to channel
+            room = f"channel:{channel_name}"
+            emit('newMessage', prepare_for_socketio(message_dict), room=room)
+            print(f"Broadcasted message {message_id} to room {room}")
+            
+            # Verifica intento calendario per messaggi di canale
+            message_text = message_data.get('text', '')
+            is_calendar_intent = check_calendar_intent(message_text, None, conversation_id, room, message_id)
+            
+            # Verifica intento query database se non è un intento calendario
+            if not is_calendar_intent:
+                check_db_query_intent(message_text, None, conversation_id, room, message_id)
 
     @socketio.on('deleteMessage')
     def handle_delete_message(data):
