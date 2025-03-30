@@ -383,7 +383,10 @@ def register_handlers(socketio):
             messages = (
                 db.query(Message, User)
                 .join(User, Message.user_id == User.id)
-                .filter(Message.conversation_id == conversation_id)
+                .filter(
+                    Message.conversation_id == conversation_id,
+                    Message.message_type != 'memory'  # Escludi i messaggi di tipo memory
+                )
                 .order_by(Message.created_at.desc())
                 .limit(50)
                 .all()
@@ -521,7 +524,10 @@ def register_handlers(socketio):
             messages = (
                 db.query(Message, User)
                 .join(User, Message.user_id == User.id)
-                .filter(Message.conversation_id == conversation_id)
+                .filter(
+                    Message.conversation_id == conversation_id,
+                    Message.message_type != 'memory'  # Escludi i messaggi di tipo memory
+                )
                 .order_by(Message.created_at.desc())
                 .limit(50)
                 .all()
@@ -907,9 +913,8 @@ def register_handlers(socketio):
             if not is_calendar_intent:
                 is_db_query_intent = check_db_query_intent(message_text, user_id, conversation_id, room, message_id)
 
-            # Se il messaggio è per John Doe E NON è un intento calendario, procedi con l'inferenza standard
-            if int(user_id) == 2 and not is_calendar_intent and not is_db_query_intent:
-
+            # Se il messaggio è per un utente e non sono stati rilevati altri intenti
+            if int(user_id) > 0 and not is_calendar_intent and not is_db_query_intent:
                 # Verifica se è un messaggio con file allegato
                 has_file = message_data.get('type') == 'file' and message_data.get('fileData')
                 if has_file:
@@ -928,95 +933,287 @@ def register_handlers(socketio):
                     if is_file_intent:
                         return
 
-                # Mostra indicatore di digitazione
-                emit('modelInference', {
-                    'status': 'started',
-                    'userId': 2
-                }, room=room)
+                # Se il messaggio è per Alex Wilson (ID 4) - AGENTE CON MEMORIA
+                if int(user_id) == 4:
+                    # Mostra indicatore di digitazione
+                    emit('modelInference', {
+                        'status': 'started',
+                        'userId': 4
+                    }, room=room)
 
-                try:
-                    # Get AI response (Resta del codice originale...)
-                    ai_response = get_llm_response(message_data.get('text', ''))
+                    try:
+                        # Ottieni o crea il messaggio di memoria
+                        memory_message = None
+                        memory_truncated = False
+                        
+                        # Cerca un messaggio di tipo "memory" esistente per questa conversazione
+                        memory_message = db.query(Message).filter(
+                            Message.conversation_id == conversation_id,
+                            Message.message_type == 'memory',
+                            Message.user_id == 4
+                        ).first()
+                        
+                        # Se non esiste, creane uno nuovo
+                        if not memory_message:
+                            memory_message = Message(
+                                conversation_id=conversation_id,
+                                user_id=4,  # Alex Wilson
+                                text="Memory storage - non visualizzato",
+                                message_type="memory",
+                                message_metadata={
+                                    "history": [],
+                                    "agent_id": 4
+                                }
+                            )
+                            db.add(memory_message)
+                            db.commit()
+                            db.refresh(memory_message)
+                        
+                        # Ottieni la storia della conversazione attuale
+                        if not memory_message.message_metadata:
+                            memory_message.message_metadata = {"history": []}
+                        
+                        history = memory_message.message_metadata.get('history', [])
+                        
+                        # Costruisci il prompt con la storia della conversazione
+                        prompt = "Sei Alex Wilson, un assistente AI che fornisce risposte:\n"
+                        prompt += "- Mediamente brevi\n"
+                        prompt += "- Senza formattazione eccessiva\n"
+                        prompt += "- Con un tono neutro e gentile\n"
+                        prompt += "- Sempre pertinenti al contesto della conversazione\n\n"
+                        
+                        # Aggiungi la storia solo se esiste
+                        if history:
+                            prompt += "Ecco la storia recente della conversazione:\n"
+                            for exchange in history:
+                                prompt += f"Utente: {exchange.get('user')}\n"
+                                prompt += f"Alex: {exchange.get('bot')}\n\n"
+                        
+                        # Aggiungi il messaggio corrente
+                        prompt += f"Utente: {message_text}\nAlex:"
+                        
+                        # Ottieni risposta dal modello
+                        ai_response = get_llm_response(prompt)
+                        
+                        # Aggiorna la memoria
+                        MAX_HISTORY = 5
+                        history.append({
+                            "user": message_text,
+                            "bot": ai_response,
+                            "timestamp": datetime.now().isoformat()
+                        })
+                        
+                        # Mantieni solo gli ultimi MAX_HISTORY scambi (FIFO)
+                        if len(history) > MAX_HISTORY:
+                            history = history[-MAX_HISTORY:]
+                            memory_truncated = True
+                        
+                        # Aggiorna il messaggio memory
+                        memory_message.message_metadata['history'] = history
+                        memory_message.message_metadata['lastUpdated'] = datetime.now().isoformat()
+                        db.commit()
+                        
+                        # Simulate typing delay
+                        time.sleep(1.5)
 
-                    # Simulate typing delay
-                    time.sleep(1.5)
+                        # Get AI user data from database
+                        ai_user = db.query(User).filter(User.id == 4).first()
 
-                    # Get AI user data from database
-                    ai_user = db.query(User).filter(User.id == 2).first()
-                    print(f"AI user data from database: {ai_user.username if ai_user else 'Not found'}")
+                        # Create response message
+                        ai_message = Message(
+                            conversation_id=conversation_id,
+                            user_id=4,
+                            text=ai_response,
+                            message_type='normal',
+                            reply_to_id=message_id
+                        )
+                        db.add(ai_message)
+                        db.commit()
+                        db.refresh(ai_message)
+                        
+                        ai_message_id = ai_message.id
+                        ai_created_at = ai_message.created_at
 
-                    # Create response message - MODIFICATO PER INCLUDERE reply_to_id
-                    ai_message = Message(
-                        conversation_id=conversation_id,
-                        user_id=2,
-                        text=ai_response,
-                        message_type='normal',
-                        reply_to_id=message_id  # Aggiungiamo message_id come reply_to_id
-                    )
-                    db.add(ai_message)
-                    db.commit()
-                    db.refresh(ai_message)
-                    
-                    ai_message_id = ai_message.id
-                    ai_created_at = ai_message.created_at
-
-                    # Recuperiamo i dettagli del messaggio a cui stiamo rispondendo
-                    reply_message = db.query(Message).get(message_id)
-                    reply_message_user = db.query(User).get(reply_message.user_id)
-                    
-                    # Prepara l'oggetto replyTo
-                    reply_to = None
-                    if reply_message:
-                        # Costruisci l'oggetto reply
-                        reply_to = {
-                            'id': reply_message.id,
-                            'text': reply_message.text,
-                            'message_type': reply_message.message_type,
-                            'fileData': reply_message.file_data,
-                            'user': {
-                                'id': reply_message_user.id,
-                                'username': reply_message_user.username,
-                                'displayName': reply_message_user.display_name,
-                                'avatarUrl': reply_message_user.avatar_url,
-                                'status': reply_message_user.status
+                        # Recuperiamo i dettagli del messaggio a cui stiamo rispondendo
+                        reply_message = db.query(Message).get(message_id)
+                        reply_message_user = db.query(User).get(reply_message.user_id)
+                        
+                        # Prepara l'oggetto replyTo
+                        reply_to = None
+                        if reply_message:
+                            # Costruisci l'oggetto reply
+                            reply_to = {
+                                'id': reply_message.id,
+                                'text': reply_message.text,
+                                'message_type': reply_message.message_type,
+                                'fileData': reply_message.file_data,
+                                'user': {
+                                    'id': reply_message_user.id,
+                                    'username': reply_message_user.username,
+                                    'displayName': reply_message_user.display_name,
+                                    'avatarUrl': reply_message_user.avatar_url,
+                                    'status': reply_message_user.status
+                                }
                             }
+
+                        # Send AI response with user data from database
+                        ai_message_dict = {
+                            'id': ai_message_id,
+                            'conversationId': conversation_id,
+                            'user': {
+                                'id': ai_user.id,
+                                'username': ai_user.username,
+                                'displayName': ai_user.display_name,
+                                'avatarUrl': ai_user.avatar_url,
+                                'status': ai_user.status
+                            },
+                            'text': ai_response,
+                            'timestamp': ai_created_at.isoformat(),
+                            'type': 'normal',
+                            'fileData': None,
+                            'replyTo': reply_to,
+                            'forwardedFrom': None,
+                            'message_metadata': {"agent_memory": True},
+                            'edited': False,
+                            'editedAt': None,
+                            'isOwn': False
                         }
 
-                    # Send AI response with user data from database
-                    ai_message_dict = {
-                        'id': ai_message_id,
-                        'conversationId': conversation_id,
-                        'user': {
-                            'id': ai_user.id,
-                            'username': ai_user.username,
-                            'displayName': ai_user.display_name,
-                            'avatarUrl': ai_user.avatar_url,
-                            'status': ai_user.status
-                        },
-                        'text': ai_response,
-                        'timestamp': ai_created_at.isoformat(),
-                        'type': 'normal',
-                        'fileData': None,
-                        'replyTo': reply_to,  # Includiamo l'oggetto reply completo
-                        'forwardedFrom': None,
-                        'message_metadata': {},
-                        'edited': False,
-                        'editedAt': None,
-                        'isOwn': False
-                    }
-
-                    print(f"Sending AI response with user data: {ai_message_dict['user']}")
-                    emit('newMessage', prepare_for_socketio(ai_message_dict), room=room)
-
-                    if ai_user.id == 2:  # ID di John Doe
-                        # Broadcast del messaggio a tutti i client 
-                        emit('newMessage', prepare_for_socketio(ai_message_dict), broadcast=True)
-                finally:
-                    # Hide typing indicator
+                        emit('newMessage', prepare_for_socketio(ai_message_dict), room=room)
+                        
+                        # Se la memoria è stata troncata, invia un messaggio di sistema
+                        if memory_truncated:
+                            memory_notice = Message(
+                                conversation_id=conversation_id,
+                                user_id=4,
+                                text="Memoria della conversazione azzerata. La cronologia precedente non sarà più considerata.",
+                                message_type='system'
+                            )
+                            db.add(memory_notice)
+                            db.commit()
+                            db.refresh(memory_notice)
+                            
+                            notice_dict = {
+                                'id': memory_notice.id,
+                                'conversationId': conversation_id,
+                                'user': {
+                                    'id': ai_user.id,
+                                    'username': ai_user.username,
+                                    'displayName': ai_user.display_name,
+                                    'avatarUrl': ai_user.avatar_url,
+                                    'status': ai_user.status
+                                },
+                                'text': memory_notice.text,
+                                'timestamp': memory_notice.created_at.isoformat(),
+                                'type': 'system',
+                                'fileData': None,
+                                'replyTo': None,
+                                'forwardedFrom': None,
+                                'message_metadata': {},
+                                'edited': False,
+                                'editedAt': None,
+                                'isOwn': False
+                            }
+                            
+                            emit('newMessage', prepare_for_socketio(notice_dict), room=room)
+                    finally:
+                        # Hide typing indicator
+                        emit('modelInference', {
+                            'status': 'completed',
+                            'userId': 4
+                        }, room=room)
+                
+                # Se il messaggio è per John Doe
+                elif int(user_id) == 2:
+                    # Mostra indicatore di digitazione
                     emit('modelInference', {
-                        'status': 'completed',
+                        'status': 'started',
                         'userId': 2
                     }, room=room)
+
+                    try:
+                        # Get AI response
+                        ai_response = get_llm_response(message_data.get('text', ''))
+
+                        # Simulate typing delay
+                        time.sleep(1.5)
+
+                        # Get AI user data from database
+                        ai_user = db.query(User).filter(User.id == 2).first()
+                        print(f"AI user data from database: {ai_user.username if ai_user else 'Not found'}")
+
+                        # Create response message
+                        ai_message = Message(
+                            conversation_id=conversation_id,
+                            user_id=2,
+                            text=ai_response,
+                            message_type='normal',
+                            reply_to_id=message_id
+                        )
+                        db.add(ai_message)
+                        db.commit()
+                        db.refresh(ai_message)
+                        
+                        ai_message_id = ai_message.id
+                        ai_created_at = ai_message.created_at
+
+                        # Recuperiamo i dettagli del messaggio a cui stiamo rispondendo
+                        reply_message = db.query(Message).get(message_id)
+                        reply_message_user = db.query(User).get(reply_message.user_id)
+                        
+                        # Prepara l'oggetto replyTo
+                        reply_to = None
+                        if reply_message:
+                            # Costruisci l'oggetto reply
+                            reply_to = {
+                                'id': reply_message.id,
+                                'text': reply_message.text,
+                                'message_type': reply_message.message_type,
+                                'fileData': reply_message.file_data,
+                                'user': {
+                                    'id': reply_message_user.id,
+                                    'username': reply_message_user.username,
+                                    'displayName': reply_message_user.display_name,
+                                    'avatarUrl': reply_message_user.avatar_url,
+                                    'status': reply_message_user.status
+                                }
+                            }
+
+                        # Send AI response with user data from database
+                        ai_message_dict = {
+                            'id': ai_message_id,
+                            'conversationId': conversation_id,
+                            'user': {
+                                'id': ai_user.id,
+                                'username': ai_user.username,
+                                'displayName': ai_user.display_name,
+                                'avatarUrl': ai_user.avatar_url,
+                                'status': ai_user.status
+                            },
+                            'text': ai_response,
+                            'timestamp': ai_created_at.isoformat(),
+                            'type': 'normal',
+                            'fileData': None,
+                            'replyTo': reply_to,
+                            'forwardedFrom': None,
+                            'message_metadata': {},
+                            'edited': False,
+                            'editedAt': None,
+                            'isOwn': False
+                        }
+
+                        print(f"Sending AI response with user data: {ai_message_dict['user']}")
+                        emit('newMessage', prepare_for_socketio(ai_message_dict), room=room)
+
+                        if ai_user.id == 2:
+                            # Broadcast del messaggio a tutti i client 
+                            emit('newMessage', prepare_for_socketio(ai_message_dict), broadcast=True)
+                    finally:
+                        # Hide typing indicator
+                        emit('modelInference', {
+                            'status': 'completed',
+                            'userId': 2
+                        }, room=room)
 
     @socketio.on('channelMessage')
     def handle_channel_message(data):
@@ -1146,8 +1343,22 @@ def register_handlers(socketio):
             is_calendar_intent = check_calendar_intent(message_text, None, conversation_id, room, message_id)
             
             # Verifica intento query database se non è un intento calendario
+            is_db_query_intent = False
             if not is_calendar_intent:
-                check_db_query_intent(message_text, None, conversation_id, room, message_id)
+                is_db_query_intent = check_db_query_intent(message_text, None, conversation_id, room, message_id)
+
+                # Verifica intento analisi file se non è un altro intento e c'è un file allegato
+                if not is_db_query_intent and has_file:
+                    file_data = message_data.get('fileData', {})
+                    check_file_analysis_intent(
+                        message_text=message_text,
+                        file_path=file_data.get('path'),
+                        file_type=file_data.get('ext'),
+                        user_id=None,
+                        conversation_id=conversation_id,
+                        room=room,
+                        original_message_id=message_id
+                    )   
 
     @socketio.on('deleteMessage')
     def handle_delete_message(data):
@@ -1556,6 +1767,11 @@ def check_db_query_intent(message_text, user_id, conversation_id, room, original
 
 # Add this function to your handlers.py file
 
+"""
+Funzione per verificare e gestire gli intenti di analisi file nei messaggi
+Questa implementazione dovrebbe essere inserita nel file chat/handlers.py
+"""
+
 def check_file_analysis_intent(message_text, file_path, file_type, user_id, conversation_id, room, original_message_id=None):
     """
     Verifica se il messaggio contiene un intento di analisi file e invia la risposta appropriata
@@ -1581,7 +1797,7 @@ def check_file_analysis_intent(message_text, file_path, file_type, user_id, conv
     # Inizializza il middleware
     file_middleware = FileAgentMiddleware()
     
-    # Verifica se è un intento di analisi file usando il pattern matching
+    # Verifica se è un intento di analisi file usando il modello di linguaggio
     is_file_intent = file_middleware.detect_file_analysis_intent(message_text)
     print(f"Intento analisi file rilevato: {is_file_intent}")
     
@@ -1609,6 +1825,19 @@ def check_file_analysis_intent(message_text, file_path, file_type, user_id, conv
             with get_db() as db:
                 # Ottieni dati utente File Agent dal database
                 file_agent_user = db.query(User).filter(User.id == 7).first()
+                
+                # Se l'utente file agent non esiste, crealo
+                if not file_agent_user:
+                    file_agent_user = User(
+                        id=7, 
+                        username='file_agent',
+                        display_name='File Analysis',
+                        avatar_url='https://ui-avatars.com/api/?name=File+Analysis&background=3698D3&color=fff',
+                        status='online'
+                    )
+                    db.add(file_agent_user)
+                    db.commit()
+                    db.refresh(file_agent_user)
                 
                 # Crea messaggio di risposta con reply_to_id
                 file_agent_message = Message(
@@ -1681,4 +1910,4 @@ def check_file_analysis_intent(message_text, file_path, file_type, user_id, conv
         emit('modelInference', {'status': 'completed', 'userId': user_id or 7}, room=room)
         return agent_result.get('is_file_intent', False)
     
-    return False    
+    return False

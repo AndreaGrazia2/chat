@@ -71,7 +71,10 @@ def get_channel_messages(channel_name):
             query = (
                 db.query(Message, User)
                 .join(User, Message.user_id == User.id)
-                .filter(Message.conversation_id == conversation_id)
+                .filter(
+                    Message.conversation_id == conversation_id,                    
+                    Message.message_type != 'memory'  # Escludi i messaggi di tipo memory
+                )
             )
             
               # Aggiunta filtro paginazione con controllo validità
@@ -242,7 +245,10 @@ def get_dm_messages(user_id):
             query = (
                 db.query(Message, User)
                 .join(User, Message.user_id == User.id)
-                .filter(Message.conversation_id == conversation_id)
+                .filter(
+                    Message.conversation_id == conversation_id,
+                    Message.message_type != 'memory'  # Escludi i messaggi di tipo memory
+                )
             )
             
             # Aggiungi filtro paginazione solo se before_id è valido
@@ -763,3 +769,66 @@ def uploaded_file(filename):
     """Serve i file caricati"""
     upload_dir = init_upload_dir()
     return send_from_directory(str(upload_dir), filename)
+
+@chat_bp.route('/api/memory/<int:conversation_id>', methods=['GET'])
+def get_memory_message(conversation_id):
+    """Get memory message for a conversation"""
+    try:
+        agent_id = request.args.get('agent_id')
+        with get_db() as db:
+            query = db.query(Message).filter(
+                Message.conversation_id == conversation_id,
+                Message.message_type == 'memory'
+            )
+            
+            # Se specificato l'ID dell'agente, filtra per l'agente specifico
+            if agent_id:
+                query = query.filter(Message.user_id == agent_id)
+                
+            memory_message = query.first()
+            
+            if memory_message:
+                return jsonify(memory_message.to_dict())
+            else:
+                return jsonify({"error": "Memory message not found"}), 404
+    except Exception as e:
+        print(f"Error getting memory message: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@chat_bp.route('/api/memory', methods=['POST'])
+def create_memory_message():
+    """Create a new memory message"""
+    try:
+        data = request.json
+        with get_db() as db:
+            new_message = Message(
+                conversation_id=data.get('conversation_id'),
+                user_id=data.get('user_id'),
+                text=data.get('text', 'Memory storage'),
+                message_type='memory',
+                message_metadata=data.get('message_metadata', {})
+            )
+            db.add(new_message)
+            db.commit()
+            db.refresh(new_message)
+            return jsonify(new_message.to_dict())
+    except Exception as e:
+        print(f"Error creating memory message: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@chat_bp.route('/api/memory/<int:message_id>', methods=['PUT'])
+def update_memory_message(message_id):
+    """Update an existing memory message"""
+    try:
+        data = request.json
+        with get_db() as db:
+            message = db.query(Message).get(message_id)
+            if not message:
+                return jsonify({"error": "Message not found"}), 404
+            
+            message.message_metadata = data.get('message_metadata', {})
+            db.commit()
+            return jsonify(message.to_dict())
+    except Exception as e:
+        print(f"Error updating memory message: {str(e)}")
+        return jsonify({'error': str(e)}), 500
