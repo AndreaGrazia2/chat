@@ -933,7 +933,7 @@ def register_handlers(socketio):
                     if is_file_intent:
                         return
 
-                # Se il messaggio è per Alex Wilson (ID 4) - AGENTE CON MEMORIA
+                # Se il messaggio è per Jane Smithn (ID 4) - AGENTE CON MEMORIA
                 if int(user_id) == 4:
                     # Mostra indicatore di digitazione
                     emit('modelInference', {
@@ -957,7 +957,7 @@ def register_handlers(socketio):
                         if not memory_message:
                             memory_message = Message(
                                 conversation_id=conversation_id,
-                                user_id=4,  # Alex Wilson
+                                user_id=4,  # Jane Smith
                                 text="Memory storage - non visualizzato",
                                 message_type="memory",
                                 message_metadata={
@@ -976,7 +976,7 @@ def register_handlers(socketio):
                         history = memory_message.message_metadata.get('history', [])
                         
                         # Costruisci il prompt con la storia della conversazione
-                        prompt = "Sei Alex Wilson, un assistente AI che fornisce risposte:\n"
+                        prompt = "Sei un assistente AI che fornisce risposte:\n"
                         prompt += "- Mediamente brevi\n"
                         prompt += "- Senza formattazione eccessiva\n"
                         prompt += "- Con un tono neutro e gentile\n"

@@ -138,8 +138,8 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA chat_schema TO postgres;
 INSERT INTO users (id, username, display_name, avatar_url, status) VALUES
 (1, 'owner', 'Owner', 'https://ui-avatars.com/api/?name=Owner&background=27AE60&color=fff', 'online'),
 (2, 'john_doe', 'John Doe', 'https://ui-avatars.com/api/?name=John+Doe&background=0D8ABC&color=fff', 'online'),
-(3, 'jane_smith', 'Jane Smith', 'https://ui-avatars.com/api/?name=Jane+Smith&background=9B59B6&color=fff', 'away'),
-(4, 'alex_wilson', 'Alex Wilson', 'https://ui-avatars.com/api/?name=Alex+Wilson&background=E74C3C&color=fff', 'offline'),
+(3, 'db_agent', 'DB Agent', 'https://ui-avatars.com/api/?name=Database+Agent&background=9B59B6&color=fff', 'away'),
+(4, 'jane_smith', 'Jane Smith', 'https://ui-avatars.com/api/?name=Jane+Smith&background=E74C3C&color=fff', 'offline'),
 (5, 'maria_rodriguez', 'Maria Rodriguez', 'https://ui-avatars.com/api/?name=Maria+Rodriguez&background=F39C12&color=fff', 'busy'),
 (6, 'david_chen', 'David Chen', 'https://ui-avatars.com/api/?name=David+Chen&background=3498DB&color=fff', 'online'),
 (7, 'file_agent', 'File Analysis', 'https://ui-avatars.com/api/?name=File+Analysis&background=3698D3&color=fff', 'online');
