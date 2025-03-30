@@ -300,9 +300,9 @@ function sendFileMessage(fileData) {
                 message: messageData
             });
         } else {
-            console.log('Invio messaggio diretto all\'utente:', window.currentConversationId);
+            console.log('Invio messaggio diretto all\'utente:', window.currentUser ? window.currentUser.id : null);
             window.socket.emit('directMessage', {
-                userId: parseInt(window.currentConversationId),
+                userId: window.currentUser ? window.currentUser.id : null,
                 message: messageData
             });
         }
