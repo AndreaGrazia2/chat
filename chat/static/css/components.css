@@ -467,21 +467,25 @@
 /* ===== CAMPO INPUT ===== */
 .message-input {
 	flex: 1;
-	padding: 10px;
-	border-radius: 20px;
-	border: 1px solid var(--border-color);
-	background-color: var(--bg-main);
+    padding: 8px 10px;
+    border: none !important;
+    border-radius: 0;
+    background: transparent;
+    min-height: 24px;
+    margin: 0;
 	color: var(--text-color);
 	resize: none;
-	min-height: 38px;
-	max-height: 120px;
-	outline: none;
-	font-size: 14px;
+}
+
+.message-input::placeholder {
+    color: var(--text-color);
+    opacity: 0.6; /* Make placeholder slightly transparent */
 }
 
 .message-input:focus {
-	border-color: var(--primary);
-	box-shadow: 0 0 0 2px rgba(29, 116, 245, 0.2);
+	outline: none;
+	border: none !important;
+	box-shadow: none;
 }
 
 .send-button {
@@ -497,6 +501,7 @@
 	justify-content: center;
 	align-items: center;
 	font-size: 18px;
+	margin-right: 5px;
 }
 
 .send-button:active {
@@ -652,57 +657,6 @@
 	overflow-wrap: break-word;
 }
 
-/* Stili per il drag and drop */
-.message-input-container {
-    position: relative;
-    flex: 1;
-    padding: 10px;
-    border-radius: 20px;
-    border: 1px solid var(--border-color);
-    background-color: var(--bg-main);
-    color: var(--text-color);
-    resize: none;
-    min-height: 38px;
-    max-height: 120px;
-    outline: none;
-    font-size: 14px;
-}
-
-.message-input-container.drag-active {
-    border: 2px dashed var(--primary-color);
-    background-color: rgba(var(--primary-rgb), 0.05);
-}
-
-.drop-overlay {
-    display: none;
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(var(--primary-rgb), 0.1);
-    border: 2px dashed var(--primary-color);
-    border-radius: 8px;
-    z-index: 10;
-    justify-content: center;
-    align-items: center;
-}
-
-.message-input-container.drag-active .drop-overlay {
-    display: flex;
-}
-
-.drop-message {
-    text-align: center;
-    color: var(--primary-color);
-    font-weight: bold;
-}
-
-.drop-message i {
-    font-size: 2rem;
-    margin-bottom: 0.5rem;
-}
-
 /* Stili per l'indicatore di caricamento */
 .upload-progress-container {
     position: absolute;
@@ -805,13 +759,13 @@
 .file-preview-close:hover {
     color: var(--danger-color);
 }
+
 /* Stili per la message-toolbar */
 .message-toolbar {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 0 8px;
-    margin-bottom: 8px;
+    padding: 0 0 0 8px;
+    margin: 0;
 }
 
 .toolbar-button {
@@ -828,4 +782,58 @@
 .toolbar-button:hover {
     opacity: 1;
     background-color: var(--secondary-bg);
+}
+
+/* Fixed styles for drag and drop */
+.message-input-container {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    padding: 5px;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 20px !important;
+    min-height: 45px !important;  /* Altezza minima del contenitore */
+    background-color: var(--bg-main);
+}
+
+.message-input-container.drag-active {
+    border: 2px dashed var(--primary);
+    background-color: rgba(29, 116, 245, 0.05);
+}
+
+.drop-overlay {
+    display: none;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 110px;
+    background-color: rgba(29, 116, 245, 0.1); /* Using direct color value */
+    border: 2px dashed var(--primary);
+    border-radius: 8px;
+    z-index: 10;
+    justify-content: center;
+    align-items: center;
+}
+
+.message-input-container.drag-active .drop-overlay {
+    display: flex;
+}
+
+.drop-message {
+    text-align: center;
+    color: var(--primary-color);
+    font-weight: bold;
+}
+
+.drop-message i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Add styling for upload progress text */
+.file-upload-progress-text {
+    font-size: 12px;
+    margin-top: 4px;
+    color: var(--primary);
 }

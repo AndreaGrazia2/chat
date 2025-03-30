@@ -3,7 +3,8 @@ import { updateUnreadBadge}  from './uiNavigation.js';
 import { showNotification}  from './utils.js';
 import { scrollToBottom } from './coreScroll.js';
 import { sendDirectMessage } from './socket.js'
-import { uploadFile, handleFileSelect, initDragAndDrop, showFilePreview, removeFilePreview, createProgressBar, updateProgressBar, removeProgressBar } from './fileUpload.js';
+import { handleFileSelect, initDragAndDrop } from './fileUpload.js';
+import { createMessageElement } from './messageRenderer.js';
 
 function sendMessage() {
     // Interrompi lo stato di digitazione quando si invia un messaggio
@@ -225,78 +226,90 @@ function stopTyping() {
 }
 
 // Funzione per inviare un messaggio con file allegato
-// Aggiorniamo la funzione sendFileMessage in chat.js per gestire meglio gli errori
 function sendFileMessage(fileData) {
-    const currentConversation = window.currentConversationId;
-    const isChannelConversation = window.isChannel;
+    console.log('Invio messaggio con file:', fileData);
     
-    if (!currentConversation) {
+    if (!window.currentConversationId) {
         showNotification('Seleziona prima una conversazione', 'error');
         return;
     }
     
-    // Crea un messaggio di tipo file
-    const messageData = {
-        text: `Ha inviato un file: ${fileData.name}.${fileData.ext}`,
-        message_type: 'file',
-        file_data: fileData
-    };
-    
-    // Genera un ID temporaneo per il messaggio
+    // Creiamo un ID temporaneo per il messaggio
     const tempId = 'temp-' + Date.now();
     
-    // Aggiungi il messaggio alla UI immediatamente per feedback istantaneo
+    // Aggiungiamo immediatamente un messaggio temporaneo all'interfaccia
     const tempMessage = {
         id: tempId,
-        conversationId: currentConversation,
         user: {
-            id: 1, // Assume current user is ID 1
+            id: 1, // ID utente corrente
             username: 'me',
             displayName: 'Me',
             avatarUrl: document.querySelector('.user-avatar img')?.src || ''
         },
-        text: messageData.text,
+        text: `File inviato: ${fileData.name}.${fileData.ext}`,
         timestamp: new Date().toISOString(),
         type: 'file',
         fileData: fileData,
         isOwn: true,
-        isPending: true,
-        status: 'sending' // Aggiungiamo lo stato di invio
+        status: 'sending'
     };
     
-    // Aggiungi il messaggio temporaneo alla UI
-    const messagesContainer = document.querySelector('.messages-container');
-    if (messagesContainer) {
-        const messageElement = createMessageElement(tempMessage);
-        messageElement.dataset.tempId = tempId; // Aggiungiamo l'ID temporaneo come attributo
-        messagesContainer.appendChild(messageElement);
-        scrollToBottom();
+    // Verifica che displayedMessages sia un array
+    if (!Array.isArray(window.displayedMessages)) {
+        window.displayedMessages = [];
     }
     
-    // Aggiorniamo messageData per includere l'ID temporaneo
-    messageData.tempId = tempId;
+    // Aggiungi il messaggio all'array di messaggi visualizzati
+    window.displayedMessages.push(tempMessage);
     
-    // Invia il messaggio tramite socket
+    // Trova il container dei messaggi
+    const chatContainer = document.getElementById('chatMessages');
+    if (!chatContainer) {
+        console.error('Container dei messaggi non trovato!');
+        return;
+    }
+    
+    // Rimuovi messaggio "empty-messages" se presente
+    const emptyMessages = chatContainer.querySelector('.empty-messages, .empty-conversation');
+    if (emptyMessages) {
+        emptyMessages.remove();
+    }
+    
+    // Crea l'elemento messaggio e aggiungilo alla chat
+    const messageEl = createMessageElement(tempMessage);
+    chatContainer.appendChild(messageEl);
+    
+    // Scrolla automaticamente in basso
+    scrollToBottom();
+    
+    // Prepara i dati per il messaggio da inviare
+    const messageData = {
+        text: `File inviato: ${fileData.name}.${fileData.ext}`,
+        type: 'file',
+        fileData: fileData,
+        tempId: tempId
+    };
+    
+    // Invia messaggio tramite Socket.IO
+    console.log('Invio messaggio con file al server:', messageData);
     try {
-        if (isChannelConversation) {
-            sendChannelMessage(currentConversation, messageData);
+        if (window.isChannel) {
+            console.log('Invio messaggio al canale:', window.currentConversationId);
+            window.socket.emit('channelMessage', {
+                channelName: window.currentConversationId,
+                message: messageData
+            });
         } else {
-            sendDirectMessage(currentConversation, messageData);
+            console.log('Invio messaggio diretto all\'utente:', window.currentConversationId);
+            window.socket.emit('directMessage', {
+                userId: parseInt(window.currentConversationId),
+                message: messageData
+            });
         }
+        console.log('Messaggio inviato con successo');
     } catch (error) {
-        console.error("Errore nell'invio del messaggio con file:", error);
-        
-        // Aggiorna lo stato del messaggio nella UI
-        const messageElement = document.querySelector(`[data-temp-id="${tempId}"]`);
-        if (messageElement) {
-            const statusElement = messageElement.querySelector('.message-status');
-            if (statusElement) {
-                statusElement.innerHTML = '<i class="fas fa-exclamation-circle text-danger"></i>';
-                statusElement.title = "Errore nell'invio";
-            }
-        }
-        
-        showNotification("Errore nell'invio del messaggio con file", 'error');
+        console.error('Errore nell\'invio del messaggio:', error);
+        showNotification('Errore nell\'invio del file: ' + error.message, 'error');
     }
 }
 

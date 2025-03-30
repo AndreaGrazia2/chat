@@ -103,7 +103,7 @@ def save_uploaded_file(file):
             'size': size_str,
             'icon': icon,
             'path': str(file_path.relative_to(current_app.root_path)),
-            'url': f"/chat/uploads/{unique_filename}"
+            'url': f"/chat/uploads/documents/{unique_filename}"  # Modifica qui: aggiungi 'documents/'
         }
         
         return file_data
