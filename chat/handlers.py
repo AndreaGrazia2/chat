@@ -933,7 +933,7 @@ def register_handlers(socketio):
                     if is_file_intent:
                         return
 
-                # Se il messaggio è per Jane Smithn (ID 4) - AGENTE CON MEMORIA
+                # Se il messaggio è per Jane Smith (ID 4) - AGENTE CON MEMORIA
                 if int(user_id) == 4:
                     # Mostra indicatore di digitazione
                     emit('modelInference', {
@@ -942,19 +942,24 @@ def register_handlers(socketio):
                     }, room=room)
 
                     try:
-                        # Ottieni o crea il messaggio di memoria
+                        print(f"✅ ATTIVAZIONE AGENTE CON MEMORIA per Jane Smith (ID 4)")
+                        
+                        # 1. Recuperiamo o creiamo il messaggio di memoria
                         memory_message = None
                         memory_truncated = False
                         
-                        # Cerca un messaggio di tipo "memory" esistente per questa conversazione
+                        # Cerchiamo un messaggio di tipo "memory" esistente per questa conversazione
                         memory_message = db.query(Message).filter(
                             Message.conversation_id == conversation_id,
                             Message.message_type == 'memory',
                             Message.user_id == 4
                         ).first()
                         
-                        # Se non esiste, creane uno nuovo
+                        print(f"Ricerca memoria: conversation_id={conversation_id}, user_id=4")
+                        
+                        # Se non esiste, ne creiamo uno nuovo
                         if not memory_message:
+                            print(f"⚠️ Nessun messaggio memory trovato, ne creo uno nuovo")
                             memory_message = Message(
                                 conversation_id=conversation_id,
                                 user_id=4,  # Jane Smith
@@ -968,34 +973,51 @@ def register_handlers(socketio):
                             db.add(memory_message)
                             db.commit()
                             db.refresh(memory_message)
+                            print(f"✅ Nuovo messaggio memory creato con ID {memory_message.id}")
+                        else:
+                            print(f"✅ Trovato messaggio memory esistente con ID {memory_message.id}")
+                            print(f"Stato attuale della memoria: {memory_message.message_metadata}")
                         
-                        # Ottieni la storia della conversazione attuale
-                        if not memory_message.message_metadata:
+                        # 2. Gestiamo correttamente i metadati e la storia
+                        if memory_message.message_metadata is None:
+                            print("⚠️ message_metadata è None, inizializzo")
                             memory_message.message_metadata = {"history": []}
+                        elif "history" not in memory_message.message_metadata:
+                            print("⚠️ 'history' non trovato nei metadati, aggiungo")
+                            # Creiamo una copia per evitare problemi di riferimento
+                            updated_metadata = dict(memory_message.message_metadata)
+                            updated_metadata["history"] = []
+                            memory_message.message_metadata = updated_metadata
                         
-                        history = memory_message.message_metadata.get('history', [])
+                        # 3. Creiamo una copia del metadata per sicurezza
+                        metadata_copy = dict(memory_message.message_metadata)
+                        history = metadata_copy.get('history', [])
+                        print(f"👁️ Recuperata storia conversazione con {len(history)} scambi")
                         
-                        # Costruisci il prompt con la storia della conversazione
-                        prompt = "Sei un assistente AI che fornisce risposte:\n"
-                        prompt += "- Mediamente brevi\n"
-                        prompt += "- Senza formattazione eccessiva\n"
-                        prompt += "- Con un tono neutro e gentile\n"
-                        prompt += "- Sempre pertinenti al contesto della conversazione\n\n"
+                        # 4. Costruiamo il prompt con la storia della conversazione
+                        prompt = "Sei un assistente AI chiamato Jane che:\n"
+                        prompt += "- Fornisce risposte concise e utili\n"
+                        prompt += "- Usa un tono amichevole e conversazionale\n"
+                        prompt += "- Si ricorda delle conversazioni precedenti\n"
+                        prompt += "- Risponde in italiano\n\n"
                         
-                        # Aggiungi la storia solo se esiste
+                        # Aggiungiamo la storia solo se esiste
                         if history:
                             prompt += "Ecco la storia recente della conversazione:\n"
                             for exchange in history:
-                                prompt += f"Utente: {exchange.get('user')}\n"
-                                prompt += f"Alex: {exchange.get('bot')}\n\n"
+                                prompt += f"Utente: {exchange.get('user', '')}\n"
+                                prompt += f"Jane: {exchange.get('bot', '')}\n\n"
                         
-                        # Aggiungi il messaggio corrente
-                        prompt += f"Utente: {message_text}\nAlex:"
+                        # Aggiungiamo il messaggio corrente
+                        prompt += f"Utente: {message_text}\nJane:"
                         
-                        # Ottieni risposta dal modello
+                        print(f"📝 Prompt generato con {len(history)} scambi precedenti")
+                        
+                        # 5. Otteniamo la risposta dal modello
                         ai_response = get_llm_response(prompt)
+                        print(f"✅ Risposta generata: {ai_response[:50]}...")
                         
-                        # Aggiorna la memoria
+                        # 6. Aggiorniamo la memoria
                         MAX_HISTORY = 5
                         history.append({
                             "user": message_text,
@@ -1003,23 +1025,26 @@ def register_handlers(socketio):
                             "timestamp": datetime.now().isoformat()
                         })
                         
-                        # Mantieni solo gli ultimi MAX_HISTORY scambi (FIFO)
+                        # 7. Manteniamo solo gli ultimi MAX_HISTORY scambi
                         if len(history) > MAX_HISTORY:
+                            print(f"⚠️ Memoria piena, rimuovo scambi più vecchi (max={MAX_HISTORY})")
                             history = history[-MAX_HISTORY:]
                             memory_truncated = True
                         
-                        # Aggiorna il messaggio memory
-                        memory_message.message_metadata['history'] = history
-                        memory_message.message_metadata['lastUpdated'] = datetime.now().isoformat()
+                        # 8. Aggiorniamo il messaggio memory
+                        metadata_copy['history'] = history
+                        metadata_copy['lastUpdated'] = datetime.now().isoformat()
+                        memory_message.message_metadata = metadata_copy
                         db.commit()
+                        print(f"✅ Memoria aggiornata con {len(history)} scambi")
                         
-                        # Simulate typing delay
+                        # Ritardo simulato per digitazione
                         time.sleep(1.5)
 
-                        # Get AI user data from database
+                        # 9. Otteniamo i dati utente dal database
                         ai_user = db.query(User).filter(User.id == 4).first()
 
-                        # Create response message
+                        # 10. Creiamo il messaggio di risposta
                         ai_message = Message(
                             conversation_id=conversation_id,
                             user_id=4,
@@ -1034,14 +1059,13 @@ def register_handlers(socketio):
                         ai_message_id = ai_message.id
                         ai_created_at = ai_message.created_at
 
-                        # Recuperiamo i dettagli del messaggio a cui stiamo rispondendo
+                        # 11. Recuperiamo i dettagli del messaggio originale
                         reply_message = db.query(Message).get(message_id)
                         reply_message_user = db.query(User).get(reply_message.user_id)
                         
-                        # Prepara l'oggetto replyTo
+                        # Prepariamo l'oggetto replyTo
                         reply_to = None
                         if reply_message:
-                            # Costruisci l'oggetto reply
                             reply_to = {
                                 'id': reply_message.id,
                                 'text': reply_message.text,
@@ -1056,7 +1080,7 @@ def register_handlers(socketio):
                                 }
                             }
 
-                        # Send AI response with user data from database
+                        # 12. Inviamo la risposta al client
                         ai_message_dict = {
                             'id': ai_message_id,
                             'conversationId': conversation_id,
@@ -1081,7 +1105,7 @@ def register_handlers(socketio):
 
                         emit('newMessage', prepare_for_socketio(ai_message_dict), room=room)
                         
-                        # Se la memoria è stata troncata, invia un messaggio di sistema
+                        # 13. Se la memoria è stata troncata, inviamo un messaggio di sistema
                         if memory_truncated:
                             memory_notice = Message(
                                 conversation_id=conversation_id,
@@ -1116,13 +1140,59 @@ def register_handlers(socketio):
                             }
                             
                             emit('newMessage', prepare_for_socketio(notice_dict), room=room)
+                            
+                    except Exception as e:
+                        print(f"❌ ERRORE nell'agente memoria Jane Smith: {str(e)}")
+                        print(traceback.format_exc())
+                        
+                        # Risposta di fallback senza memoria in caso di errore
+                        try:
+                            ai_response = get_llm_response(message_text)
+                            ai_user = db.query(User).filter(User.id == 4).first()
+                            
+                            ai_message = Message(
+                                conversation_id=conversation_id,
+                                user_id=4,
+                                text=ai_response,
+                                message_type='normal',
+                                reply_to_id=message_id
+                            )
+                            db.add(ai_message)
+                            db.commit()
+                            db.refresh(ai_message)
+                            
+                            ai_message_dict = {
+                                'id': ai_message.id,
+                                'conversationId': conversation_id,
+                                'user': {
+                                    'id': ai_user.id,
+                                    'username': ai_user.username,
+                                    'displayName': ai_user.display_name,
+                                    'avatarUrl': ai_user.avatar_url,
+                                    'status': ai_user.status
+                                },
+                                'text': f"{ai_response}\n\n(Nota: risposta senza memoria per un errore temporaneo)",
+                                'timestamp': ai_message.created_at.isoformat(),
+                                'type': 'normal',
+                                'replyTo': None,
+                                'fileData': None,
+                                'forwardedFrom': None,
+                                'message_metadata': {},
+                                'edited': False,
+                                'editedAt': None,
+                                'isOwn': False
+                            }
+                            
+                            emit('newMessage', prepare_for_socketio(ai_message_dict), room=room)
+                        except Exception as fallback_error:
+                            print(f"❌ ERRORE anche nel fallback: {str(fallback_error)}")
                     finally:
-                        # Hide typing indicator
+                        # Nascondiamo l'indicatore di digitazione
                         emit('modelInference', {
                             'status': 'completed',
                             'userId': 4
                         }, room=room)
-                
+
                 # Se il messaggio è per John Doe
                 elif int(user_id) == 2:
                     # Mostra indicatore di digitazione

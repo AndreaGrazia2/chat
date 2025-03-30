@@ -1,9 +1,7 @@
-//TODO: upload files
 //TODO: aggiungere prompt strutturato all'inferenza di john doe
 //TODO: Aggiungere memoria all'inferenza di john doe
 //TODO: Aggiungere RAG vettoriale
 //TODO: Aggiungere inferenza per agent per RAG sul DB
-//TODO: Aggiungere analisi dei documenti inviati
 
 /**
  * app.js - File bridge per rendere disponibili le funzioni dei moduli
@@ -58,18 +56,24 @@ window.users = [{
 },
 {
     id: 3,
+    displayName: 'DB Agent', // Aggiunto DB Agent con ID 3
+    avatarUrl: 'https://ui-avatars.com/api/?name=DB+Agent&background=9B59B6&color=fff',
+    status: 'online'
+},
+{
+    id: 4,
     displayName: 'Jane Smith',
     avatarUrl: 'https://i.pravatar.cc/150?img=3',
     status: 'away'
 },
 {
-    id: 4,
+    id: 5,
     displayName: 'Mike Johnson',
     avatarUrl: 'https://i.pravatar.cc/150?img=4',
     status: 'busy'
 },
 {
-    id: 5,
+    id: 6,
     displayName: 'Emma Davis',
     avatarUrl: 'https://i.pravatar.cc/150?img=5',
     status: 'offline'
