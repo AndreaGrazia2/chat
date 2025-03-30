@@ -162,17 +162,10 @@ body {
 
 /* Area input messaggi */
 .input-area {
-	padding: 12px 16px;
-	border-top: 1px solid var(--border-color);
-	background-color: var(--bg-main);
-	position: sticky;
-	bottom: 0;
-	z-index: 50; /* Aumentiamo il z-index */
-}
-
-.message-input-container {
-	display: flex;
-	align-items: center;
+    padding: 15px 16px !important;
+    border-top: 1px solid var(--border-color);
+    background-color: var(--bg-main);
+    min-height: 110px;  /* Altezza minima aumentata */
 }
 
 /* Sidebar */

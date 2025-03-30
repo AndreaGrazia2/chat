@@ -29,7 +29,6 @@ function setupSocketIOEvents() {
     // Eventi per i messaggi
     socket.on('messageHistory', handleMessageHistory);
     socket.on('newMessage', handleNewMessage);
-    socket.on('userTyping', handleUserTyping);
     socket.on('modelInference', handleModelInference);
     socket.on('userStatusUpdate', handleUserStatusUpdate);
     
@@ -678,42 +677,71 @@ function joinDirectMessage(userId) {
 	}
 }
 
+// Aggiorniamo le funzioni di invio messaggi per supportare i file
 function sendChannelMessage(channelName, messageData) {
-    if (currentlyConnected) {
-        try {
-            console.log(`Inviando messaggio al canale ${channelName}:`, messageData);
-            socket.emit('channelMessage', {
-                channelName: channelName,
-                message: messageData
-            });
-            
-            // Aggiungi timeout di sicurezza per verificare se il messaggio è stato ricevuto
-            setTimeout(() => {
-                const sentMessages = displayedMessages.filter(m => 
-                    m.isOwn && m.text === messageData.text && m.status !== 'sending'
-                );
-                
-                if (sentMessages.length === 0) {
-                    console.warn(`Possibile problema nell'invio del messaggio al canale ${channelName}:`, messageData);
-                }
-            }, 3000);
-        } catch (error) {
-            console.error(`Errore nell'invio del messaggio al canale ${channelName}:`, error);
-            showNotification(`Errore nell'invio del messaggio: ${error.message}`, true);
-        }
+    // Per tutti i tipi di messaggi, usa sempre lo stesso evento channelMessage
+    if (messageData.message_type === 'file' && messageData.file_data) {
+        // Per i messaggi di tipo file, adatta il formato per corrispondere a ciò che il server si aspetta
+        socket.emit('channelMessage', {
+            channelName: channelName,
+            message: {
+                text: messageData.text || '',
+                type: 'file',  // Usa 'type' invece di 'message_type'
+                fileData: messageData.file_data  // Usa 'fileData' invece di 'file_data'
+            }
+        });
     } else {
-        console.warn("Socket non connesso. Impossibile inviare il messaggio.");
-        showNotification("Non connesso al server. Messaggio non inviato.", true);
+        // Messaggio normale, nessun cambiamento
+        socket.emit('channelMessage', {
+            channelName: channelName,
+            message: messageData
+        });
     }
+    
+    // Mantieni il timeout di sicurezza per tutti i tipi di messaggi
+    setTimeout(() => {
+        const sentMessages = displayedMessages.filter(m => 
+            m.isOwn && m.text === messageData.text && m.status !== 'sending'
+        );
+        
+        if (sentMessages.length === 0) {
+            console.warn(`Possibile problema nell'invio del messaggio al canale ${channelName}:`, messageData);
+        }
+    }, 3000);
 }
 
 function sendDirectMessage(userId, messageData) {
-	if (currentlyConnected) {
-		socket.emit('directMessage', {
-			userId: userId,
-			message: messageData
-		});
-	}
+    if (currentlyConnected) {
+        // Aggiungi la stessa logica anche per i messaggi diretti
+        if (messageData.message_type === 'file' && messageData.file_data) {
+            // Per i messaggi di tipo file, adatta il formato
+            socket.emit('directMessage', {
+                userId: userId,
+                message: {
+                    text: messageData.text || '',
+                    type: 'file',  // Usa 'type' invece di 'message_type'
+                    fileData: messageData.file_data  // Usa 'fileData' invece di 'file_data'
+                }
+            });
+        } else {
+            // Messaggio normale, nessun cambiamento
+            socket.emit('directMessage', {
+                userId: userId,
+                message: messageData
+            });
+        }
+        
+        // Aggiungi il timeout di sicurezza anche per i messaggi diretti
+        setTimeout(() => {
+            const sentMessages = displayedMessages.filter(m => 
+                m.isOwn && m.text === messageData.text && m.status !== 'sending'
+            );
+            
+            if (sentMessages.length === 0) {
+                console.warn(`Possibile problema nell'invio del messaggio diretto a ${userId}:`, messageData);
+            }
+        }, 3000);
+    }
 }
 
 function setupTypingTimeoutChecker() {

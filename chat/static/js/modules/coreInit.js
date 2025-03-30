@@ -50,6 +50,12 @@ function initializeApp() {
 
     // Inizializza eventi di digitazione
     setupTypingEvents();   
+
+    // Ensure default channel is set
+    if (!window.currentConversationId) {
+        window.currentConversationId = 'general';
+        window.isChannel = true;
+    }    
     
     debug("Chat initialization complete");
 }

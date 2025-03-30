@@ -12,6 +12,9 @@
 // Importa le funzioni dai moduli
 import { initializeApp } from './modules/coreInit.js';
 
+// Importa la funzione di inizializzazione dell'upload
+import { initFileUpload } from './modules/chat.js';
+
 // Variabili globali principali
 window.darkMode = true;
 window.currentChannel = 'general';
@@ -19,7 +22,6 @@ window.isDirectMessage = false;
 window.currentUser = null;
 window.messages = [];
 window.displayedMessages = [];
-window.loadingMore = 0;
 window.loadingMore = false;
 window.historyScrollLock = false;
 window.lastHistoryLockTime = 0;
@@ -29,7 +31,7 @@ window.unreadMessages = 0;
 window.searchOpen = false;
 window.isLoadingMessages = false;
 window.hasMoreMessages = true;
-window.currentConversationId = null;
+window.currentConversationId = 'general';
 window.oldestMessageId = null;
 window.isChannel = false;
 window.currentlyConnected = false;
@@ -76,7 +78,7 @@ window.users = [{
 // Inizializza l'app quando il DOM è pronto
 document.addEventListener('DOMContentLoaded', () => {
     initializeApp();
-
+    initFileUpload();
     // Elementi sidebar
     const sidebar = document.querySelector('.sidebar');
     const closeSidebarBtn = document.getElementById('closeSidebar');

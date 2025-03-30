@@ -3,6 +3,7 @@ import { updateUnreadBadge}  from './uiNavigation.js';
 import { showNotification}  from './utils.js';
 import { scrollToBottom } from './coreScroll.js';
 import { sendDirectMessage } from './socket.js'
+import { handleFileSelect, initDragAndDrop } from './fileUpload.js';
 import { createMessageElement } from './messageRenderer.js';
 
 function sendMessage() {
@@ -224,9 +225,135 @@ function stopTyping() {
     }
 }
 
-// Export functions
-export {
-    sendMessage,
-    setupTypingEvents,
-    stopTyping
-};
+// Funzione per inviare un messaggio con file allegato
+function sendFileMessage(fileData) {
+    console.log('Invio messaggio con file:', fileData);
+    
+    if (!window.currentConversationId) {
+        showNotification('Seleziona prima una conversazione', 'error');
+        return;
+    }
+    
+    // Creiamo un ID temporaneo per il messaggio
+    const tempId = 'temp-' + Date.now();
+    
+    // Aggiungiamo immediatamente un messaggio temporaneo all'interfaccia
+    const tempMessage = {
+        id: tempId,
+        user: {
+            id: 1, // ID utente corrente
+            username: 'me',
+            displayName: 'Me',
+            avatarUrl: document.querySelector('.user-avatar img')?.src || ''
+        },
+        text: `File inviato: ${fileData.name}.${fileData.ext}`,
+        timestamp: new Date().toISOString(),
+        type: 'file',
+        fileData: fileData,
+        isOwn: true,
+        status: 'sending'
+    };
+    
+    // Verifica che displayedMessages sia un array
+    if (!Array.isArray(window.displayedMessages)) {
+        window.displayedMessages = [];
+    }
+    
+    // Aggiungi il messaggio all'array di messaggi visualizzati
+    window.displayedMessages.push(tempMessage);
+    
+    // Trova il container dei messaggi
+    const chatContainer = document.getElementById('chatMessages');
+    if (!chatContainer) {
+        console.error('Container dei messaggi non trovato!');
+        return;
+    }
+    
+    // Rimuovi messaggio "empty-messages" se presente
+    const emptyMessages = chatContainer.querySelector('.empty-messages, .empty-conversation');
+    if (emptyMessages) {
+        emptyMessages.remove();
+    }
+    
+    // Crea l'elemento messaggio e aggiungilo alla chat
+    const messageEl = createMessageElement(tempMessage);
+    chatContainer.appendChild(messageEl);
+    
+    // Scrolla automaticamente in basso
+    scrollToBottom();
+    
+    // Prepara i dati per il messaggio da inviare
+    const messageData = {
+        text: `File inviato: ${fileData.name}.${fileData.ext}`,
+        type: 'file',
+        fileData: fileData,
+        tempId: tempId
+    };
+    
+    // Invia messaggio tramite Socket.IO
+    console.log('Invio messaggio con file al server:', messageData);
+    try {
+        if (window.isChannel) {
+            console.log('Invio messaggio al canale:', window.currentConversationId);
+            window.socket.emit('channelMessage', {
+                channelName: window.currentConversationId,
+                message: messageData
+            });
+        } else {
+            console.log('Invio messaggio diretto all\'utente:', window.currentUser ? window.currentUser.id : null);
+            window.socket.emit('directMessage', {
+                userId: window.currentUser ? window.currentUser.id : null,
+                message: messageData
+            });
+        }
+        console.log('Messaggio inviato con successo');
+    } catch (error) {
+        console.error('Errore nell\'invio del messaggio:', error);
+        showNotification('Errore nell\'invio del file: ' + error.message, 'error');
+    }
+}
+
+// Inizializza il pulsante di upload file e il drag and drop
+function initFileUpload() {
+    // Crea l'elemento input file nascosto
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.id = 'fileInput';
+    fileInput.style.display = 'none';
+    fileInput.accept = '.pdf,.txt,.doc,.docx,.jpg,.jpeg,.png,.csv,.md,.xls,.xlsx';
+    document.body.appendChild(fileInput);
+    
+    // Trova il pulsante di upload esistente
+    const uploadButton = document.getElementById('fileUploadBtn');
+    
+    if (uploadButton) {
+        // Gestisci il click sul pulsante
+        uploadButton.addEventListener('click', () => {
+            // Verifica se c'è una conversazione attiva
+            if (!window.currentConversationId) {
+                showNotification('Seleziona prima una conversazione', 'error');
+                return;
+            }
+            
+            fileInput.click();
+        });
+    }
+    
+    // Gestisci la selezione del file
+    fileInput.addEventListener('change', (event) => {
+        handleFileSelect(event, (fileData) => {
+            sendFileMessage(fileData);
+        });
+    });
+    
+    // Inizializza il drag and drop sulla textarea del messaggio
+    const messageInput = document.querySelector('#messageInput');
+    if (messageInput) {
+        initDragAndDrop(messageInput.parentElement, (fileData) => {
+            sendFileMessage(fileData);
+        });
+    }
+}
+
+// Esporta le funzioni
+export { sendMessage, initFileUpload, sendFileMessage, setupTypingEvents };
