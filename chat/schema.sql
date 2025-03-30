@@ -141,7 +141,8 @@ INSERT INTO users (id, username, display_name, avatar_url, status) VALUES
 (3, 'jane_smith', 'Jane Smith', 'https://ui-avatars.com/api/?name=Jane+Smith&background=9B59B6&color=fff', 'away'),
 (4, 'alex_wilson', 'Alex Wilson', 'https://ui-avatars.com/api/?name=Alex+Wilson&background=E74C3C&color=fff', 'offline'),
 (5, 'maria_rodriguez', 'Maria Rodriguez', 'https://ui-avatars.com/api/?name=Maria+Rodriguez&background=F39C12&color=fff', 'busy'),
-(6, 'david_chen', 'David Chen', 'https://ui-avatars.com/api/?name=David+Chen&background=3498DB&color=fff', 'online');
+(6, 'david_chen', 'David Chen', 'https://ui-avatars.com/api/?name=David+Chen&background=3498DB&color=fff', 'online'),
+(7, 'file_agent', 'File Analysis', 'https://ui-avatars.com/api/?name=File+Analysis&background=3698D3&color=fff', 'online');
 
 -- Canali di test con diverse caratteristiche
 INSERT INTO channels (id, name, description, is_private) VALUES

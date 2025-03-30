@@ -624,6 +624,12 @@ def register_handlers(socketio):
             print("Missing channel name or message data")
             return
 
+        # Verifica per messaggi di tipo file (aggiunto nuovo controllo)
+        has_file = message_data.get('type') == 'file' and message_data.get('fileData')
+        if not message_data.get('text') and not has_file:
+            print(f"Error: Message without text or file data: {message_data}")
+            return
+
         # Find the channel conversation
         with get_db() as db:
             conversation = (
@@ -727,8 +733,22 @@ def register_handlers(socketio):
             is_calendar_intent = check_calendar_intent(message_text, None, conversation_id, room, message_id)
             
             # Verifica intento query database se non è un intento calendario
+            is_db_query_intent = False
             if not is_calendar_intent:
-                check_db_query_intent(message_text, None, conversation_id, room, message_id)
+                is_db_query_intent = check_db_query_intent(message_text, None, conversation_id, room, message_id)
+
+                # Verifica intento analisi file se non è un altro intento e c'è un file allegato
+                if not is_db_query_intent and has_file:
+                    file_data = message_data.get('fileData', {})
+                    check_file_analysis_intent(
+                        message_text=message_text,
+                        file_path=file_data.get('path'),
+                        file_type=file_data.get('ext'),
+                        user_id=None,
+                        conversation_id=conversation_id,
+                        room=room,
+                        original_message_id=message_id
+                    )                
 
     @socketio.on('directMessage')
     def handle_direct_message(data):
@@ -889,6 +909,25 @@ def register_handlers(socketio):
 
             # Se il messaggio è per John Doe E NON è un intento calendario, procedi con l'inferenza standard
             if int(user_id) == 2 and not is_calendar_intent and not is_db_query_intent:
+
+                # Verifica se è un messaggio con file allegato
+                has_file = message_data.get('type') == 'file' and message_data.get('fileData')
+                if has_file:
+                    file_data = message_data.get('fileData', {})
+                    is_file_intent = check_file_analysis_intent(
+                        message_text=message_text,
+                        file_path=file_data.get('path'),
+                        file_type=file_data.get('ext'),
+                        user_id=user_id,
+                        conversation_id=conversation_id,
+                        room=room,
+                        original_message_id=message_id
+                    )
+                    
+                    # Se è un intento di analisi file, non procedere con l'inferenza standard
+                    if is_file_intent:
+                        return
+
                 # Mostra indicatore di digitazione
                 emit('modelInference', {
                     'status': 'started',
@@ -1514,3 +1553,132 @@ def check_db_query_intent(message_text, user_id, conversation_id, room, original
     # Emetti evento modelInference 'completed' anche se non è un intento database
     emit('modelInference', {'status': 'completed', 'userId': user_id or 3}, room=room)
     return False
+
+# Add this function to your handlers.py file
+
+def check_file_analysis_intent(message_text, file_path, file_type, user_id, conversation_id, room, original_message_id=None):
+    """
+    Verifica se il messaggio contiene un intento di analisi file e invia la risposta appropriata
+    
+    Args:
+        message_text: Testo del messaggio
+        file_path: Percorso del file allegato
+        file_type: Tipo MIME del file
+        user_id: ID dell'utente destinatario
+        conversation_id: ID della conversazione
+        room: Room Socket.IO per emettere eventi
+        original_message_id: ID del messaggio a cui rispondere
+        
+    Returns:
+        bool: True se è un intento di analisi file, False altrimenti
+    """
+    # Importa il middleware dell'agente file
+    from agent.file_agent.file_agent_middleware import FileAgentMiddleware
+
+    print(f"Verifica intento analisi file per: '{message_text}'")
+    print(f"File path: {file_path}, File type: {file_type}")    
+    
+    # Inizializza il middleware
+    file_middleware = FileAgentMiddleware()
+    
+    # Verifica se è un intento di analisi file usando il pattern matching
+    is_file_intent = file_middleware.detect_file_analysis_intent(message_text)
+    print(f"Intento analisi file rilevato: {is_file_intent}")
+    
+    if is_file_intent:
+        # Emetti evento modelInference 'started' all'inizio dell'elaborazione
+        emit('modelInference', {'status': 'started', 'userId': user_id or 7}, room=room)
+        
+        # Processa il messaggio attraverso l'agente file
+        print(f"Elaborazione messaggio attraverso agente file")
+        agent_result = file_middleware.process_message(
+            message_text=message_text,
+            message_id=original_message_id,
+            user_id=user_id,
+            conversation_id=conversation_id,
+            file_data={
+                'path': file_path,
+                'ext': file_type
+            }
+        )
+        
+        print(f"Risultato agente file: {agent_result}")
+
+        # Se abbiamo una risposta, inviala
+        if agent_result and agent_result.get('response'):
+            with get_db() as db:
+                # Ottieni dati utente File Agent dal database
+                file_agent_user = db.query(User).filter(User.id == 7).first()
+                
+                # Crea messaggio di risposta con reply_to_id
+                file_agent_message = Message(
+                    conversation_id=conversation_id,
+                    user_id=7,  # File Analysis Agent
+                    text=agent_result.get('response'),
+                    message_type='normal',
+                    reply_to_id=original_message_id,  # Imposta il riferimento al messaggio originale
+                    message_metadata={'file_analysis_intent': True}  # Aggiungiamo un flag per tracciare
+                )
+                db.add(file_agent_message)
+                db.commit()
+                db.refresh(file_agent_message)
+                
+                file_message_id = file_agent_message.id
+                file_created_at = file_agent_message.created_at
+                
+                # Se abbiamo un messaggio originale, recuperiamo i suoi dettagli per il reply
+                reply_to = None
+                if original_message_id:
+                    original_message = db.query(Message).get(original_message_id)
+                    if original_message:
+                        original_user = db.query(User).get(original_message.user_id)
+                        if original_user:
+                            reply_to = {
+                                'id': original_message.id,
+                                'text': original_message.text,
+                                'message_type': original_message.message_type,
+                                'fileData': original_message.file_data,
+                                'user': {
+                                    'id': original_user.id,
+                                    'username': original_user.username,
+                                    'displayName': original_user.display_name,
+                                    'avatarUrl': original_user.avatar_url,
+                                    'status': original_user.status
+                                }
+                            }
+                
+                # Invia la risposta dell'agente
+                file_message_dict = {
+                    'id': file_message_id,
+                    'conversationId': conversation_id,
+                    'user': {
+                        'id': file_agent_user.id,
+                        'username': file_agent_user.username,
+                        'displayName': file_agent_user.display_name,
+                        'avatarUrl': file_agent_user.avatar_url,
+                        'status': file_agent_user.status
+                    },
+                    'text': agent_result.get('response'),
+                    'timestamp': file_created_at.isoformat(),
+                    'type': 'normal',
+                    'fileData': None,
+                    'replyTo': reply_to,  # Aggiungi il riferimento al messaggio originale
+                    'forwardedFrom': None,
+                    'message_metadata': {'file_analysis_intent': True},
+                    'edited': False,
+                    'editedAt': None,
+                    'isOwn': False
+                }
+                
+                emit('newMessage', prepare_for_socketio(file_message_dict), room=room)
+                
+                # Emetti evento modelInference 'completed' alla fine dell'elaborazione
+                emit('modelInference', {'status': 'completed', 'userId': user_id or 7}, room=room)
+                
+                return True
+        
+        # Se non abbiamo una risposta ma è comunque un intento file, emetti completed
+        emit('modelInference', {'status': 'completed', 'userId': user_id or 7}, room=room)
+        return agent_result.get('is_file_intent', False)
+    
+    return False    
