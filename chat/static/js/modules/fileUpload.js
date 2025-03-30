@@ -176,13 +176,29 @@ function createFilePreviewWithMessage(file, confirmCallback) {
     // Rimuovi eventuali preview esistenti
     removeFilePreviewWithMessage();
     
-    // Crea contenitore principale
-    const previewContainer = document.createElement('div');
-    previewContainer.className = 'file-preview-with-message';
+    // Crea l'overlay per il modal
+    const modalOverlay = document.createElement('div');
+    modalOverlay.className = 'modal-overlay';
     
-    // Crea anteprima del file
+    // Crea il dialog modale
+    const modalDialog = document.createElement('div');
+    modalDialog.className = 'file-upload-modal';
+    
+    // Intestazione del modale con pulsante di chiusura
+    const modalHeader = document.createElement('div');
+    modalHeader.className = 'modal-header';
+    modalHeader.innerHTML = `
+        <h3>Invia file</h3>
+        <button class="modal-close-btn"><i class="fas fa-times"></i></button>
+    `;
+    
+    // Contenuto del modale
+    const modalContent = document.createElement('div');
+    modalContent.className = 'modal-content';
+    
+    // Anteprima del file
     const filePreview = document.createElement('div');
-    filePreview.className = 'file-preview-area';
+    filePreview.className = 'modal-file-preview';
     
     // Determina il tipo di anteprima in base al tipo di file
     const extension = file.name.split('.').pop().toLowerCase();
@@ -210,9 +226,13 @@ function createFilePreviewWithMessage(file, confirmCallback) {
             'xlsx': 'fa-file-excel'
         };
         
+        const iconContainer = document.createElement('div');
+        iconContainer.className = 'file-icon-container';
+        
         const fileIcon = document.createElement('i');
         fileIcon.className = `fas ${iconMap[extension] || 'fa-file'} file-preview-icon`;
-        filePreview.appendChild(fileIcon);
+        iconContainer.appendChild(fileIcon);
+        filePreview.appendChild(iconContainer);
     }
     
     // Informazioni file
@@ -224,29 +244,66 @@ function createFilePreviewWithMessage(file, confirmCallback) {
     `;
     
     // Campo messaggio
-    const messageInput = document.createElement('textarea');
-    messageInput.className = 'file-message-input';
-    messageInput.placeholder = 'Aggiungi un messaggio (opzionale)';
-    messageInput.rows = 3;
+    const messageContainer = document.createElement('div');
+    messageContainer.className = 'message-input-container';
+    messageContainer.innerHTML = `
+        <textarea id="file-message-input" class="file-message-input" 
+                  placeholder="Aggiungi un messaggio (opzionale)" rows="3"></textarea>
+    `;
     
     // Pulsanti azione
     const actionButtons = document.createElement('div');
-    actionButtons.className = 'file-action-buttons';
+    actionButtons.className = 'modal-actions';
     
     const cancelButton = document.createElement('button');
-    cancelButton.className = 'file-cancel-button';
+    cancelButton.className = 'modal-cancel-btn';
     cancelButton.innerHTML = 'Annulla';
-    cancelButton.addEventListener('click', () => {
-        removeFilePreviewWithMessage();
-    });
     
     const sendButton = document.createElement('button');
-    sendButton.className = 'file-send-button';
+    sendButton.className = 'modal-send-btn';
     sendButton.innerHTML = 'Invia File';
+    
+    actionButtons.appendChild(cancelButton);
+    actionButtons.appendChild(sendButton);
+    
+    // Assembla tutti gli elementi
+    modalContent.appendChild(filePreview);
+    modalContent.appendChild(fileInfo);
+    modalContent.appendChild(messageContainer);
+    
+    modalDialog.appendChild(modalHeader);
+    modalDialog.appendChild(modalContent);
+    modalDialog.appendChild(actionButtons);
+    
+    modalOverlay.appendChild(modalDialog);
+    
+    // Aggiungi al body (non al container dell'input)
+    document.body.appendChild(modalOverlay);
+    
+    // Funzione per chiudere il modale
+    const closeModal = () => {
+        modalOverlay.classList.add('closing');
+        setTimeout(() => {
+            if (modalOverlay.parentNode) {
+                modalOverlay.parentNode.removeChild(modalOverlay);
+            }
+        }, 300);
+    };
+    
+    // Aggiungi event listener
+    modalHeader.querySelector('.modal-close-btn').addEventListener('click', closeModal);
+    cancelButton.addEventListener('click', closeModal);
+    
     sendButton.addEventListener('click', () => {
         if (confirmCallback) {
             // Recupera il messaggio personalizzato
+            const messageInput = modalContent.querySelector('.file-message-input');
             const message = messageInput.value.trim() || `File: ${file.name}`;
+            
+            // Chiudi il modale
+            closeModal();
+            
+            // Esegui il callback
             confirmCallback({
                 file: file,
                 message: message
@@ -254,28 +311,26 @@ function createFilePreviewWithMessage(file, confirmCallback) {
         }
     });
     
-    actionButtons.appendChild(cancelButton);
-    actionButtons.appendChild(sendButton);
+    // Aggiungi l'animazione di apertura
+    setTimeout(() => {
+        modalOverlay.classList.add('active');
+    }, 10);
     
-    // Assembla tutti gli elementi
-    previewContainer.appendChild(filePreview);
-    previewContainer.appendChild(fileInfo);
-    previewContainer.appendChild(messageInput);
-    previewContainer.appendChild(actionButtons);
-    
-    // Aggiungi alla UI
-    const messageInputContainer = document.querySelector('.message-input-container');
-    if (messageInputContainer) {
-        messageInputContainer.appendChild(previewContainer);
-        // Focus sul campo di input del messaggio
-        setTimeout(() => messageInput.focus(), 100);
-    }
+    // Focus sul campo di input del messaggio
+    setTimeout(() => {
+        modalContent.querySelector('.file-message-input').focus();
+    }, 300);
 }
 
 function removeFilePreviewWithMessage() {
-    const previewContainer = document.querySelector('.file-preview-with-message');
-    if (previewContainer && previewContainer.parentNode) {
-        previewContainer.parentNode.removeChild(previewContainer);
+    const modalOverlay = document.querySelector('.modal-overlay');
+    if (modalOverlay) {
+        modalOverlay.classList.add('closing');
+        setTimeout(() => {
+            if (modalOverlay.parentNode) {
+                modalOverlay.parentNode.removeChild(modalOverlay);
+            }
+        }, 300);
     }
 }
 

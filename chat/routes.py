@@ -758,7 +758,7 @@ def upload_file():
     
     return jsonify({'success': True, 'fileData': file_data})
 
-@chat_bp.route('/uploads/<filename>')
+@chat_bp.route('/uploads/documents/<filename>')
 def uploaded_file(filename):
     """Serve i file caricati"""
     upload_dir = init_upload_dir()

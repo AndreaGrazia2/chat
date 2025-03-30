@@ -794,6 +794,7 @@
     border-radius: 20px !important;
     min-height: 45px !important;  /* Altezza minima del contenitore */
     background-color: var(--bg-main);
+    margin-bottom: 16px;
 }
 
 .message-input-container.drag-active {
@@ -937,4 +938,215 @@
     margin-top: 6px;
     font-size: 0.9em;
     color: var(--primary);
+}
+
+/* Modal overlay */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.modal-overlay.active {
+    opacity: 1;
+}
+
+.modal-overlay.closing {
+    opacity: 0;
+}
+
+/* Dialog modal */
+.file-upload-modal {
+    background-color: var(--bg-main);
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    width: 460px;
+    max-width: 90%;
+    overflow: hidden;
+    transform: translateY(20px);
+    transition: transform 0.3s ease;
+}
+
+.modal-overlay.active .file-upload-modal {
+    transform: translateY(0);
+}
+
+/* Modal header */
+.modal-header {
+    padding: 16px 20px;
+    background-color: var(--bg-secondary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-weight: 600;
+    font-size: 18px;
+    color: var(--text-color);
+}
+
+.modal-close-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.modal-close-btn:hover {
+    color: var(--text-color);
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Modal content */
+.modal-content {
+    padding: 20px;
+}
+
+.modal-file-preview {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 16px;
+    min-height: 100px;
+}
+
+.file-icon-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 80px;
+    height: 80px;
+    background-color: rgba(var(--primary-rgb), 0.1);
+    border-radius: 8px;
+}
+
+.file-preview-icon {
+    font-size: 40px;
+    color: var(--primary);
+}
+
+.file-preview-image {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: 4px;
+}
+
+.file-info {
+    margin-bottom: 16px;
+    text-align: center;
+}
+
+.file-name {
+    font-weight: 600;
+    margin-bottom: 4px;
+    word-break: break-all;
+}
+
+.file-size {
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.message-input-container label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+.file-message-input {
+    width: 100%;
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-main);
+    color: var(--text-color);
+    resize: vertical;
+    font-family: inherit;
+    font-size: 14px;
+    min-height: 60px;
+    transition: border-color 0.2s;
+}
+
+.file-message-input:focus {
+    border-color: var(--primary);
+    outline: none;
+}
+
+/* Modal actions */
+.modal-actions {
+    padding: 16px 20px;
+    background-color: var(--bg-secondary);
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    border-top: 1px solid var(--border-color);
+}
+
+.modal-cancel-btn,
+.modal-send-btn {
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.modal-cancel-btn {
+    background-color: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+}
+
+.modal-send-btn {
+    background-color: var(--primary);
+    border: none;
+    color: white;
+}
+
+.modal-cancel-btn:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.modal-send-btn:hover {
+    background-color: var(--primary-dark);
+}
+
+/* Upload progress in modal */
+.upload-progress-container {
+    margin-top: 12px;
+    background-color: var(--bg-tertiary);
+    border-radius: 4px;
+    height: 6px;
+    overflow: hidden;
+}
+
+.upload-progress {
+    height: 100%;
+    background-color: var(--primary);
+    transition: width 0.3s ease;
+}
+
+.upload-progress-text {
+    margin-top: 8px;
+    font-size: 14px;
+    color: var(--primary);
+    text-align: center;
 }
