@@ -38,6 +38,8 @@ function setupSocketIOEvents() {
 
     socket.on('userStartTyping', (data) => handleUserTyping({...data, isTyping: true}));
     socket.on('userStopTyping', (data) => handleUserTyping({...data, isTyping: false}));
+    
+    socket.on('conversationInfo', handleConversationInfo);
 }
 
 function handleSocketConnect() {
@@ -163,6 +165,15 @@ function handleMessageHistory(history) {
     // Reset del contatore messaggi non letti
     unreadMessages = 0;
     updateUnreadBadge();
+}
+
+function handleConversationInfo(data) {
+    console.log("Received conversation info:", data);
+    if (data.conversationId) {
+        // Aggiorna l'ID della conversazione corrente
+        window.currentConversationId = data.conversationId;
+        console.log("Updated currentConversationId to:", window.currentConversationId);
+    }
 }
 
 // Funzione per gestire nuovi messaggi
@@ -776,5 +787,6 @@ export {
     sendDirectMessage,
     joinDirectMessage,
     sendChannelMessage,
-    setupTypingTimeoutChecker
+    setupTypingTimeoutChecker,
+    handleConversationInfo
 };
