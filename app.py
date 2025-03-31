@@ -1,6 +1,7 @@
 # TODO: Autenticazione
 # TODO: Analisi delle email e allegati
 # TODO: Refattorizzare il codice per gestire meglio i file e le varie operazioni
+# TODO: Meccanismo per azzerare la memoria della chat di jane smith
 import gevent.monkey
 gevent.monkey.patch_all()
 
