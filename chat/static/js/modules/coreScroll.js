@@ -100,14 +100,19 @@ function scrollToBottom(smooth = true) {
     
     const chatContainer = document.getElementById('chatMessages');
     
-    // Forza un reflow del DOM per assicurare che scrollHeight sia aggiornato
-    // eslint-disable-next-line no-unused-expressions
-    chatContainer.scrollHeight;
+    // Salva il comportamento originale
+    const originalScrollBehavior = chatContainer.style.scrollBehavior;
     
-    chatContainer.scrollTo({
-        top: chatContainer.scrollHeight,
-        behavior: smooth ? 'smooth' : 'auto'
-    });
+    // Imposta scrollBehavior basato sul parametro
+    chatContainer.style.scrollBehavior = smooth ? 'smooth' : 'auto';
+    
+    // Esegui lo scroll istantaneo
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    
+    // Ripristina il comportamento originale dopo un breve ritardo
+    setTimeout(() => {
+        chatContainer.style.scrollBehavior = originalScrollBehavior;
+    }, 100);
     
     // Reset contatore messaggi non letti
     unreadMessages = 0;

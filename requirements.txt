@@ -18,3 +18,7 @@ openai[datalib]
 openai[voice_helpers]
 reportlab
 python-magic
+pypdf
+unstructured
+openpyxl  
+tabulate

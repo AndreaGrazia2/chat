@@ -56,13 +56,14 @@ def get_calendar_agent():
     
     return _calendar_agent
 
-def process_message_through_agents(message_text, user_id=None):
+def process_message_through_agents(message_text, user_id=None, message_data=None):
     """
     Elabora un messaggio attraverso tutti gli agenti disponibili
     
     Args:
         message_text: Testo del messaggio da elaborare
         user_id: ID dell'utente (opzionale)
+        message_data: Dati aggiuntivi del messaggio (opzionale)
         
     Returns:
         dict: Risultato dell'elaborazione con informazioni sull'agente e risposta
@@ -95,19 +96,39 @@ def process_message_through_agents(message_text, user_id=None):
             'error': str(e)
         }
     
-    # 2. In futuro, qui si possono aggiungere altri agenti
-    # Esempio:
-    # rag_result = process_through_rag_agent(message_text)
-    # if rag_result['action_taken']:
-    #     return rag_result
+    # 2. Controlla attraverso l'agente file se c'è un file allegato
+    if message_data and message_data.get('type') == 'file' and message_data.get('fileData'):
+        try:
+            logger.info("Rilevato messaggio con file allegato, verifico se è un intento di analisi file")
+            from agent.file_agent.file_agent_middleware import FileAgentMiddleware
+            
+            file_agent_middleware = FileAgentMiddleware()
+            file_result = file_agent_middleware.process_message(
+                message_text=message_text,
+                user_id=user_id,
+                file_data=message_data.get('fileData')
+            )
+            
+            if file_result:
+                logger.info(f"Intento di analisi file rilevato e processato")
+                return file_result
+        except Exception as e:
+            logger.error(f"Errore durante l'elaborazione con l'agente file: {e}")
+            return {
+                'agent_used': 'file',
+                'action_taken': 'error',
+                'response': f"Mi dispiace, c'è stato un errore con l'analisi del file: {str(e)}",
+                'success': False,
+                'error': str(e)
+            }
     
-    # 3. Nessun agente ha intercettato il messaggio
+    # Nessun agente ha intercettato il messaggio
     logger.info("Nessun agente ha intercettato il messaggio")
     return {
         'agent_used': None,
         'action_taken': None,
         'response': None,
-        'success': True
+        'success': False
     }
 
 def should_generate_assistant_response(agent_result):
