@@ -14,11 +14,14 @@ langchain-community
 psycopg2-binary
 langchain_openai
 pandas
-openai[datalib]
-openai[voice_helpers]
+openai>=1.0.0
 reportlab
 python-magic
 pypdf
 unstructured
 openpyxl  
 tabulate
+sentence-transformers
+numpy>=1.0.0,<2.0.0
+torch
+tqdm

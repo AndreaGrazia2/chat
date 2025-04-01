@@ -1,5 +1,3 @@
-//TODO: Aggiungere inferenza per agent per RAG sul DB ( codice_civile nello schema public )
-
 /**
  * app.js - File bridge per rendere disponibili le funzioni dei moduli
  */

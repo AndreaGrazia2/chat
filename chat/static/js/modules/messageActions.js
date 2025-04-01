@@ -256,6 +256,41 @@ function editMessage(messageId) {
     });
 }
 
+function clearAgentMemory() {
+    // Verifica se siamo in una conversazione diretta con Jane Smith (ID 4)
+    if (isDirectMessage && currentUser && currentUser.id === 4) {
+        console.log("Current conversation state:", {
+            isDirectMessage,
+            currentUser,
+            currentConversationId
+        });
+        
+        // Conferma l'azione
+        showConfirmDialog("Sei sicuro di voler azzerare la memoria della conversazione?", function() {
+            // Controllo che socket.io sia connesso
+            if (currentlyConnected && socket) {
+                console.log("Emitting clearAgentMemory event:", {
+                    userId: currentUser.id,
+                    conversationId: currentConversationId
+                });
+                
+                // Emetti l'evento clearAgentMemory
+                socket.emit('clearAgentMemory', {
+                    userId: currentUser.id,
+                    conversationId: currentConversationId
+                });
+                
+                // Mostra notifica
+                showNotification('Richiesta di azzeramento memoria inviata');
+            } else {
+                showNotification('Impossibile comunicare col server', true);
+            }
+        });
+    } else {
+        showNotification('Questa azione è disponibile solo nelle conversazioni con Jane Smith', true);
+    }
+}
+
 function showConfirmDialog(message, confirmCallback) {
 	document.getElementById('confirmMessage').textContent = message;
 	const confirmDialog = document.getElementById('confirmDialog');
@@ -393,5 +428,6 @@ export {
     forwardMessage,
     copyMessageText,
     editMessage,
-    deleteMessage 
+    deleteMessage,
+    clearAgentMemory
 };

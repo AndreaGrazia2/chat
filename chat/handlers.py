@@ -3,10 +3,13 @@ from datetime import datetime
 from flask_socketio import emit, join_room, leave_room
 import time
 import json
-import tempfile
-import subprocess
-import os
 import requests
+import re
+import traceback
+from sentence_transformers import SentenceTransformer
+from common.config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
+import psycopg2
+import psycopg2.extras
 
 from chat.models import User, Conversation, Message, ConversationParticipant, Channel, ChannelMember, MessageReadStatus
 from chat.database import SessionLocal
@@ -520,6 +523,13 @@ def register_handlers(socketio):
 
             conversation_id = conversation.id
 
+            # AGGIUNTA: Emetti evento con l'ID della conversazione
+            emit('conversationInfo', {
+                'conversationId': conversation_id,
+                'type': 'direct',
+                'userId': user_id
+            })
+
             # Get messages
             messages = (
                 db.query(Message, User)
@@ -995,11 +1005,19 @@ def register_handlers(socketio):
                         print(f"👁️ Recuperata storia conversazione con {len(history)} scambi")
                         
                         # 4. Costruiamo il prompt con la storia della conversazione
-                        prompt = "Sei un assistente AI chiamato Jane che:\n"
+                        prompt = "Sei un assistente AI che:\n"
                         prompt += "- Fornisce risposte concise e utili\n"
                         prompt += "- Usa un tono amichevole e conversazionale\n"
                         prompt += "- Si ricorda delle conversazioni precedenti\n"
                         prompt += "- Risponde in italiano\n\n"
+
+                        # Aggiungi istruzioni per identificare query al codice civile
+                        prompt += "ISTRUZIONE SPECIALE:\n"
+                        prompt += "Se la domanda riguarda temi legali o il Codice Civile italiano, aggiungi alla tua risposta:\n"
+                        prompt += "[RAG_QUERY]{\"is_legal\":true,\"query\":\"query ottimizzata per ricerca\"}[/RAG_QUERY]\n"
+                        prompt += "Dove \"query ottimizzata\" è una versione semplificata della domanda con termini rilevanti per il Codice Civile.\n"
+                        prompt += "Se non riguarda temi legali, aggiungi: [RAG_QUERY]{\"is_legal\":false}[/RAG_QUERY]\n\n"
+                        prompt += "ATTENZIONE, controlla sempre che il contenuto all'interno di [RAG_QUERY][/RAG_QUERY] sia formattato correttamente in JSON\n\n"                        
                         
                         # Aggiungiamo la storia solo se esiste
                         if history:
@@ -1016,6 +1034,49 @@ def register_handlers(socketio):
                         # 5. Otteniamo la risposta dal modello
                         ai_response = get_llm_response(prompt)
                         print(f"✅ Risposta generata: {ai_response[:50]}...")
+
+                        # Estrai informazioni RAG
+                        rag_match = re.search(r'\[RAG_QUERY\](.*?)\[/RAG_QUERY\]', ai_response)
+                        if rag_match:
+                            try:
+                                # Get the raw match
+                                raw_match = rag_match.group(1)
+                                print(f"RAG match found: {raw_match}")
+                                
+                                # Fix common JSON formatting errors
+                                # Models often add an extra closing brace
+                                if raw_match.count('{') < raw_match.count('}'):
+                                    print(f"Fixing malformed JSON - removing extra closing braces")
+                                    # More robust fix for extra closing braces
+                                    raw_match = raw_match.replace('}}}', '}')
+                                    raw_match = raw_match.replace('}}', '}')
+                                    print(f"Fixed JSON: {raw_match}")
+                                
+                                rag_data = json.loads(raw_match)
+                                print(f"Successfully parsed RAG data: {rag_data}")
+                                
+                                # Rimuovi il tag dalla risposta
+                                ai_response = re.sub(r'\[RAG_QUERY\].*?\[/RAG_QUERY\]', '', ai_response).strip()
+                                
+                                # Se è una query legale, esegui ricerca e integra risultati
+                                if rag_data.get('is_legal') and rag_data.get('query'):
+                                    query = rag_data['query']
+                                    print(f"Executing legal search for query: '{query}'")
+                                    articles = search_semantica(query)
+                                    
+                                    if articles:
+                                        ai_response += f"\n\n📚 **Riferimenti dal Codice Civile** (ricerca: '{query}'):\n\n"
+                                        for article in articles:
+                                            ai_response += f"**Articolo {article['article_number']}** (rilevanza: {article['similarity']}):\n"
+                                            ai_response += f"{article['content']}\n\n"
+
+                            except json.JSONDecodeError as e:
+                                print(f"JSON decode error in RAG tag: {str(e)}")
+                                print(f"Problematic JSON string: {rag_match.group(1)}")
+                            except Exception as e:
+                                print(f"Errore elaborazione tag RAG: {str(e)}")
+                                import traceback
+                                print(traceback.format_exc())
                         
                         # 6. Aggiorniamo la memoria
                         MAX_HISTORY = 5
@@ -1029,7 +1090,7 @@ def register_handlers(socketio):
                         if len(history) > MAX_HISTORY:
                             print(f"⚠️ Memoria piena, rimuovo scambi più vecchi (max={MAX_HISTORY})")
                             history = history[-MAX_HISTORY:]
-                            memory_truncated = True
+                            memory_truncated = False
                         
                         # 8. Aggiorniamo il messaggio memory
                         metadata_copy['history'] = history
@@ -1284,6 +1345,85 @@ def register_handlers(socketio):
                             'status': 'completed',
                             'userId': 2
                         }, room=room)
+
+    # In handlers.py, aggiungi a register_handlers
+    @socketio.on('clearAgentMemory')
+    def handle_clear_agent_memory(data):
+        """Handle request to clear agent memory"""
+
+        print(f"Ricevuta richiesta clearAgentMemory: {data}")
+
+        user_id = data.get('userId')
+        conversation_id = data.get('conversationId')
+        
+        if user_id != 4:  # Verifica che sia Jane Smith
+            return
+        
+        with get_db() as db:
+            try:
+                # Trova il messaggio memory
+                memory_message = db.query(Message).filter(
+                    Message.conversation_id == conversation_id,
+                    Message.message_type == 'memory',
+                    Message.user_id == 4
+                ).first()
+                
+                if memory_message:
+                    # Azzera la history
+                    if memory_message.message_metadata is None:
+                        memory_message.message_metadata = {}
+                    
+                    # Crea una copia per sicurezza
+                    metadata_copy = dict(memory_message.message_metadata)
+                    metadata_copy['history'] = []
+                    metadata_copy['lastUpdated'] = datetime.now().isoformat()
+                    memory_message.message_metadata = metadata_copy
+                    db.commit()
+                    
+                    print(f"✅ Memoria agente azzerata manualmente per conversazione {conversation_id}")
+                    
+                    # Invia messaggio di sistema
+                    room = f"dm:{user_id}"
+                    ai_user = db.query(User).filter(User.id == 4).first()
+                    
+                    # Crea messaggio di sistema
+                    memory_notice = Message(
+                        conversation_id=conversation_id,
+                        user_id=4,
+                        text="Memoria della conversazione azzerata manualmente. La cronologia precedente non sarà più considerata.",
+                        message_type='system'
+                    )
+                    db.add(memory_notice)
+                    db.commit()
+                    db.refresh(memory_notice)
+                    
+                    # Invia notifica
+                    notice_dict = {
+                        'id': memory_notice.id,
+                        'conversationId': conversation_id,
+                        'user': {
+                            'id': ai_user.id,
+                            'username': ai_user.username,
+                            'displayName': ai_user.display_name,
+                            'avatarUrl': ai_user.avatar_url,
+                            'status': ai_user.status
+                        },
+                        'text': memory_notice.text,
+                        'timestamp': memory_notice.created_at.isoformat(),
+                        'type': 'system',
+                        'fileData': None,
+                        'replyTo': None,
+                        'forwardedFrom': None,
+                        'message_metadata': {},
+                        'edited': False,
+                        'editedAt': None,
+                        'isOwn': False
+                    }
+                    
+                    emit('newMessage', prepare_for_socketio(notice_dict), room=room)
+            except Exception as e:
+                print(f"❌ Errore durante l'azzeramento della memoria: {str(e)}")
+                print(traceback.format_exc())
 
     @socketio.on('channelMessage')
     def handle_channel_message(data):
@@ -1981,3 +2121,40 @@ def check_file_analysis_intent(message_text, file_path, file_type, user_id, conv
         return agent_result.get('is_file_intent', False)
     
     return False
+
+def search_semantica(query, top_k=3):
+    """Esegue ricerca semantica nella tabella codice_civile"""
+    try:
+        model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
+        query_embedding = model.encode(query).tolist()
+        
+        conn = psycopg2.connect(
+            host=DB_HOST, port=DB_PORT, dbname=DB_NAME, 
+            user=DB_USER, password=DB_PASSWORD
+        )
+        cur = conn.cursor()
+        
+        cur.execute("""
+        SELECT article_number, content, 1 - (embedding <=> %s::vector) AS similarity
+        FROM codice_civile
+        ORDER BY embedding <=> %s::vector
+        LIMIT %s;
+        """, (query_embedding, query_embedding, top_k))
+        
+        results = cur.fetchall()
+        articles = []
+        
+        for article_number, content, similarity in results:
+            articles.append({
+                "article_number": article_number,
+                "content": content[:500] + "..." if len(content) > 500 else content,
+                "similarity": round(similarity, 4)
+            })
+        
+        cur.close()
+        conn.close()
+        return articles
+    except Exception as e:
+        print(f"Errore ricerca semantica: {str(e)}")
+        return []
+        

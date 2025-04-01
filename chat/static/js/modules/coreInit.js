@@ -9,7 +9,7 @@ import { setupTypingTimeoutChecker } from './socket.js';
 import { setupScrollHandlers, scrollToBottom } from './coreScroll.js';
 import { debug, hideLoader } from './utils.js';
 import { initializeSocketIO } from './socket.js';
-import { handleReply, forwardMessage, copyMessageText, editMessage } from './messageActions.js';
+import { handleReply, forwardMessage, copyMessageText, editMessage, clearAgentMemory } from './messageActions.js';
 import { sendMessage } from './chat.js';
 import { setupTypingEvents } from './chat.js';
 
@@ -215,6 +215,9 @@ function setupEventListeners() {
             case 'delete':
                 deleteMessage(messageId);
                 break;
+            case 'clearMemory':
+                clearAgentMemory();
+                break;                
         }
         this.style.display = 'none';
     });
